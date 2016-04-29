@@ -1,5 +1,6 @@
-from yt.funcs import mylog, get_hash
 from .property_getter import DatasetType
+
+from yt.funcs import mylog, get_hash
 
 class CAESAR(object):
 
@@ -32,7 +33,7 @@ class CAESAR(object):
         if hasattr(self, 'hash'):
             hash = get_hash(infile)
             if hash != self.hash:
-                raise IOError('has mismatch!')
+                raise IOError('hash mismatch!')
             else:
                 self._ds = value
         else:
@@ -42,4 +43,7 @@ class CAESAR(object):
         self._ds_type = DatasetType(self._ds)
         
 
-
+    def member_search(self):
+        from .fubar import fubar
+        fubar(self, 'halo')
+        fubar(self, 'galaxy')

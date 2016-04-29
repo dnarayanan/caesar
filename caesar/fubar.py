@@ -1,16 +1,19 @@
+import numpy as np
 from .group import create_new_group
 from .property_getter import get_property, get_particles_for_FOF
+
+from yt.extern import six
 from yt.units.yt_array import uconcatenate, YTArray
 from yt.data_objects.octree_subset import YTPositionArray
 from yt.utilities.lib.contour_finding import ParticleContourTree
-import numpy as np
 from yt.geometry.selection_routines import AlwaysSelector
+from yt.analysis_modules.halo_finding.rockstar.rockstar_groupies import RockstarGroupiesInterface
 
 def fof(obj, pdata, LL):
     pct = ParticleContourTree(LL)
 
-    #pos = YTPositionArray(YTArray(pdata['pos'],'kpccm',registry=obj.yt_dataset.unit_registry))
-    pos = YTPositionArray(pdata['pos'])
+    pos = YTPositionArray(YTArray(pdata['pos'],obj.units['length'],registry=obj.yt_dataset.unit_registry))
+    #pos = YTPositionArray(pdata['pos'])
     ot  = pos.to_octree()
 
     #ot  = [c._current_chunk.objs[0] for c in obj._dd.chunks([], 'all')][0]
@@ -26,7 +29,27 @@ def fof(obj, pdata, LL):
         0,0
     )
 
+    """
+    ## RS
+    ds  = obj.yt_dataset
+    rgi = RockstarGroupiesInterface(ds)
+    rgi.setup_rockstar(ds.mass_unit * ds.parameters['MassTable'][1], force_res = LL / 0.2 / 50.)
+    ind = np.argsort(group_tags)
+    print 'running rs'
+    
+    print pdata.keys()
+    #pcounts = rgi.make_rockstar_fof(ind, group_tags, pdata['pos'], pdata['vel'], pdata['mass'], pdata['ptype'])
+    pcounts = rgi.make_rockstar_fof(ind, group_tags, pdata['pos'], pdata['vel'])
+    print 'pcounts:',pcounts
+    #rgi.output_halos()
+    halos = rgi.return_halos()
+    #import ipdb; ipdb.set_trace()
+    return halos
+    """
+    
     return group_tags
+
+
 
 def get_ptypes(obj, find_type):
     ptypes = ['dm','gas','star']
@@ -65,35 +88,58 @@ def get_mean_interparticle_separation(obj):
 def fubar(obj, find_type, **kwargs):
     ptypes = get_ptypes(obj, find_type)        
     pdata  = get_particles_for_FOF(obj, ptypes, find_type)
+    nparts = len(pdata['mass'])
     LL     = get_mean_interparticle_separation(obj) * 0.2
+    
+    if find_type == 'galaxy': LL *= 0.2
     tags   = fof(obj, pdata, LL)
+    
+    #return fof(obj, pdata, LL)
+    
+    pdata['tags'] = tags
+    tag_sort = np.argsort(tags)    
+    for k,v in pdata.iteritems():
+        pdata[k] = v[tag_sort]
 
-    tag_sort = np.argsort(tags)
-    tags     = tags[tag_sort]
-    pos      = pdata['pos'][tag_sort]
-    vel      = pdata['vel'][tag_sort]
-    mass     = pdata['mass'][tag_sort]
-    ptype    = pdata['ptype'][tag_sort]
-    indexes  = pdata['indexes'][tag_sort]
+    #tags     = tags[tag_sort]    
+    #pos      = pdata['pos'][tag_sort]
+    #vel      = pdata['vel'][tag_sort]
+    #mass     = pdata['mass'][tag_sort]
+    #ptype    = pdata['ptype'][tag_sort]
+    #indexes  = pdata['indexes'][tag_sort]
 
     # create unique groups
     groupings = {}
     unique_groupIDs = np.unique(tags)
 
     print len(unique_groupIDs)
-    import sys
-    sys.exit()
-    
               
     for GroupID in unique_groupIDs:
         if GroupID < 0:
             continue
         groupings[GroupID] = create_new_group(obj, find_type)
 
-    # assign particles to each group    
-    for i in range(0,pdata['nparticles']):
-        if tags[i] < 0:
+    for i in range(0,nparts):
+        tag = pdata['tags'][i]
+        if tag < 0:
             continue
-        groupings[tags[i]].particle_indexes.append(i)
+        groupings[tag].particle_indexes.append(i)
 
+    # calculate group quantities
+    for v in six.itervalues(groupings):
+        v.mass = np.random.rand()
+    
+    # move groupings to a list and drop invalid groups
+    group_list = []
+    for v in six.itervalues(groupings):
+        #if not v.valid
+        #    continue
+        group_list.append(v)
+
+    # sort by mass
+    group_list.sort(key = lambda x: x.mass, reverse=True)
+    for i in range(0,len(group_list)):
+        group_list[i].GroupID = i
+
+    import ipdb; ipdb.set_trace()
     

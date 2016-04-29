@@ -169,7 +169,7 @@ def get_particles_for_FOF(obj, ptypes, find_type):
         ind = 'all'
         if p == 'gas' and find_type == 'galaxy':
             ind = get_high_density_gas_indexes(obj)
-        
+            
         data = get_property(obj, 'pos', p, indexes=ind).to(obj.units['length'])
         pos  = np.append(pos, data.d, axis=0)
         
@@ -182,6 +182,11 @@ def get_particles_for_FOF(obj, ptypes, find_type):
         nparts = len(data)
         
         ptype   = np.append(ptype,   np.full(nparts, ptype_ints[p], dtype=np.int32), axis=0)
-        indexes = np.append(indexes, np.arange(0, nparts, dtype=np.int32), axis=0)
 
-    return dict(pos=pos,vel=vel,mass=mass,ptype=ptype,indexes=indexes,nparticles=nparts)
+        if isinstance(ind, str):
+            i = np.arange(0, nparts, dtype=np.int32)
+        else:
+            i = ind.astype(np.int32)        
+        indexes = np.append(indexes, i, axis=0) 
+
+    return dict(pos=pos,vel=vel,mass=mass,ptype=ptype,indexes=indexes)

@@ -1,4 +1,5 @@
 import argparse
+import yt
 
 def run():
     parser = argparse.ArgumentParser()
@@ -8,5 +9,6 @@ def run():
     print args.infile
 
     from main import CAESAR
-    n = CAESAR(args.infile, test='yay')
+    obj = CAESAR(yt.load(args.infile), test='yay')
+    obj.member_search()
     
