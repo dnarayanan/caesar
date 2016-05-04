@@ -7,7 +7,7 @@ from yt.units.yt_array import uconcatenate, YTArray
 from yt.data_objects.octree_subset import YTPositionArray
 from yt.utilities.lib.contour_finding import ParticleContourTree
 from yt.geometry.selection_routines import AlwaysSelector
-from yt.analysis_modules.halo_finding.rockstar.rockstar_groupies import RockstarGroupiesInterface
+#from yt.analysis_modules.halo_finding.rockstar.rockstar_groupies import RockstarGroupiesInterface
 
 def fof(obj, pdata, LL):
     pct = ParticleContourTree(LL)
@@ -101,13 +101,6 @@ def fubar(obj, find_type, **kwargs):
     for k,v in pdata.iteritems():
         pdata[k] = v[tag_sort]
 
-    #tags     = tags[tag_sort]    
-    #pos      = pdata['pos'][tag_sort]
-    #vel      = pdata['vel'][tag_sort]
-    #mass     = pdata['mass'][tag_sort]
-    #ptype    = pdata['ptype'][tag_sort]
-    #indexes  = pdata['indexes'][tag_sort]
-
     # create unique groups
     groupings = {}
     unique_groupIDs = np.unique(tags)
@@ -125,19 +118,22 @@ def fubar(obj, find_type, **kwargs):
             continue
         groupings[tag].particle_indexes.append(i)
 
+    # no longer need tags
+    pdata.pop('tags')
+        
     # calculate group quantities
     for v in six.itervalues(groupings):
-        v.mass = np.random.rand()
+        v._process_group(pdata)
     
     # move groupings to a list and drop invalid groups
     group_list = []
     for v in six.itervalues(groupings):
-        #if not v.valid
-        #    continue
+        if not v.valid:
+            continue
         group_list.append(v)
 
     # sort by mass
-    group_list.sort(key = lambda x: x.mass, reverse=True)
+    group_list.sort(key = lambda x: x.masses['total'], reverse=True)
     for i in range(0,len(group_list)):
         group_list[i].GroupID = i
 
