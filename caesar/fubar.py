@@ -1,6 +1,7 @@
 import numpy as np
 from .group import create_new_group
 from .property_getter import get_property, get_particles_for_FOF
+from .property_getter import ptype_ints
 
 from yt.extern import six
 from yt.units.yt_array import uconcatenate, YTArray
@@ -94,7 +95,9 @@ def fubar(obj, find_type, **kwargs):
     if find_type == 'galaxy': LL *= 0.2
     tags   = fof(obj, pdata, LL)
     
-    #return fof(obj, pdata, LL)
+    ngas  = len(np.where(pdata['ptype'] == ptype_ints['gas'])[0])
+    nstar = len(np.where(pdata['ptype'] == ptype_ints['star'])[0])
+    ndm   = len(np.where(pdata['ptype'] == ptype_ints['dm'])[0])        
     
     pdata['tags'] = tags
     tag_sort = np.argsort(tags)    
@@ -106,7 +109,7 @@ def fubar(obj, find_type, **kwargs):
     unique_groupIDs = np.unique(tags)
 
     print len(unique_groupIDs)
-              
+
     for GroupID in unique_groupIDs:
         if GroupID < 0:
             continue
@@ -137,5 +140,18 @@ def fubar(obj, find_type, **kwargs):
     for i in range(0,len(group_list)):
         group_list[i].GroupID = i
 
+    # initialize global lists
+    glist  = np.full(ngas,  -1, dtype=np.int32)
+    slist  = np.full(nstar, -1, dtype=np.int32)
+    dmlist = np.full(ndm,   -1, dtype=np.int32)
+
+    for group in group_list:
+        glist[group.glist]   = group.GroupID
+        slist[group.slist]   = group.GroupID
+        dmlist[group.dmlist] = group.GroupID
+            
+    setattr(obj.global_particle_lists, '%s_glist'  % find_type, glist)
+    setattr(obj.global_particle_lists, '%s_slist'  % find_type, slist)
+    setattr(obj.global_particle_lists, '%s_dmlist' % find_type, dmlist)
+
     import ipdb; ipdb.set_trace()
-    

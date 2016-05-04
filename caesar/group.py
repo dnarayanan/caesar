@@ -59,9 +59,9 @@ class Group(object):
         """ glist/slist/dmlist indexes correspond to the GLOBAL particle data """
         if isinstance(self.particle_indexes, list):
             self.particle_indexes = np.array(self.particle_indexes)
-        self.glist  = self.particle_indexes[self.glist]
-        self.slist  = self.particle_indexes[self.slist]
-        self.dmlist = self.particle_indexes[self.dmlist]
+        self.glist  = self.particle_data['indexes'][self.glist]
+        self.slist  = self.particle_data['indexes'][self.slist]
+        self.dmlist = self.particle_data['indexes'][self.dmlist]
 
     def _calculate_masses(self):
         """ calculate various masses """

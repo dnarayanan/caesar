@@ -1,4 +1,5 @@
 from .property_getter import DatasetType
+from .particle_list import ParticleListContainer
 
 from yt.funcs import mylog, get_hash
 
@@ -10,6 +11,7 @@ class CAESAR(object):
         self._ds    = 0
 
         self.yt_dataset = ds
+        self.global_particle_lists = ParticleListContainer(self)
 
         self.units = dict(
             mass='Msun',
