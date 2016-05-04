@@ -8,7 +8,7 @@ def run():
     
     print args.infile
 
-    from main import CAESAR
+    from caesar import CAESAR
     obj = CAESAR(yt.load(args.infile), test='yay')
     obj.member_search()
     
