@@ -113,7 +113,7 @@ def save(obj, filename='test.hdf5'):
     outfile = h5py.File(filename, 'w')
 
     unit_registry = obj.yt_dataset.unit_registry.to_json()
-    outfile.attrs.create('unit_registry', unit_registry.encode('utf8'))
+    outfile.attrs.create('unit_registry_json', unit_registry.encode('utf8'))
 
     serialize_global_attribs(obj, outfile)
 
