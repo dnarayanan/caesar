@@ -13,6 +13,7 @@ attribute_blacklist = [
 ]
 
 ######################################################################
+
 def _write_dataset(key, data, hd):
     hd.create_dataset(key, data=data)
 
@@ -84,7 +85,27 @@ def _write_dict(obj_list, k, v, hd):
             hd['%s.%s' % (k,kk)].attrs.create('unit', str(vv.units).encode('utf8'))        
 
 ######################################################################
+
+def serialize_global_attribs(obj, hd):
+    units = {}
+    for k,v in six.iteritems(obj.__dict__):
+        if k in attribute_blacklist: continue
+
+        if isinstance(v, (YTQuantity, YTArray)):
+            hd.attrs.create(k, v.d)
+            units[k] = v.units
+        elif isinstance(v, str):
+            hd.attrs.create(k, v.encode('utf8'))
+        elif isinstance(v, (int, float, bool, np.number)):
+            hd.attrs.create(k, v)
+
+    if len(units) > 0:
+        uhd = hd.create_group('global_attribute_units')
+        for k,v in six.iteritems(units):
+            uhd.attrs.create(k, str(v).encode('utf8'))
             
+######################################################################
+    
 def save(obj, filename='test.hdf5'):
     if os.path.isfile(filename):
         os.remove(filename)
@@ -94,7 +115,7 @@ def save(obj, filename='test.hdf5'):
     unit_registry = obj.yt_dataset.unit_registry.to_json()
     outfile.attrs.create('unit_registry', unit_registry.encode('utf8'))
 
-    # write global attributes
+    serialize_global_attribs(obj, outfile)
 
     if hasattr(obj, 'halos') and obj.nhalos > 0:
         hd   = outfile.create_group('halo_data')
