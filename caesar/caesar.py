@@ -43,9 +43,36 @@ class CAESAR(object):
             self.hash = get_hash(infile)
 
         self._ds_type = DatasetType(self._ds)
-        
 
+
+    @property
+    def has_galaxies(self):
+        """ ngalaxies gets assigned during fubar() """
+        if hasattr(self,'ngalaxies'):
+            return True
+        else:
+            return False
+
+    def _assign_objects(self):
+        import assignment as assign
+        assign.assign_galaxies_to_halos(self)
+        assign.assign_central_galaxies(self)
+        
+    def _link_data(self):
+        import linking as link
+        link.link_galaxies_and_halos(self)
+        link.create_sublists(self)
+        
     def member_search(self):
         from .fubar import fubar
         fubar(self, 'halo')
         fubar(self, 'galaxy')
+
+        import assignment as assign
+        import linking as link
+        assign.assign_galaxies_to_halos(self)
+        link.link_galaxies_and_halos(self)
+        assign.assign_central_galaxies(self)
+        link.create_sublists(self)
+
+        import ipdb; ipdb.set_trace()

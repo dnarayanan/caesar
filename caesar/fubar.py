@@ -93,11 +93,7 @@ def fubar(obj, find_type, **kwargs):
     LL     = get_mean_interparticle_separation(obj) * 0.2
     
     if find_type == 'galaxy': LL *= 0.2
-    tags   = fof(obj, pdata, LL)
-    
-    ngas  = len(np.where(pdata['ptype'] == ptype_ints['gas'])[0])
-    nstar = len(np.where(pdata['ptype'] == ptype_ints['star'])[0])
-    ndm   = len(np.where(pdata['ptype'] == ptype_ints['dm'])[0])        
+    tags   = fof(obj, pdata, LL)      
     
     pdata['tags'] = tags
     tag_sort = np.argsort(tags)    
@@ -140,10 +136,16 @@ def fubar(obj, find_type, **kwargs):
     for i in range(0,len(group_list)):
         group_list[i].GroupID = i
 
+    # only assign on the first pass (halos)
+    if not hasattr(obj, 'ngas'): 
+        obj.ngas  = len(np.where(pdata['ptype'] == ptype_ints['gas'])[0])
+        obj.nstar = len(np.where(pdata['ptype'] == ptype_ints['star'])[0])
+        obj.ndm   = len(np.where(pdata['ptype'] == ptype_ints['dm'])[0])  
+        
     # initialize global lists
-    glist  = np.full(ngas,  -1, dtype=np.int32)
-    slist  = np.full(nstar, -1, dtype=np.int32)
-    dmlist = np.full(ndm,   -1, dtype=np.int32)
+    glist  = np.full(obj.ngas,  -1, dtype=np.int32)
+    slist  = np.full(obj.nstar, -1, dtype=np.int32)
+    dmlist = np.full(obj.ndm,   -1, dtype=np.int32)
 
     for group in group_list:
         glist[group.glist]   = group.GroupID
@@ -154,4 +156,9 @@ def fubar(obj, find_type, **kwargs):
     setattr(obj.global_particle_lists, '%s_slist'  % find_type, slist)
     setattr(obj.global_particle_lists, '%s_dmlist' % find_type, dmlist)
 
-    import ipdb; ipdb.set_trace()
+    if find_type == 'halo':
+        obj.halos  = group_list
+        obj.nhalos = len(obj.halos)
+    elif find_type == 'galaxy':
+        obj.galaxies  = group_list
+        obj.ngalaxies = len(obj.galaxies)
