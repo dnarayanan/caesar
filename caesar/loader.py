@@ -94,6 +94,7 @@ def load(filename, ds = None, obj = None):
         import os
         from .caesar import CAESAR
         obj = CAESAR()
+        obj.data_file = os.path.abspath(filename)
 
     unit_registry_json = infile.attrs['unit_registry_json']
     obj.unit_registry  = UnitRegistry.from_json(unit_registry_json.decode('utf8'))
