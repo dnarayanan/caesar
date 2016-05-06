@@ -58,11 +58,14 @@ class CAESAR(object):
         assign.assign_galaxies_to_halos(self)
         assign.assign_central_galaxies(self)
         
-    def _link_data(self):
+    def _link_object(self):
         import linking as link
         link.link_galaxies_and_halos(self)
         link.create_sublists(self)
-        
+
+    def save(self, filename):
+        pass
+    
     def member_search(self):
         from .fubar import fubar
         fubar(self, 'halo')
@@ -75,4 +78,7 @@ class CAESAR(object):
         assign.assign_central_galaxies(self)
         link.create_sublists(self)
 
+        from saver import save
+        save(self)
+        
         import ipdb; ipdb.set_trace()
