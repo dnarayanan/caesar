@@ -6,7 +6,24 @@ from .property_getter import ptype_ints
 MINIMUM_STARS_PER_GALAXY = 32
 MINIMUM_DM_PER_HALO      = 32
 
+class GroupList(object):
+    def __init__(self, name):
+        self.name = name
+
+    def __get__(self, instance, owner):
+        if not hasattr(instance, '_%s' % self.name) or \
+           isinstance(getattr(instance, '_%s' % self.name), int):
+            from .loader import restore_single_list
+            restore_single_list(instance.obj, instance, self.name)
+        return getattr(instance, '_%s' % self.name)
+
+    def __set__(self, instance, value):
+        setattr(instance, '_%s' % self.name, value)
+
 class Group(object):
+    glist = GroupList('glist')
+    slist = GroupList('slist')    
+    
     def __init__(self,obj):
         self.particle_indexes = []
         self.obj = obj
@@ -17,12 +34,12 @@ class Group(object):
 
     @property
     def valid(self):
-        valid = True
         if self.obj_type == 'halo' and len(self.dmlist) < MINIMUM_DM_PER_HALO:
-            valid = False
+            return False
         elif self.obj_type == 'galaxy' and len(self.slist) < MINIMUM_STARS_PER_GALAXY:
-            valid = False
-        return valid
+            return False
+        else:
+            return True
 
     def _delete_attribute(self,a):
         if hasattr(self,a):
@@ -96,7 +113,8 @@ class Galaxy(Group):
         self.central = False
         
 class Halo(Group):
-    obj_type = 'halo'    
+    obj_type = 'halo'
+    dmlist   = GroupList('dmlist')
     def __init__(self,obj):
         super(Halo, self).__init__(obj)
         self.child = False

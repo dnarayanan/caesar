@@ -9,6 +9,16 @@ from yt.units.yt_array import YTQuantity, YTArray, UnitRegistry
 
 ######################################################################
 
+def restore_single_list(obj, group, key):
+    infile = h5py.File(obj.data_file,'r')
+    data   = np.array(infile['%s_data/lists/%s' % (group.obj_type, key)])
+    infile.close()
+    start  = getattr(group, '%s_start' % key)
+    end    = getattr(group, '%s_end'   % key)
+    setattr(group, key, data[start:end])    
+
+######################################################################
+
 def get_unit_quant(v, data):
     unit  = None
     quant = True
@@ -39,8 +49,8 @@ def restore_object_list(obj_list, key, hd):
         start = getattr(i, '%s_start' % key)
         end   = getattr(i, '%s_end'   % key)
         setattr(i, key, data[start:end])
-        delattr(i, '%s_start' % key)
-        delattr(i, '%s_end'   % key)
+        #delattr(i, '%s_start' % key)
+        #delattr(i, '%s_end'   % key)
 
 ######################################################################                    
         
@@ -96,7 +106,7 @@ def load(filename, ds = None, obj = None):
 
     if obj is None:
         import os
-        from .caesar import CAESAR
+        from .main import CAESAR
         obj = CAESAR()
         obj.data_file = os.path.abspath(filename)
 
@@ -128,8 +138,8 @@ def load(filename, ds = None, obj = None):
         restore_object_attributes(obj.galaxies, hd, obj.unit_registry)
         restore_object_dicts(obj.galaxies, hd, obj.unit_registry)
         
-        for vals in ['glist', 'slist']:
-            restore_object_list(obj.galaxies, vals, hd)
+        #for vals in ['glist', 'slist']:
+        #    restore_object_list(obj.galaxies, vals, hd)
 
     infile.close()
             

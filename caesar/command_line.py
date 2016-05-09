@@ -26,16 +26,16 @@ def run():
 def open_caesar_file(infile):
     import IPython
     from loader import load
+    obj = load(infile)
+
     print('')
     print("CAESAR file loaded into the 'obj' variable")
     print('')
-    obj = load(infile)
-    
+
     IPython.embed()
 
 def run_caesar(infile):
     import yt
-    ds = yt.load(infile)
     
     #if outfile is None:
     if infile.endswith('.bin') or infile.endswith('.dat'):
@@ -43,7 +43,7 @@ def run_caesar(infile):
     else:
         outfile = 'caesar_%s' % (infile) 
 
-    from .caesar import CAESAR
+    from .main import CAESAR
         
     obj = CAESAR(yt.load(infile))
     obj.member_search()

@@ -69,7 +69,9 @@ class CAESAR(object):
     
     def member_search(self):
         from .fubar import fubar
+        print 'doing halo'
         fubar(self, 'halo')
+        print 'doing galaxy'
         fubar(self, 'galaxy')
 
         import assignment as assign
