@@ -10,6 +10,7 @@ blacklist = [
     'valid', 'vel_conversion',
     'unbound_particles', '_units',
     'unit_registry_json', 'caesar',
+    'unbound_indexes',
     'lists','dicts'
 ]
 

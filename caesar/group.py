@@ -5,6 +5,8 @@ from .property_getter import ptype_ints
 
 from yt.units.yt_array import YTQuantity, YTArray
 
+UNBIND_HALOS    = True
+UNBIND_GALAXIES = False
 MINIMUM_STARS_PER_GALAXY = 32
 MINIMUM_DM_PER_HALO      = 32
 
@@ -35,12 +37,11 @@ class Group(object):
         self.radii = {} 
         self.temperatures = {}
 
-
     @property
     def valid(self):
-        if self.obj_type == 'halo' and len(self.dmlist) < MINIMUM_DM_PER_HALO:
+        if self.obj_type == 'halo' and self.ndm < MINIMUM_DM_PER_HALO:
             return False
-        elif self.obj_type == 'galaxy' and len(self.slist) < MINIMUM_STARS_PER_GALAXY:
+        elif self.obj_type == 'galaxy' and self.nstar < MINIMUM_STARS_PER_GALAXY:
             return False
         else:
             return True
@@ -52,26 +53,31 @@ class Group(object):
     def _cleanup(self):
         self._delete_attribute('particle_data')
         self._delete_attribute('particle_indexes')
+        self._delete_attribute('_pdata')
     
     def _process_group(self,pdata):
-        self._assign_particle_data(pdata)
+        self._pdata = pdata
+        self._assign_particle_data()
         self._assign_local_indexes()
 
         if self.valid:
-            self._calculate_masses()
+            self._calculate_total_mass()
             self._calculate_center_of_mass_quantities()
-            self._calculate_virial_quantities()
-            self._calculate_velocity_dispersions()
-            self._calculate_angular_quantities()
-            
-            self._assign_global_plists()
+            self._unbind()  # iterative procedure
+
+            if self.valid:
+                self._calculate_masses()
+                self._calculate_virial_quantities()
+                self._calculate_velocity_dispersions()
+                self._calculate_angular_quantities()            
+                self._assign_global_plists()
             
         self._cleanup()
         
-    def _assign_particle_data(self,pdata):
+    def _assign_particle_data(self):
         """ Use self.particle_indexes to assign group particle data """
         self.particle_data = {}
-        for k,v in six.iteritems(pdata):
+        for k,v in six.iteritems(self._pdata):
             self.particle_data[k] = v[self.particle_indexes]
 
     def _assign_local_indexes(self):
@@ -92,19 +98,22 @@ class Group(object):
         self.slist  = self.particle_data['indexes'][self.slist]
         self.dmlist = self.particle_data['indexes'][self.dmlist]
 
+    def _calculate_total_mass(self):
+        self.masses['total'] = self.obj.yt_dataset.quan(np.sum(self.particle_data['mass']), self.obj.units['mass'])
+        
     def _calculate_masses(self):
         """ calculate various masses """
-        mass_total  = np.sum(self.particle_data['mass'])
         mass_dm     = np.sum(self.particle_data['mass'][self.dmlist])
         mass_gas    = np.sum(self.particle_data['mass'][self.glist])
         mass_star   = np.sum(self.particle_data['mass'][self.slist])
         mass_baryon = mass_gas + mass_star
 
-        self.masses['total']   = self.obj.yt_dataset.quan(mass_total, self.obj.units['mass'])
         self.masses['dm']      = self.obj.yt_dataset.quan(mass_dm, self.obj.units['mass'])
         self.masses['gas']     = self.obj.yt_dataset.quan(mass_gas, self.obj.units['mass'])
         self.masses['stellar'] = self.obj.yt_dataset.quan(mass_star, self.obj.units['mass'])
         self.masses['baryon']  = self.obj.yt_dataset.quan(mass_baryon, self.obj.units['mass'])
+
+        self._calculate_total_mass()
             
     def _calculate_center_of_mass_quantities(self):
         """ calculate center-of-mass position and velocity """
@@ -118,6 +127,57 @@ class Group(object):
         self.pos = self.obj.yt_dataset.arr(get_center_of_mass_quantity('pos'), self.obj.units['length'])
         self.vel = self.obj.yt_dataset.arr(get_center_of_mass_quantity('vel'), self.obj.units['velocity'])
 
+    def _unbind(self):
+        if self.obj_type == 'halo' and not UNBIND_HALOS:
+            return
+        elif self.obj_type == 'galaxy' and not UNBIND_GALAXIES:
+            return        
+
+        if not hasattr(self, 'unbound_indexes'):
+            self.unbound_indexes = {
+                ptype_ints['gas']:[],
+                ptype_ints['star']:[],
+                ptype_ints['dm']:[],
+            }
+        if not hasattr(self, 'unbind_iterations'):
+            self.unbind_iterations = 0        
+        self.unbind_iterations += 1
+        
+        cmpos = (self.pos.to('kpc')).d
+        ppos  = self.obj.yt_dataset.arr(self.particle_data['pos'], self.obj.units['length'])
+        ppos  = (ppos.to('kpc')).d
+        cmvel = (self.vel.to('kpc/s')).d
+        pvels = self.obj.yt_dataset.arr(self.particle_data['vel'], self.obj.units['velocity'])
+        pvels = (pvels.to('kpc/s')).d
+        mass  = self.obj.yt_dataset.arr(self.particle_data['mass'], self.obj.units['mass'])
+        mass  = (mass.to('Msun')).d
+        
+        r  = np.sqrt( (ppos[:,0] - cmpos[0])**2 +
+                      (ppos[:,1] - cmpos[1])**2 +
+                      (ppos[:,2] - cmpos[2])**2 )
+        v2 = ( (pvels[:,0] - cmvel[0])**2 +
+               (pvels[:,1] - cmvel[1])**2 +
+               (pvels[:,2] - cmvel[2])**2 )
+        
+        energy = -(mass * self.obj.simulation.G.d * (self.masses['total'].d - mass) / r) + (0.5 * mass * v2)
+
+        positive = np.where(energy > 0)[0]
+        if len(positive) > 0:
+            positive = positive[::-1]
+            for i in positive:
+                self.unbound_indexes[self.particle_data['ptype'][i]].append(self.particle_data['indexes'][i])
+                del self.particle_indexes[i]
+
+            self._assign_particle_data()
+            self._assign_local_indexes()
+
+            if not self.valid:
+                return
+            
+            self._calculate_total_mass()
+            self._calculate_center_of_mass_quantities()
+            self._unbind()
+        
     def _calculate_virial_quantities(self):
         # from Byran & Norman 1998 (xray cluster paper)
         # and Mo et al. 2002

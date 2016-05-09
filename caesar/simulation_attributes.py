@@ -42,7 +42,7 @@ class SimulationAttributes(object):
                 self.Om_z = 0.3
 
             # correct for NON comoving coordinates in non-cosmo sims
-            if obj.units['length'].endswith('cm') and len(obj.units['length']) > 2:
+            if obj.units['length'].endswith('cm') and obj.units['length'] != 'cm':
                 obj.units['length'] = obj.units['length'][:-2]
 
                 

@@ -151,6 +151,13 @@ def fubar(obj, find_type, **kwargs):
         glist[group.glist]   = group.GroupID
         slist[group.slist]   = group.GroupID
         dmlist[group.dmlist] = group.GroupID
+
+        if not hasattr(group, 'unbound_indexes'):
+            continue
+        
+        glist[group.unbound_indexes[ptype_ints['gas']]]  = -2
+        slist[group.unbound_indexes[ptype_ints['star']]] = -2
+        dmlist[group.unbound_indexes[ptype_ints['dm']]]  = -2
             
     setattr(obj.global_particle_lists, '%s_glist'  % find_type, glist)
     setattr(obj.global_particle_lists, '%s_slist'  % find_type, slist)
