@@ -125,8 +125,10 @@ def load(filename, ds = None, obj = None):
             obj.halos.append(Halo(obj))
         restore_object_attributes(obj.halos, hd, obj.unit_registry)
         restore_object_dicts(obj.halos, hd, obj.unit_registry)
-        
-        for vals in ['dmlist', 'glist', 'slist', 'galaxy_index_list']:
+        restore_object_list(obj.halos, 'galaxy_index_list', hd)
+
+        # optional
+        for vals in ['dmlist', 'glist', 'slist']:
             restore_object_list(obj.halos, vals, hd)
    
     # restore galaxy data
@@ -137,9 +139,10 @@ def load(filename, ds = None, obj = None):
             obj.galaxies.append(Galaxy(obj))
         restore_object_attributes(obj.galaxies, hd, obj.unit_registry)
         restore_object_dicts(obj.galaxies, hd, obj.unit_registry)
-        
-        #for vals in ['glist', 'slist']:
-        #    restore_object_list(obj.galaxies, vals, hd)
+
+        # optional
+        for vals in ['glist', 'slist']:
+            restore_object_list(obj.galaxies, vals, hd)
 
     infile.close()
             
