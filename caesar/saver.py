@@ -5,11 +5,12 @@ import numpy as np
 from yt.extern import six
 from yt.units.yt_array import YTQuantity, YTArray
 
-attribute_blacklist = [
+blacklist = [
     'G', 'initial_mass',
     'valid', 'vel_conversion',
     'unbound_particles', '_units',
-    'unit_registry',
+    'unit_registry_json', 'caesar',
+    'lists','dicts'
 ]
 
 ######################################################################
@@ -25,6 +26,7 @@ def check_and_write_dataset(obj, key, hd):
 ######################################################################
 
 def serialize_list(obj_list, key, hd):
+    if key in blacklist: return
     if not hasattr(obj_list[0], key): return
     data = _get_serialized_list(obj_list, key)
     _write_dataset(key, data, hd)
@@ -45,7 +47,7 @@ def _get_serialized_list(obj_list, key):
 
 def serialize_attributes(obj_list, hd, hd_dicts):
     for k,v in six.iteritems(obj_list[0].__dict__):
-        if k in attribute_blacklist: continue
+        if k in blacklist: continue
 
         if isinstance(v, dict):
             _write_dict(obj_list, k, v, hd_dicts)
@@ -89,7 +91,7 @@ def _write_dict(obj_list, k, v, hd):
 def serialize_global_attribs(obj, hd):
     units = {}
     for k,v in six.iteritems(obj.__dict__):
-        if k in attribute_blacklist: continue
+        if k in blacklist: continue
 
         if isinstance(v, (YTQuantity, YTArray)):
             hd.attrs.create(k, v.d)
@@ -111,7 +113,8 @@ def save(obj, filename='test.hdf5'):
         os.remove(filename)
 
     outfile = h5py.File(filename, 'w')
-
+    outfile.attrs.create('caesar', True)
+    
     unit_registry = obj.yt_dataset.unit_registry.to_json()
     outfile.attrs.create('unit_registry_json', unit_registry.encode('utf8'))
 

@@ -2,6 +2,7 @@ import h5py
 import numpy as np
 
 from .group import Halo, Galaxy
+from .saver import blacklist
 
 from yt.extern import six
 from yt.units.yt_array import YTQuantity, YTArray, UnitRegistry
@@ -21,7 +22,7 @@ def get_unit_quant(v, data):
 
 def restore_global_attributes(obj, hd):
     for k,v in six.iteritems(hd.attrs):
-        if k == 'unit_registry_json': continue
+        if k in blacklist: continue
         setattr(obj, k, v)
 
     if 'global_attribute_units' in hd:
@@ -32,6 +33,7 @@ def restore_global_attributes(obj, hd):
 ######################################################################            
             
 def restore_object_list(obj_list, key, hd):
+    if key in blacklist: return
     data = np.array(hd['lists/%s' % key])
     for i in obj_list:
         start = getattr(i, '%s_start' % key)
@@ -50,6 +52,7 @@ def restore_object_dicts(obj_list, hd, unit_reg):
         unit, use_quant = get_unit_quant(v, data)               
         
         dict_name, dict_key = k.split('.')
+        if dict_key in blacklist: continue
         for i in range(0,len(obj_list)):
             if not hasattr(obj_list[i], dict_name):
                 setattr(obj_list[i], dict_name, {})
@@ -68,6 +71,7 @@ def restore_object_dicts(obj_list, hd, unit_reg):
 
 def restore_object_attributes(obj_list, hd, unit_reg):
     for k,v in six.iteritems(hd):
+        if k in blacklist: continue
         if k == 'lists' or k == 'dicts': continue
         data = np.array(v)
 

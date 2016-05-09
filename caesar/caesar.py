@@ -65,7 +65,7 @@ class CAESAR(object):
 
     def save(self, filename):
         from saver import save
-        save(self)
+        save(self, filename)
     
     def member_search(self):
         from .fubar import fubar
@@ -79,6 +79,3 @@ class CAESAR(object):
         assign.assign_central_galaxies(self)
         link.create_sublists(self)
 
-        self.save('test.hdf5')
-        
-        import ipdb; ipdb.set_trace()

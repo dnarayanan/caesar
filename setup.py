@@ -12,11 +12,12 @@ setup(
     license='not sure',
 
     classifiers=[],
-    install_requires=[],
     keywords='',
     entry_points={
         'console_scripts':['caesar = caesar.command_line:run']
     },
     packages=find_packages(),
+    setup_requires=[],
+    install_requires=['numpy','h5py']
 )
 
