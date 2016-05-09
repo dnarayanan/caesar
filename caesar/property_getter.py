@@ -138,7 +138,7 @@ def filter_enzo_results(obj, data, ptype, requested_ptype):
     return data
 """    
 
-def check_for_ptype(obj, requested_ptype):
+def ptype_present(obj, requested_ptype):
     requested_ptype = requested_ptype.lower()
     ptype = obj._ds_type._get_ptype_name(requested_ptype)
     if ptype in obj._ds_type.ds.particle_fields_by_type:
@@ -175,7 +175,7 @@ def get_particles_for_FOF(obj, ptypes, find_type):
     indexes = np.empty(0,dtype=np.int32)
     
     for p in ptypes:
-        if not check_for_ptype(obj, p):
+        if not ptype_present(obj, p):
             continue
         
         ind = 'all'
