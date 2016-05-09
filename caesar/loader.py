@@ -114,8 +114,7 @@ def load(filename, ds = None, obj = None):
     obj.unit_registry  = UnitRegistry.from_json(unit_registry_json.decode('utf8'))
     
     restore_global_attributes(obj, infile)
-
-    # restore parameters??
+    obj.simulation._unpack(obj, infile)
     
     # restore halo data
     if 'halo_data' in infile:

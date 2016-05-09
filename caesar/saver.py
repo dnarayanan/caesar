@@ -100,6 +100,8 @@ def serialize_global_attribs(obj, hd):
             hd.attrs.create(k, v.encode('utf8'))
         elif isinstance(v, (int, float, bool, np.number)):
             hd.attrs.create(k, v)
+        #else:
+        #    print k,type(v)
 
     if len(units) > 0:
         uhd = hd.create_group('global_attribute_units')
@@ -119,6 +121,7 @@ def save(obj, filename='test.hdf5'):
     outfile.attrs.create('unit_registry_json', unit_registry.encode('utf8'))
 
     serialize_global_attribs(obj, outfile)
+    obj.simulation._serialize(obj, outfile)
 
     if hasattr(obj, 'halos') and obj.nhalos > 0:
         hd   = outfile.create_group('halo_data')

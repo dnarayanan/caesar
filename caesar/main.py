@@ -1,5 +1,6 @@
 from .property_getter import DatasetType
 from .particle_list import ParticleListContainer
+from .simulation_attributes import SimulationAttributes
 
 from yt.funcs import mylog, get_hash
 
@@ -10,9 +11,6 @@ class CAESAR(object):
         self.kwargs = kwargs
         self._ds    = 0
 
-        self.yt_dataset = ds
-        self.global_particle_lists = ParticleListContainer(self)
-
         self.units = dict(
             mass='Msun',
             length='kpccm',
@@ -20,6 +18,10 @@ class CAESAR(object):
             time='year',
         )
 
+        self.global_particle_lists = ParticleListContainer(self)
+        self.simulation = SimulationAttributes()
+        self.yt_dataset = ds
+        
     @property
     def yt_dataset(self):
         return self._ds
@@ -43,7 +45,7 @@ class CAESAR(object):
             self.hash = get_hash(infile)
 
         self._ds_type = DatasetType(self._ds)
-
+        self._assign_simulation_attributes()
 
     @property
     def has_galaxies(self):
@@ -52,6 +54,9 @@ class CAESAR(object):
             return True
         else:
             return False
+
+    def _assign_simulation_attributes(self):
+        self.simulation.create_attributes(self)
 
     def _assign_objects(self):
         import assignment as assign
