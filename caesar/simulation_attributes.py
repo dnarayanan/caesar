@@ -41,14 +41,18 @@ class SimulationAttributes(object):
             else:
                 self.Om_z = 0.3
 
-        self.H_z = ds.quan(H_z * 3.24077929e-20, '1/s')
-        self.G   = 4.51691362044e-39   ## kpc^3 / (Msun s^2)
+            # correct for NON comoving coordinates in non-cosmo sims
+            if obj.units['length'].endswith('cm') and len(obj.units['length']) > 2:
+                obj.units['length'] = obj.units['length'][:-2]
 
-        rho_crit = ds.quan(
-            (3.0 * self.H_z.d**2) / (8.0 * np.pi * self.G),
+                
+        self.H_z = ds.quan(H_z * 3.24077929e-20, '1/s')
+        self.G   = ds.quan(4.51691362044e-39, 'kpc**3/(Msun * s**2)')  ## kpc^3 / (Msun s^2)
+
+        self.critical_density = ds.quan(
+            (3.0 * self.H_z.d**2) / (8.0 * np.pi * self.G.d),
             'Msun / kpc**3'
         )        
-        self.critical_density = rho_crit.to('%s/%s**3' % (obj.units['mass'], obj.units['length']))
 
         
     def _serialize(self, obj, hd):

@@ -16,6 +16,7 @@ class CAESAR(object):
             length='kpccm',
             velocity='km/s',
             time='year',
+            temperature='K'
         )
 
         self.global_particle_lists = ParticleListContainer(self)

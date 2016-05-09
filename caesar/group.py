@@ -3,6 +3,8 @@ import numpy as np
 
 from .property_getter import ptype_ints
 
+from yt.units.yt_array import YTQuantity
+
 MINIMUM_STARS_PER_GALAXY = 32
 MINIMUM_DM_PER_HALO      = 32
 
@@ -20,6 +22,7 @@ class GroupList(object):
     def __set__(self, instance, value):
         setattr(instance, '_%s' % self.name, value)
 
+
 class Group(object):
     glist = GroupList('glist')
     slist = GroupList('slist')    
@@ -29,8 +32,9 @@ class Group(object):
         self.obj = obj
 
         self.masses = {}
+        self.radii = {} 
         self.temperatures = {}
-        self.radii = {}        
+
 
     @property
     def valid(self):
@@ -56,6 +60,9 @@ class Group(object):
         if self.valid:
             self._calculate_masses()
             self._calculate_center_of_mass_quantities()
+            self._calculate_virial_quantities()
+
+            
             self._assign_global_plists()
             
         self._cleanup()
@@ -71,6 +78,10 @@ class Group(object):
         self.glist  = np.where(self.particle_data['ptype'] == ptype_ints['gas'])[0] 
         self.slist  = np.where(self.particle_data['ptype'] == ptype_ints['star'])[0]
         self.dmlist = np.where(self.particle_data['ptype'] == ptype_ints['dm'])[0]
+
+        self.ngas  = len(self.glist)
+        self.nstar = len(self.slist)
+        self.ndm   = len(self.dmlist)
         
     def _assign_global_plists(self):
         """ glist/slist/dmlist indexes correspond to the GLOBAL particle data """
@@ -105,6 +116,39 @@ class Group(object):
 
         self.pos = self.obj.yt_dataset.arr(get_center_of_mass_quantity('pos'), self.obj.units['length'])
         self.vel = self.obj.yt_dataset.arr(get_center_of_mass_quantity('vel'), self.obj.units['velocity'])
+
+    def _calculate_virial_quantities(self):
+        # from Byran & Norman 1998 (xray cluster paper)
+        # and Mo et al. 2002
+        rho_crit = self.obj.simulation.critical_density   # in Msun/kpc^3 PHYSICAL
+
+        def get_r_vir(deltaC):
+            return ( (3.0 * self.masses['total'].to('Msun') /
+                      (4.0 * np.pi * rho_crit * deltaC))**(1./3.) )
+
+        # Bryan & Norman 1998
+        self.radii['virial'] = YTQuantity(get_r_vir(18.0 * np.pi**2), 'kpc', registry=self.obj.yt_dataset.unit_registry)
+        self.radii['r200c']  = YTQuantity(get_r_vir(200.0), 'kpc', registry=self.obj.yt_dataset.unit_registry)
+
+        # equation 1 of Mo et al 2002
+        vc = (np.sqrt( self.obj.simulation.G * self.masses['total'].to('Msun') / self.radii['r200c'] )).to('km/s')
+
+        # equation 4 of Mo et al 2002 (K)
+        vT = YTQuantity(3.6e5 * (vc.d / 100.0)**2, 'K', registry=self.obj.yt_dataset.unit_registry)
+
+        self.radii['virial'] = self.radii['virial'].to(self.obj.units['length'])
+        self.radii['r200c']  = self.radii['r200c'].to(self.obj.units['length'])
+
+        vc = vc.to(self.obj.units['velocity'])
+        vT = vT.to(self.obj.units['temperature'])
+        
+        self.virial_quantities = dict(
+            radius = self.radii['virial'],
+            r200c  = self.radii['r200c'],
+            circular_velocity = vc,
+            temperature = vT
+        )
+            
         
 class Galaxy(Group):
     obj_type = 'galaxy'    
