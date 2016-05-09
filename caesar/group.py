@@ -151,6 +151,8 @@ class Group(object):
         pvels = (pvels.to('kpc/s')).d
         mass  = self.obj.yt_dataset.arr(self.particle_data['mass'], self.obj.units['mass'])
         mass  = (mass.to('Msun')).d
+
+        init_mass = (self.masses['total'].to('Msun')).d
         
         r  = np.sqrt( (ppos[:,0] - cmpos[0])**2 +
                       (ppos[:,1] - cmpos[1])**2 +
@@ -159,7 +161,7 @@ class Group(object):
                (pvels[:,1] - cmvel[1])**2 +
                (pvels[:,2] - cmvel[2])**2 )
         
-        energy = -(mass * self.obj.simulation.G.d * (self.masses['total'].d - mass) / r) + (0.5 * mass * v2)
+        energy = -(mass * self.obj.simulation.G.d * (init_mass - mass) / r) + (0.5 * mass * v2)
 
         positive = np.where(energy > 0)[0]
         if len(positive) > 0:
