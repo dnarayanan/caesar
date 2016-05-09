@@ -260,7 +260,24 @@ class Group(object):
         self.spin = self.total_angular_momentum / (1.4142135623730951 *
                                                    self.masses['total'] *
                                                    self.virial_quantities['circular_velocity'].to('km/s') *
-                                                   self.virial_quantities['r200c'].to('km'))        
+                                                   self.virial_quantities['r200c'].to('km'))
+
+
+    def _calculate_radial_quantities(self):
+
+        r = np.sqrt( (self.particle_data['pos'][:,0] - self.pos[0].d)**2 +
+                     (self.particle_data['pos'][:,1] - self.pos[1].d)**2 +
+                     (self.particle_data['pos'][:,2] - self.pos[2].d)**2 )
+        
+        rsort = np.argsort(r)
+        r     = r[rsort_indexes]
+        mass  = self.particle_data['mass'][rsort]
+        ptype = self.particle_data['ptype'][rsort]
+
+        radial_categories = dict(
+
+        )
+        
         
 class Galaxy(Group):
     obj_type = 'galaxy'    

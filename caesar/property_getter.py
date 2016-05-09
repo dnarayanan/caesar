@@ -28,11 +28,12 @@ grid_gas_aliases = {
 ptype_ints = dict(
     gas=0,
     star=4,
-    dm=1
+    dm=1,
+    bh=5
 )
 
 ptype_aliases = dict(
-    GadgetHDF5Dataset = {'gas':'PartType0','star':'PartType4','dm':'PartType1'},
+    GadgetHDF5Dataset = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
     GadgetDataset     = {'gas':'Gas','star':'Stars','dm':'Halo'},
     TipsyDataset      = {'gas':'Gas','star':'Stars','dm':'DarkMatter'},
     EnzoDataset       = {'gas':'gas','star':'io','dm':'io'},
@@ -111,7 +112,7 @@ class DatasetType(object):
             prop = self._get_grid_property_name(requested_prop)
         else:
             prop = self._get_particle_property_name(requested_prop)
-            
+
         if not self.check_for_field(prop, ptype):
             raise IOError('could not find %s for %s!' % (prop, ptype))
 
@@ -136,7 +137,15 @@ def filter_enzo_results(obj, data, ptype, requested_ptype):
         data = data[indexes]
     return data
 """    
-            
+
+def check_for_ptype(obj, requested_ptype):
+    requested_ptype = requested_ptype.lower()
+    ptype = obj._ds_type._get_ptype_name(requested_ptype)
+    if ptype in obj._ds_type.ds.particle_fields_by_type:
+        return True
+    else:
+        return False    
+
 def get_property(obj, requested_prop, requested_ptype, indexes='all'):
     requested_prop  = requested_prop.lower()
     requested_ptype = requested_ptype.lower()
@@ -166,6 +175,9 @@ def get_particles_for_FOF(obj, ptypes, find_type):
     indexes = np.empty(0,dtype=np.int32)
     
     for p in ptypes:
+        if not check_for_ptype(obj, p):
+            continue
+        
         ind = 'all'
         if p == 'gas' and find_type == 'galaxy':
             ind = get_high_density_gas_indexes(obj)

@@ -54,6 +54,10 @@ def fof(obj, pdata, LL):
 
 def get_ptypes(obj, find_type):
     ptypes = ['dm','gas','star']
+    
+    if 'blackholes' in obj._kwargs and obj._kwargs['blackholes']:
+        ptypes.append('bh')
+    
     if find_type == 'galaxy':
         ptypes.remove('dm')
     if obj._ds_type.grid:

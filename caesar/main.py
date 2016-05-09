@@ -73,11 +73,12 @@ class CAESAR(object):
         from saver import save
         save(self, filename)
     
-    def member_search(self):
+    def member_search(self, *args, **kwargs):
+        self._args   = args
+        self._kwargs = kwargs
+        
         from .fubar import fubar
-        print 'doing halo'
         fubar(self, 'halo')
-        print 'doing galaxy'
         fubar(self, 'galaxy')
 
         import assignment as assign
