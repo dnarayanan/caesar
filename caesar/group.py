@@ -61,7 +61,7 @@ class Group(object):
             self._calculate_masses()
             self._calculate_center_of_mass_quantities()
             self._calculate_virial_quantities()
-
+            self._calculate_velocity_dispersions()
             
             self._assign_global_plists()
             
@@ -123,6 +123,7 @@ class Group(object):
         rho_crit = self.obj.simulation.critical_density   # in Msun/kpc^3 PHYSICAL
 
         def get_r_vir(deltaC):
+            """ returns r_vir in PHYSICAL kpc """
             return ( (3.0 * self.masses['total'].to('Msun') /
                       (4.0 * np.pi * rho_crit * deltaC))**(1./3.) )
 
@@ -141,6 +142,8 @@ class Group(object):
 
         vc = vc.to(self.obj.units['velocity'])
         vT = vT.to(self.obj.units['temperature'])
+
+        self.temperatures['virial'] = vT
         
         self.virial_quantities = dict(
             radius = self.radii['virial'],
@@ -148,7 +151,32 @@ class Group(object):
             circular_velocity = vc,
             temperature = vT
         )
+
+    def _calculate_velocity_dispersions(self):
+        def get_sigma(filtered_v):
+            if len(filtered_v) == 0:
+                return 0.0            
+            v_mean = np.mean(filtered_v)
+            v_diff = filtered_v - v_mean
+            return np.std(v_diff)
+
+        ptypes = self.particle_data['ptype']
+        particle_vel = self.particle_data['vel']
+        v = np.sqrt( particle_vel[:,0]**2 +
+                     particle_vel[:,1]**2 +
+                     particle_vel[:,2]**2 )
             
+        self.velocity_dispersions = dict() 
+
+        self.velocity_dispersions['all']     = get_sigma(v)
+        self.velocity_dispersions['dm']      = get_sigma(v[ptypes == ptype_ints['dm']])
+        self.velocity_dispersions['baryon']  = get_sigma(v[(ptypes == ptype_ints['gas']) | (ptypes == ptype_ints['star'])])
+        self.velocity_dispersions['gas']     = get_sigma(v[ptypes == ptype_ints['gas']])
+        self.velocity_dispersions['stellar'] = get_sigma(v[ptypes == ptype_ints['star']])
+
+        for k,v in six.iteritems(self.velocity_dispersions):
+            self.velocity_dispersions[k] = YTQuantity(v, self.obj.units['velocity'], registry=self.obj.yt_dataset.unit_registry)
+                            
         
 class Galaxy(Group):
     obj_type = 'galaxy'    
