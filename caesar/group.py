@@ -3,7 +3,7 @@ import numpy as np
 
 from .property_getter import ptype_ints
 
-from yt.units.yt_array import YTQuantity
+from yt.units.yt_array import YTQuantity, YTArray
 
 MINIMUM_STARS_PER_GALAXY = 32
 MINIMUM_DM_PER_HALO      = 32
@@ -62,6 +62,7 @@ class Group(object):
             self._calculate_center_of_mass_quantities()
             self._calculate_virial_quantities()
             self._calculate_velocity_dispersions()
+            self._calculate_angular_quantities()
             
             self._assign_global_plists()
             
@@ -176,7 +177,28 @@ class Group(object):
 
         for k,v in six.iteritems(self.velocity_dispersions):
             self.velocity_dispersions[k] = YTQuantity(v, self.obj.units['velocity'], registry=self.obj.yt_dataset.unit_registry)
-                            
+
+            
+    def _calculate_angular_quantities(self):
+        px = self.obj.yt_dataset.arr(self.particle_data['mass'] * self.particle_data['vel'][:,0], '%s * %s' % (self.obj.units['mass'],self.obj.units['velocity']))
+        py = self.obj.yt_dataset.arr(self.particle_data['mass'] * self.particle_data['vel'][:,1], '%s * %s' % (self.obj.units['mass'],self.obj.units['velocity']))
+        pz = self.obj.yt_dataset.arr(self.particle_data['mass'] * self.particle_data['vel'][:,2], '%s * %s' % (self.obj.units['mass'],self.obj.units['velocity']))
+
+        x  = (self.obj.yt_dataset.arr(self.particle_data['pos'][:,0] - self.pos[0].d, self.obj.units['length'])).to('km')
+        y  = (self.obj.yt_dataset.arr(self.particle_data['pos'][:,1] - self.pos[1].d, self.obj.units['length'])).to('km')
+        z  = (self.obj.yt_dataset.arr(self.particle_data['pos'][:,2] - self.pos[2].d, self.obj.units['length'])).to('km')
+        
+        Lx = np.sum( y*pz - z*py )
+        Ly = np.sum( z*px - x*pz )
+        Lz = np.sum( x*py - y*px )
+        self.total_angular_momentum  = np.sqrt(Lx*Lx + Ly*Ly + Lz*Lz)
+        self.angular_momentum_vector = self.obj.yt_dataset.arr([Lx.d,Ly.d,Lz.d], Lx.units)
+
+        # Bullock spin or lambda prime
+        self.spin = self.total_angular_momentum / (1.4142135623730951 *
+                                                   self.masses['total'] *
+                                                   self.virial_quantities['circular_velocity'].to('km/s') *
+                                                   self.virial_quantities['r200c'].to('km'))        
         
 class Galaxy(Group):
     obj_type = 'galaxy'    

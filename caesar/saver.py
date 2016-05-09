@@ -56,7 +56,10 @@ def serialize_attributes(obj_list, hd, hd_dicts):
 
 def _write_attrib(obj_list, k, v, hd):
     unit = False
-    if isinstance(v, (YTQuantity, YTArray)):
+    if isinstance(v, YTQuantity):
+        data = [getattr(i,k).d for i in obj_list]
+        unit = True
+    elif isinstance(v, YTArray):
         if np.shape(v)[0] == 3:
             data = np.vstack((getattr(i,k).d for i in obj_list))
         else:
