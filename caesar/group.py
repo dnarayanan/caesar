@@ -51,6 +51,7 @@ class Group(object):
             delattr(self,a)
     
     def _cleanup(self):
+        """ cleanup function to delete attributes no longer needed """
         self._delete_attribute('particle_data')
         self._delete_attribute('particle_indexes')
         self._delete_attribute('_pdata')
@@ -100,10 +101,11 @@ class Group(object):
         self.dmlist = self.particle_data['indexes'][self.dmlist]
 
     def _calculate_total_mass(self):
+        """ calculate the total mass of the object """
         self.masses['total'] = self.obj.yt_dataset.quan(np.sum(self.particle_data['mass']), self.obj.units['mass'])
         
     def _calculate_masses(self):
-        """ calculate various masses """
+        """ calculate various total masses """
         mass_dm     = np.sum(self.particle_data['mass'][self.dmlist])
         mass_gas    = np.sum(self.particle_data['mass'][self.glist])
         mass_star   = np.sum(self.particle_data['mass'][self.slist])
@@ -129,6 +131,7 @@ class Group(object):
         self.vel = self.obj.yt_dataset.arr(get_center_of_mass_quantity('vel'), self.obj.units['velocity'])
 
     def _unbind(self):
+        """ Iterative procedure to unbind objects. """        
         if self.obj_type == 'halo' and not UNBIND_HALOS:
             return
         elif self.obj_type == 'galaxy' and not UNBIND_GALAXIES:
@@ -180,8 +183,10 @@ class Group(object):
             self._calculate_total_mass()
             self._calculate_center_of_mass_quantities()
             self._unbind()
-        
+
+
     def _calculate_virial_quantities(self):
+        """ Calculates virial quantities such as r200, circular velocity, and virial temperature """
         sim = self.obj.simulation        
         rho_crit = sim.critical_density   # in Msun/kpc^3 PHYSICAL
         mass     = self.masses['total'].to('Msun')
@@ -220,7 +225,9 @@ class Group(object):
             temperature = vT
         )
 
+
     def _calculate_velocity_dispersions(self):
+        """ Calculate velocity dispersions for the various components """
         def get_sigma(filtered_v):
             if len(filtered_v) == 0:
                 return 0.0            
@@ -247,6 +254,7 @@ class Group(object):
 
             
     def _calculate_angular_quantities(self):
+        """ Calculate angular momentum, spin, max_vphi and max_vr """
         px = self.obj.yt_dataset.arr(self.particle_data['mass'] * self.particle_data['vel'][:,0], '%s * %s' % (self.obj.units['mass'],self.obj.units['velocity']))
         py = self.obj.yt_dataset.arr(self.particle_data['mass'] * self.particle_data['vel'][:,1], '%s * %s' % (self.obj.units['mass'],self.obj.units['velocity']))
         pz = self.obj.yt_dataset.arr(self.particle_data['mass'] * self.particle_data['vel'][:,2], '%s * %s' % (self.obj.units['mass'],self.obj.units['velocity']))
@@ -292,9 +300,10 @@ class Group(object):
 
         self.max_vphi = self.obj.yt_dataset.quan(np.max(vphi), self.obj.units['velocity'])
         self.max_vr   = self.obj.yt_dataset.quan(np.max(vr)  , self.obj.units['length'])
+
         
     def _calculate_radial_quantities(self):
-
+        """ Calculate various component radii and half radii """        
         r = np.sqrt( (self.particle_data['pos'][:,0] - self.pos[0].d)**2 +
                      (self.particle_data['pos'][:,1] - self.pos[1].d)**2 +
                      (self.particle_data['pos'][:,2] - self.pos[2].d)**2 )
