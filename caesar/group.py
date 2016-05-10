@@ -5,7 +5,7 @@ from .property_getter import ptype_ints
 
 from yt.units.yt_array import YTQuantity, YTArray
 
-UNBIND_HALOS    = True
+UNBIND_HALOS    = False
 UNBIND_GALAXIES = False
 MINIMUM_STARS_PER_GALAXY = 32
 MINIMUM_DM_PER_HALO      = 32
@@ -67,9 +67,10 @@ class Group(object):
 
             if self.valid:
                 self._calculate_masses()
+                self._calculate_radial_quantities()
                 self._calculate_virial_quantities()
                 self._calculate_velocity_dispersions()
-                self._calculate_angular_quantities()            
+                self._calculate_angular_quantities()
                 self._assign_global_plists()
             
         self._cleanup()
@@ -181,28 +182,31 @@ class Group(object):
             self._unbind()
         
     def _calculate_virial_quantities(self):
-        # from Byran & Norman 1998 (xray cluster paper)
-        # and Mo et al. 2002
-        rho_crit = self.obj.simulation.critical_density   # in Msun/kpc^3 PHYSICAL
-
+        sim = self.obj.simulation        
+        rho_crit = sim.critical_density   # in Msun/kpc^3 PHYSICAL
+        mass     = self.masses['total'].to('Msun')
+        
         def get_r_vir(deltaC):
             """ returns r_vir in PHYSICAL kpc """
-            return ( (3.0 * self.masses['total'].to('Msun') /
-                      (4.0 * np.pi * rho_crit * deltaC))**(1./3.) )
+            return (3.0 * mass / (4.0 * np.pi * rho_crit * deltaC))**(1./3.)
 
         # Bryan & Norman 1998
-        self.radii['virial'] = YTQuantity(get_r_vir(18.0 * np.pi**2), 'kpc', registry=self.obj.yt_dataset.unit_registry)
-        self.radii['r200c']  = YTQuantity(get_r_vir(200.0), 'kpc', registry=self.obj.yt_dataset.unit_registry)
+        self.radii['virial'] = self.obj.yt_dataset.quan(get_r_vir(18.0 * np.pi**2), 'kpc')
+        self.radii['r200c']  = self.obj.yt_dataset.quan(get_r_vir(200.0), 'kpc')
 
-        # equation 1 of Mo et al 2002
-        vc = (np.sqrt( self.obj.simulation.G * self.masses['total'].to('Msun') / self.radii['r200c'] )).to('km/s')
+        # eq 1 of Mo et al 2002
+        self.radii['r200'] = (sim.G * mass / (100.0 * sim.Om_z * sim.H_z**2))**(1./3.)
+        
+        # eq 1 of Mo et al 2002
+        vc = (np.sqrt( sim.G * mass / self.radii['r200'] )).to('km/s')
 
-        # equation 4 of Mo et al 2002 (K)
-        vT = YTQuantity(3.6e5 * (vc.d / 100.0)**2, 'K', registry=self.obj.yt_dataset.unit_registry)
+        # eq 4 of Mo et al 2002 (K)
+        vT = self.obj.yt_dataset.quan(3.6e5 * (vc.d / 100.0)**2, 'K')
 
+        # convert units
         self.radii['virial'] = self.radii['virial'].to(self.obj.units['length'])
         self.radii['r200c']  = self.radii['r200c'].to(self.obj.units['length'])
-
+        self.radii['r200']   = self.radii['r200'].to(self.obj.units['length'])        
         vc = vc.to(self.obj.units['velocity'])
         vT = vT.to(self.obj.units['temperature'])
 
@@ -211,6 +215,7 @@ class Group(object):
         self.virial_quantities = dict(
             radius = self.radii['virial'],
             r200c  = self.radii['r200c'],
+            r200   = self.radii['r200'],
             circular_velocity = vc,
             temperature = vT
         )
@@ -232,10 +237,10 @@ class Group(object):
         self.velocity_dispersions = dict() 
 
         self.velocity_dispersions['all']     = get_sigma(v)
-        self.velocity_dispersions['dm']      = get_sigma(v[ptypes == ptype_ints['dm']])
+        self.velocity_dispersions['dm']      = get_sigma(v[ ptypes == ptype_ints['dm']])
         self.velocity_dispersions['baryon']  = get_sigma(v[(ptypes == ptype_ints['gas']) | (ptypes == ptype_ints['star'])])
-        self.velocity_dispersions['gas']     = get_sigma(v[ptypes == ptype_ints['gas']])
-        self.velocity_dispersions['stellar'] = get_sigma(v[ptypes == ptype_ints['star']])
+        self.velocity_dispersions['gas']     = get_sigma(v[ ptypes == ptype_ints['gas']])
+        self.velocity_dispersions['stellar'] = get_sigma(v[ ptypes == ptype_ints['star']])
 
         for k,v in six.iteritems(self.velocity_dispersions):
             self.velocity_dispersions[k] = YTQuantity(v, self.obj.units['velocity'], registry=self.obj.yt_dataset.unit_registry)
@@ -270,15 +275,73 @@ class Group(object):
                      (self.particle_data['pos'][:,2] - self.pos[2].d)**2 )
         
         rsort = np.argsort(r)
-        r     = r[rsort_indexes]
+        r     = r[rsort]
         mass  = self.particle_data['mass'][rsort]
         ptype = self.particle_data['ptype'][rsort]
 
         radial_categories = dict(
-
+            total   = dict(ptypes=[ptype_ints['gas'],ptype_ints['star'],ptype_ints['dm'],ptype_ints['bh']],
+                           radius=0.0, cumulative_mass=0.0, HMradius=False),
+            baryon  = dict(ptypes=[ptype_ints['gas'],ptype_ints['star']],
+                           radius=0.0, cumulative_mass=0.0, HMradius=False),
+            gas     = dict(ptypes=[ptype_ints['gas']],
+                           radius=0.0, cumulative_mass=0.0, HMradius=False),
+            stellar = dict(ptypes=[ptype_ints['star']],
+                           radius=0.0, cumulative_mass=0.0, HMradius=False),
+            dm      = dict(ptypes=[ptype_ints['dm']],
+                           radius=0.0, cumulative_mass=0.0, HMradius=False),            
         )
         
-        
+        n_outer_radii_set = 0
+        if self.obj_type == 'galaxy': n_outer_radii_set += 1  #account for no DM
+
+        # lets reverse iterate through the list and define the outer radii
+        for i in reversed(range(0,len(r))):
+            for k,v in six.iteritems(radial_categories):
+                if k == 'dm' and self.obj_type == 'galaxy': continue
+
+                if v['radius'] == 0.0 and ptype[i] in v['ptypes']:
+                    v['radius'] = r[i]
+                    n_outer_radii_set += 1
+                    if n_outer_radii_set == len(radial_categories):
+                        break                    
+            if n_outer_radii_set == len(radial_categories):
+                break
+
+        for k,v in six.iteritems(radial_categories):
+            self.radii[k] = self.obj.yt_dataset.quan(v['radius'], self.obj.units['length'])
+            v['radius']   = 0.0   # reset radii
+
+        half_masses = {}
+        for k,v in six.iteritems(self.masses):
+            half_masses[k] = 0.5 * v
+
+        def update_radial_categories(k, i):
+            radial_categories[k]['cumulative_mass'] += mass[i]
+            if radial_categories[k]['cumulative_mass'] >= half_masses[k]:
+                radial_categories[k]['radius']   = r[i]
+                radial_categories[k]['HMradius'] = True
+            
+
+        n_half_radii_set = 0
+        if self.obj_type == 'galaxy': n_half_radii_set += 1
+                
+        for i in range(0,len(r)):
+            for k,v in six.iteritems(radial_categories):
+                if k == 'dm' and self.obj_type == 'galaxy': continue
+                if v['HMradius']: continue
+                if ptype[i] in v['ptypes']:
+                    update_radial_categories(k, i)
+                    if v['HMradius']: n_half_radii_set += 1
+                    if n_half_radii_set == len(radial_categories):
+                        break
+            if n_half_radii_set == len(radial_categories):
+                break
+
+        for k,v in six.iteritems(radial_categories):
+            self.radii['%s_half_mass' % k] = self.obj.yt_dataset.quan(v['radius'], self.obj.units['length'])
+
+            
 class Galaxy(Group):
     obj_type = 'galaxy'    
     def __init__(self,obj):
