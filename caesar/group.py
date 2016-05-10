@@ -258,16 +258,32 @@ class Group(object):
         Lx = np.sum( y*pz - z*py )
         Ly = np.sum( z*px - x*pz )
         Lz = np.sum( x*py - y*px )
-        self.total_angular_momentum  = np.sqrt(Lx*Lx + Ly*Ly + Lz*Lz)
+        L  = np.sqrt(Lx**2 + Ly**2 + Lz**2)
+        self.total_angular_momentum  = self.obj.yt_dataset.quan(L, Lx.units)
         self.angular_momentum_vector = self.obj.yt_dataset.arr([Lx.d,Ly.d,Lz.d], Lx.units)
 
+        
         # Bullock spin or lambda prime
         self.spin = self.total_angular_momentum / (1.4142135623730951 *
                                                    self.masses['total'] *
                                                    self.virial_quantities['circular_velocity'].to('km/s') *
                                                    self.virial_quantities['r200c'].to('km'))
 
+        PHI   = np.arctan2(Ly.d,Lx.d)
+        THETA = np.arccos(Lz.d/L.d)
+        
+        ex = np.sin(THETA) * np.cos(PHI)
+        ey = np.sin(THETA) * np.sin(PHI)
+        ez = np.cos(THETA)
 
+        from .utils import rotator
+        ALPHA = np.arctan2(Ly.d, Lz.d)
+        p     = rotator(np.array([ex,ey,ez]), ALPHA)
+        BETA  = np.arctan2(p[0],p[2])
+        self.rotation_angles = dict(ALPHA=ALPHA, BETA=BETA)
+
+        ## need max_vphi and max_vr
+        
     def _calculate_radial_quantities(self):
 
         r = np.sqrt( (self.particle_data['pos'][:,0] - self.pos[0].d)**2 +
