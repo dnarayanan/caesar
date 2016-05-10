@@ -283,6 +283,15 @@ class Group(object):
         self.rotation_angles = dict(ALPHA=ALPHA, BETA=BETA)
 
         ## need max_vphi and max_vr
+        rotated_pos = rotator(self.particle_data['pos'], ALPHA, BETA)
+        rotated_vel = rotator(self.particle_data['vel'], ALPHA, BETA)
+
+        r    = np.sqrt(rotated_pos[:,0]**2 + rotated_pos[:,1]**2)
+        vphi = (rotated_vel[:,0] * -1. * rotated_pos[:,1] + rotated_vel[:,1] * rotated_pos[:,0]) / r
+        vr   = (rotated_vel[:,0] *       rotated_pos[:,0] + rotated_vel[:,1] * rotated_pos[:,1]) / r
+
+        self.max_vphi = self.obj.yt_dataset.quan(np.max(vphi), self.obj.units['velocity'])
+        self.max_vr   = self.obj.yt_dataset.quan(np.max(vr)  , self.obj.units['length'])
         
     def _calculate_radial_quantities(self):
 
