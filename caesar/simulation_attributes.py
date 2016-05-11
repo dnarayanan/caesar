@@ -18,7 +18,7 @@ class SimulationAttributes(object):
         self.hubble_constant = ds.hubble_constant
         self.parameters      = ds.parameters
 
-        self.boxsize         = ds.domain_width[0].in_units('%s/h' % obj.units['length'])
+        self.boxsize         = ds.domain_width[0].to(obj.units['length'])
         self.boxsize_units   = str(self.boxsize.units)
 
         H0 = self.hubble_constant * 100.0

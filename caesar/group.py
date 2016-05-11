@@ -2,6 +2,7 @@ import six
 import numpy as np
 
 from .property_getter import ptype_ints
+from .group_funcs import get_periodic_r
 
 from yt.units.yt_array import YTQuantity, YTArray
 
@@ -157,10 +158,10 @@ class Group(object):
         mass  = (mass.to('Msun')).d
 
         init_mass = (self.masses['total'].to('Msun')).d
-        
-        r  = np.sqrt( (ppos[:,0] - cmpos[0])**2 +
-                      (ppos[:,1] - cmpos[1])**2 +
-                      (ppos[:,2] - cmpos[2])**2 )
+
+        r = np.empty(len(ppos), dtype=np.float64)
+        get_periodic_r(self.obj.simulation.boxsize.d, cmpos, ppos, r)
+
         v2 = ( (pvels[:,0] - cmvel[0])**2 +
                (pvels[:,1] - cmvel[1])**2 +
                (pvels[:,2] - cmvel[2])**2 )
@@ -304,9 +305,8 @@ class Group(object):
         
     def _calculate_radial_quantities(self):
         """ Calculate various component radii and half radii """        
-        r = np.sqrt( (self.particle_data['pos'][:,0] - self.pos[0].d)**2 +
-                     (self.particle_data['pos'][:,1] - self.pos[1].d)**2 +
-                     (self.particle_data['pos'][:,2] - self.pos[2].d)**2 )
+        r = np.empty(len(self.particle_data['pos']), dtype=np.float64)
+        get_periodic_r(self.obj.simulation.boxsize.d, self.pos.d, self.particle_data['pos'], r)
         
         rsort = np.argsort(r)
         r     = r[rsort]

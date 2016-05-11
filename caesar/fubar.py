@@ -4,6 +4,7 @@ from .property_getter import get_property, get_particles_for_FOF
 from .property_getter import ptype_ints
 
 from yt.extern import six
+from yt.extern.tqdm import tqdm
 from yt.units.yt_array import uconcatenate, YTArray
 from yt.data_objects.octree_subset import YTPositionArray
 from yt.utilities.lib.contour_finding import ParticleContourTree
@@ -125,7 +126,7 @@ def fubar(obj, find_type, **kwargs):
     pdata.pop('tags')
         
     # calculate group quantities
-    for v in six.itervalues(groupings):
+    for v in tqdm(groupings.itervalues(), total=len(groupings), leave=True):
         v._process_group(pdata)
     
     # move groupings to a list and drop invalid groups
