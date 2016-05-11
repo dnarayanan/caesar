@@ -257,14 +257,17 @@ class Group(object):
             
     def _calculate_angular_quantities(self):
         """ Calculate angular momentum, spin, max_vphi and max_vr """
-        px = self.obj.yt_dataset.arr(self.particle_data['mass'] * self.particle_data['vel'][:,0], '%s * %s' % (self.obj.units['mass'],self.obj.units['velocity']))
-        py = self.obj.yt_dataset.arr(self.particle_data['mass'] * self.particle_data['vel'][:,1], '%s * %s' % (self.obj.units['mass'],self.obj.units['velocity']))
-        pz = self.obj.yt_dataset.arr(self.particle_data['mass'] * self.particle_data['vel'][:,2], '%s * %s' % (self.obj.units['mass'],self.obj.units['velocity']))
+        pos  = self.obj.yt_dataset.arr(self.particle_data['pos'],  self.obj.units['length'])
+        vel  = self.obj.yt_dataset.arr(self.particle_data['vel'],  self.obj.units['velocity'])
+        mass = self.obj.yt_dataset.arr(self.particle_data['mass'], self.obj.units['mass'])
 
-        x  = (self.obj.yt_dataset.arr(self.particle_data['pos'][:,0] - self.pos[0].d, self.obj.units['length'])).to('km')
-        y  = (self.obj.yt_dataset.arr(self.particle_data['pos'][:,1] - self.pos[1].d, self.obj.units['length'])).to('km')
-        z  = (self.obj.yt_dataset.arr(self.particle_data['pos'][:,2] - self.pos[2].d, self.obj.units['length'])).to('km')
-        
+        px = mass * vel[:,0]
+        py = mass * vel[:,1]
+        pz = mass * vel[:,2]        
+        x  = (pos[:,0] - self.pos[0]).to('km')
+        y  = (pos[:,1] - self.pos[1]).to('km')
+        z  = (pos[:,2] - self.pos[2]).to('km')
+
         Lx = np.sum( y*pz - z*py )
         Ly = np.sum( z*px - x*pz )
         Lz = np.sum( x*py - y*px )
@@ -293,8 +296,8 @@ class Group(object):
         self.rotation_angles = dict(ALPHA=ALPHA, BETA=BETA)
 
         ## need max_vphi and max_vr
-        rotated_pos = rotator(self.particle_data['pos'], ALPHA, BETA)
-        rotated_vel = rotator(self.particle_data['vel'], ALPHA, BETA)
+        rotated_pos = rotator(pos.d, ALPHA, BETA)
+        rotated_vel = rotator(vel.d, ALPHA, BETA)
 
         r    = np.sqrt(rotated_pos[:,0]**2 + rotated_pos[:,1]**2)
         vphi = (rotated_vel[:,0] * -1. * rotated_pos[:,1] + rotated_vel[:,1] * rotated_pos[:,0]) / r

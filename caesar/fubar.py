@@ -133,8 +133,7 @@ def fubar(obj, find_type, **kwargs):
     # move groupings to a list and drop invalid groups
     group_list = []
     for v in six.itervalues(groupings):
-        if not v._valid:
-            continue
+        if not v._valid: continue
         group_list.append(v)
 
     # sort by mass
