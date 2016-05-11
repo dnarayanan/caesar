@@ -21,11 +21,19 @@ def rotator(vals, ALPHA=0, BETA=0):
 
     c  = np.cos(ALPHA)
     s  = np.sin(ALPHA)
-    Rx = np.array([[1.,0.,0.],[0.,c,-s],[0.,s,c]])
+    Rx = np.array([
+        [1.0,0.0,0.0],
+        [0.0,  c, -s],
+        [0.0,  s,  c]
+    ])
 
     c  = np.cos(BETA)
     s  = np.sin(BETA)
-    Ry = np.array([[c,0.,-s],[0.,1.,0.],[s,0.,c]])
+    Ry = np.array([
+        [  c,0.0, -s],
+        [0.0,1.0,0.0],
+        [  s,0.0,  c]
+    ])
     
     # one value to rotate
     if len(np.shape(vals)) == 1:    
@@ -33,14 +41,10 @@ def rotator(vals, ALPHA=0, BETA=0):
             vals = np.dot(Rx, vals)
         if BETA != 0:
             vals = np.dot(Ry, vals)
-        return vals
 
     # rotating many values
     else:
-        for i in range(0,len(vals)):
-            if ALPHA != 0.0:
-                vals[i] = np.dot(Rx, vals[i])
-            if BETA  != 0.0:
-                vals[i] = np.dot(Ry, vals[i])
-        return vals
+        from .group_funcs import rotator as rotator_cython
+        rotator_cython(vals, Rx, Ry, ALPHA, BETA)
         
+    return vals

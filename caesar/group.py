@@ -300,7 +300,7 @@ class Group(object):
         vr   = (rotated_vel[:,0] *       rotated_pos[:,0] + rotated_vel[:,1] * rotated_pos[:,1]) / r
 
         self.max_vphi = self.obj.yt_dataset.quan(np.max(vphi), self.obj.units['velocity'])
-        self.max_vr   = self.obj.yt_dataset.quan(np.max(vr)  , self.obj.units['length'])
+        self.max_vr   = self.obj.yt_dataset.quan(np.max(vr)  , self.obj.units['velocity'])
 
         
     def _calculate_radial_quantities(self):

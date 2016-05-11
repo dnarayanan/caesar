@@ -109,8 +109,6 @@ def fubar(obj, find_type, **kwargs):
     groupings = {}
     unique_groupIDs = np.unique(tags)
 
-    print len(unique_groupIDs)
-
     for GroupID in unique_groupIDs:
         if GroupID < 0:
             continue
@@ -126,7 +124,10 @@ def fubar(obj, find_type, **kwargs):
     pdata.pop('tags')
         
     # calculate group quantities
-    for v in tqdm(groupings.itervalues(), total=len(groupings), leave=True):
+    for v in tqdm(groupings.itervalues(),
+                  total=len(groupings),
+                  leave=True,
+                  desc='Processing %s' % find_type):
         v._process_group(pdata)
     
     # move groupings to a list and drop invalid groups
