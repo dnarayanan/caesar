@@ -118,7 +118,7 @@ def fubar(obj, find_type, **kwargs):
         tag = pdata['tags'][i]
         if tag < 0:
             continue
-        groupings[tag].particle_indexes.append(i)
+        groupings[tag]._append_index(i)
 
     # no longer need tags
     pdata.pop('tags')
@@ -133,7 +133,7 @@ def fubar(obj, find_type, **kwargs):
     # move groupings to a list and drop invalid groups
     group_list = []
     for v in six.itervalues(groupings):
-        if not v.valid:
+        if not v._valid:
             continue
         group_list.append(v)
 

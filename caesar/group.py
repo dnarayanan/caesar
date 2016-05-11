@@ -4,8 +4,6 @@ import numpy as np
 from .property_getter import ptype_ints
 from .group_funcs import get_periodic_r
 
-from yt.units.yt_array import YTQuantity, YTArray
-
 UNBIND_HALOS    = False
 UNBIND_GALAXIES = False
 MINIMUM_STARS_PER_GALAXY = 32
@@ -31,15 +29,19 @@ class Group(object):
     slist = GroupList('slist')    
     
     def __init__(self,obj):
-        self.particle_indexes = []
         self.obj = obj
 
         self.masses = {}
         self.radii = {} 
         self.temperatures = {}
 
+    def _append_index(self, i):
+        if not hasattr(self, 'particle_indexes'):
+            self.particle_indexes = []
+        self.particle_indexes.append(i)
+
     @property
-    def valid(self):
+    def _valid(self):
         if self.obj_type == 'halo' and self.ndm < MINIMUM_DM_PER_HALO:
             return False
         elif self.obj_type == 'galaxy' and self.nstar < MINIMUM_STARS_PER_GALAXY:
@@ -62,12 +64,12 @@ class Group(object):
         self._assign_particle_data()
         self._assign_local_indexes()
 
-        if self.valid:
+        if self._valid:
             self._calculate_total_mass()
             self._calculate_center_of_mass_quantities()
             self._unbind()  # iterative procedure
 
-            if self.valid:
+            if self._valid:
                 self._calculate_masses()
                 self._calculate_radial_quantities()
                 self._calculate_virial_quantities()
@@ -178,7 +180,7 @@ class Group(object):
             self._assign_particle_data()
             self._assign_local_indexes()
 
-            if not self.valid:
+            if not self._valid:
                 return
             
             self._calculate_total_mass()
@@ -251,8 +253,7 @@ class Group(object):
         self.velocity_dispersions['stellar'] = get_sigma(v[ ptypes == ptype_ints['star']])
 
         for k,v in six.iteritems(self.velocity_dispersions):
-            self.velocity_dispersions[k] = YTQuantity(v, self.obj.units['velocity'], registry=self.obj.yt_dataset.unit_registry)
-
+            self.velocity_dispersions[k] = self.obj.yt_dataset.quan(v, self.obj.units['velocity'])
             
     def _calculate_angular_quantities(self):
         """ Calculate angular momentum, spin, max_vphi and max_vr """
@@ -268,15 +269,15 @@ class Group(object):
         Ly = np.sum( z*px - x*pz )
         Lz = np.sum( x*py - y*px )
         L  = np.sqrt(Lx**2 + Ly**2 + Lz**2)
-        self.total_angular_momentum  = self.obj.yt_dataset.quan(L, Lx.units)
+        self.angular_momentum        = self.obj.yt_dataset.quan(L, Lx.units)
         self.angular_momentum_vector = self.obj.yt_dataset.arr([Lx.d,Ly.d,Lz.d], Lx.units)
 
         
         # Bullock spin or lambda prime
-        self.spin = self.total_angular_momentum / (1.4142135623730951 *
-                                                   self.masses['total'] *
-                                                   self.virial_quantities['circular_velocity'].to('km/s') *
-                                                   self.virial_quantities['r200c'].to('km'))
+        self.spin = self.angular_momentum / (1.4142135623730951 *
+                                             self.masses['total'] *
+                                             self.virial_quantities['circular_velocity'].to('km/s') *
+                                             self.virial_quantities['r200c'].to('km'))
 
         PHI   = np.arctan2(Ly.d,Lx.d)
         THETA = np.arccos(Lz.d/L.d)
