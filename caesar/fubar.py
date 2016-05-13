@@ -1,6 +1,6 @@
 import numpy as np
 from .group import create_new_group
-from .property_getter import get_property, get_particles_for_FOF
+from .property_getter import get_property, get_particles_for_FOF, get_high_density_gas_indexes
 from .property_getter import ptype_ints
 
 from yt.extern import six
@@ -11,10 +11,10 @@ from yt.utilities.lib.contour_finding import ParticleContourTree
 from yt.geometry.selection_routines import AlwaysSelector
 #from yt.analysis_modules.halo_finding.rockstar.rockstar_groupies import RockstarGroupiesInterface
 
-def fof(obj, pdata, LL):
+def fof(obj, positions, LL):
     pct = ParticleContourTree(LL)
 
-    pos = YTPositionArray(YTArray(pdata['pos'],obj.units['length'],registry=obj.yt_dataset.unit_registry))
+    pos = YTPositionArray(obj.yt_dataset.arr(positions, obj.units['length']))
     #pos = YTPositionArray(pdata['pos'])
     ot  = pos.to_octree()
 
@@ -26,8 +26,8 @@ def fof(obj, pdata, LL):
     group_tags = pct.identify_contours(
         ot,
         ot.domain_ind(AlwaysSelector(None)),
-        pdata['pos'],
-        np.arange(0,len(pdata['pos']),dtype=np.int64),
+        positions,
+        np.arange(0,len(positions),dtype=np.int64),
         0,0
     )
 
@@ -67,6 +67,9 @@ def get_ptypes(obj, find_type):
 
 
 def get_mean_interparticle_separation(obj):
+    if hasattr(obj, 'mean_interparticle_separation'):
+        return obj.mean_interparticle_separation
+    
     UT = obj.yt_dataset.time_unit.to('s/h')/obj.yt_dataset.scale_factor
     UL = obj.yt_dataset.length_unit.to('cmcm/h')
     UM = obj.yt_dataset.mass_unit.to('g/h')
@@ -89,48 +92,57 @@ def get_mean_interparticle_separation(obj):
     rhodm = obj.yt_dataset.quan(rhodm, 'code_mass/code_length**3')
 
     mips = ((dmmass / ndm / rhodm)**(1./3.)).to(obj.units['length'])
-    return mips
+
+    obj.mean_interparticle_separation = mips
+    return obj.mean_interparticle_separation
     
 def fubar(obj, find_type, **kwargs):
-    ptypes = get_ptypes(obj, find_type)        
-    pdata  = get_particles_for_FOF(obj, ptypes, find_type)
-    nparts = len(pdata['mass'])
-    LL     = get_mean_interparticle_separation(obj) * 0.2
-    
-    if find_type == 'galaxy': LL *= 0.2
-    tags   = fof(obj, pdata, LL)      
-    
-    pdata['tags'] = tags
-    tag_sort = np.argsort(tags)    
-    for k,v in pdata.iteritems():
-        pdata[k] = v[tag_sort]
+    # REPLACE find_type with group_type
 
-    # create unique groups
+    LL = get_mean_interparticle_separation(obj) * 0.2
+
+    pos = obj.data_manager.pos
+
+    if find_type == 'galaxy':
+        LL *= 0.2
+
+        # here we want to perform FOF on high density gas + stars
+        high_rho_indexes = get_high_density_gas_indexes(obj)
+        pos  = np.concatenate((
+            pos[obj.data_manager.glist][high_rho_indexes],
+            pos[obj.data_manager.slist],
+            pos[obj.data_manager.bhlist]
+        ))        
+        
+    fof_tags = fof(obj, pos, LL)
+
+    if find_type == 'galaxy':
+        gtags = np.full(obj.ngas, -1, dtype=np.int64)
+        gtags[high_rho_indexes] = fof_tags[0:len(high_rho_indexes)]
+        fof_tags = np.concatenate((gtags,fof_tags[len(high_rho_indexes)::]))
+        
+    tag_sort = np.argsort(fof_tags)
+
+    unique_groupIDs = np.unique(fof_tags)    
     groupings = {}
-    unique_groupIDs = np.unique(tags)
-
     for GroupID in unique_groupIDs:
-        if GroupID < 0:
-            continue
+        if GroupID < 0: continue
         groupings[GroupID] = create_new_group(obj, find_type)
 
-    for i in range(0,nparts):
-        tag = pdata['tags'][i]
-        if tag < 0:
-            continue
-        groupings[tag]._append_index(i)
-
-    # no longer need tags
-    pdata.pop('tags')
+    tags = fof_tags
         
-    # calculate group quantities
+    nparts = len(tags)
+    for i in range(0,nparts):
+        index = tag_sort[i]
+        tag   = tags[index]
+        if tag < 0: continue
+        groupings[tag]._append_global_index(index)
+
     for v in tqdm(groupings.itervalues(),
                   total=len(groupings),
-                  leave=True,
                   desc='Processing %s' % find_type):
-        v._process_group(pdata)
-    
-    # move groupings to a list and drop invalid groups
+        v._process_group()
+
     group_list = []
     for v in six.itervalues(groupings):
         if not v._valid: continue
@@ -141,11 +153,6 @@ def fubar(obj, find_type, **kwargs):
     for i in range(0,len(group_list)):
         group_list[i].GroupID = i
 
-    # only assign on the first pass (halos)
-    if not hasattr(obj, 'ngas'): 
-        obj.ngas  = len(np.where(pdata['ptype'] == ptype_ints['gas'])[0])
-        obj.nstar = len(np.where(pdata['ptype'] == ptype_ints['star'])[0])
-        obj.ndm   = len(np.where(pdata['ptype'] == ptype_ints['dm'])[0])  
         
     # initialize global lists
     glist  = np.full(obj.ngas,  -1, dtype=np.int32)
@@ -166,8 +173,9 @@ def fubar(obj, find_type, **kwargs):
             
     setattr(obj.global_particle_lists, '%s_glist'  % find_type, glist)
     setattr(obj.global_particle_lists, '%s_slist'  % find_type, slist)
-    setattr(obj.global_particle_lists, '%s_dmlist' % find_type, dmlist)
+    setattr(obj.global_particle_lists, '%s_dmlist' % find_type, dmlist)       
 
+    
     if find_type == 'halo':
         obj.halos  = group_list
         obj.nhalos = len(obj.halos)

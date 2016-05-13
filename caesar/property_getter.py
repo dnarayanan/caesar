@@ -1,3 +1,5 @@
+# RENAME TO PROPERTY_MANAGER?
+
 import numpy as np
 from yt.units.yt_array import YTArray
 
@@ -165,7 +167,7 @@ def get_high_density_gas_indexes(obj):
     indexes = np.where(rho >= nH_thresh)[0]
     return indexes
 
-def get_particles_for_FOF(obj, ptypes, find_type):
+def get_particles_for_FOF(obj, ptypes, find_type=None):
 
     pos  = np.empty((0,3))
     vel  = np.empty((0,3))
@@ -179,8 +181,8 @@ def get_particles_for_FOF(obj, ptypes, find_type):
             continue
         
         ind = 'all'
-        if p == 'gas' and find_type == 'galaxy':
-            ind = get_high_density_gas_indexes(obj)
+        #if p == 'gas' and find_type == 'galaxy':
+        #    ind = get_high_density_gas_indexes(obj)
             
         data = get_property(obj, 'pos', p, indexes=ind).to(obj.units['length'])
         pos  = np.append(pos, data.d, axis=0)

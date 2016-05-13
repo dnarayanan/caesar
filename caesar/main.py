@@ -56,6 +56,10 @@ class CAESAR(object):
         else:
             return False
 
+    def _load_data(self):
+        from .data_manager import DataManager
+        self.data_manager = DataManager(self)
+        
     def _assign_simulation_attributes(self):
         self.simulation.create_attributes(self)
 
@@ -76,6 +80,8 @@ class CAESAR(object):
     def member_search(self, *args, **kwargs):
         self._args   = args
         self._kwargs = kwargs
+
+        self._load_data()
         
         from .fubar import fubar
         fubar(self, 'halo')

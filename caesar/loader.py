@@ -36,14 +36,15 @@ def restore_global_attributes(obj, hd):
         setattr(obj, k, v)
 
     if 'global_attribute_units' in hd:
-        uhd = infile['global_attribute_units']
+        uhd = hd['global_attribute_units']
         for k,v in six.iteritems(uhd.attrs):
             setattr(obj, k, YTQuantity(getattr(obj, k), v, registry=obj.unit_registry))
 
 ######################################################################            
             
 def restore_object_list(obj_list, key, hd):
-    if key in blacklist: return
+    if ('lists/%s' % key) not in hd: return
+    if key in blacklist: return    
     data = np.array(hd['lists/%s' % key])
     for i in obj_list:
         start = getattr(i, '%s_start' % key)
@@ -55,6 +56,7 @@ def restore_object_list(obj_list, key, hd):
 ######################################################################                    
         
 def restore_object_dicts(obj_list, hd, unit_reg):
+    if 'dicts' not in hd: return
     hdd = hd['dicts']
     for k,v in six.iteritems(hdd):
         data = np.array(v)

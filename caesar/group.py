@@ -35,10 +35,10 @@ class Group(object):
         self.radii = {} 
         self.temperatures = {}
 
-    def _append_index(self, i):
-        if not hasattr(self, 'particle_indexes'):
-            self.particle_indexes = []
-        self.particle_indexes.append(i)
+    def _append_global_index(self, i):
+        if not hasattr(self, 'global_indexes'):
+            self.global_indexes = []
+        self.global_indexes.append(i)
 
     @property
     def _valid(self):
@@ -52,66 +52,70 @@ class Group(object):
     def _delete_attribute(self,a):
         if hasattr(self,a):
             delattr(self,a)
-    
+
+    def _delete_key(self,d,k):
+        if k in d:
+            del d[k]
+            
+    def _remove_dm_references(self):
+        if self.obj_type != 'galaxy' or not self._valid:
+            return
+        self._delete_attribute('ndm')        
+        self._delete_key(self.radii,'dm_half_mass')
+        self._delete_key(self.radii,'dm')
+        self._delete_key(self.masses,'dm')
+        self._delete_key(self.velocity_dispersions,'dm')
+            
     def _cleanup(self):
         """ cleanup function to delete attributes no longer needed """
-        self._delete_attribute('particle_data')
-        self._delete_attribute('particle_indexes')
-        self._delete_attribute('_pdata')
-    
-    def _process_group(self,pdata):
-        self._pdata = pdata
-        self._assign_particle_data()
-        self._assign_local_indexes()
+        self._delete_attribute('global_indexes')
+        self._remove_dm_references()
+
+
+    def _process_group(self):
+        self._assign_local_data()
 
         if self._valid:
             self._calculate_total_mass()
             self._calculate_center_of_mass_quantities()
             self._unbind()  # iterative procedure
-
+            
             if self._valid:
                 self._calculate_masses()
                 self._calculate_radial_quantities()
                 self._calculate_virial_quantities()
                 self._calculate_velocity_dispersions()
-                self._calculate_angular_quantities()
-                self._assign_global_plists()
+                self._calculate_angular_quantities()            
             
         self._cleanup()
-        
-    def _assign_particle_data(self):
-        """ Use self.particle_indexes to assign group particle data """
-        self.particle_data = {}
-        for k,v in six.iteritems(self._pdata):
-            self.particle_data[k] = v[self.particle_indexes]
 
-    def _assign_local_indexes(self):
-        """ glist/slist/dmlist indexes correspond to the LOCAL particle data """
-        self.glist  = np.where(self.particle_data['ptype'] == ptype_ints['gas'])[0] 
-        self.slist  = np.where(self.particle_data['ptype'] == ptype_ints['star'])[0]
-        self.dmlist = np.where(self.particle_data['ptype'] == ptype_ints['dm'])[0]
+        
+    def _assign_local_data(self):
+        ptypes  = self.obj.data_manager.ptype[self.global_indexes]
+        indexes = self.obj.data_manager.index[self.global_indexes]
+
+        # individual global lists
+        self.glist  = indexes[np.where(ptypes == ptype_ints['gas'])[0]]
+        self.slist  = indexes[np.where(ptypes == ptype_ints['star'])[0]]
+        self.dmlist = indexes[np.where(ptypes == ptype_ints['dm'])[0]]
 
         self.ngas  = len(self.glist)
         self.nstar = len(self.slist)
         self.ndm   = len(self.dmlist)
-        
-    def _assign_global_plists(self):
-        """ glist/slist/dmlist indexes correspond to the GLOBAL particle data """
-        if isinstance(self.particle_indexes, list):
-            self.particle_indexes = np.array(self.particle_indexes)
-        self.glist  = self.particle_data['indexes'][self.glist]
-        self.slist  = self.particle_data['indexes'][self.slist]
-        self.dmlist = self.particle_data['indexes'][self.dmlist]
+
+        if self.obj.nbh > 0:
+            self.bhlist = indexes[np.where(ptypes == ptype_ints['bh'])[0]]
+            self.nbh    = len(self.bhlist)
 
     def _calculate_total_mass(self):
         """ calculate the total mass of the object """
-        self.masses['total'] = self.obj.yt_dataset.quan(np.sum(self.particle_data['mass']), self.obj.units['mass'])
+        self.masses['total'] = self.obj.yt_dataset.quan(np.sum(self.obj.data_manager.mass[self.global_indexes]), self.obj.units['mass'])
         
     def _calculate_masses(self):
         """ calculate various total masses """
-        mass_dm     = np.sum(self.particle_data['mass'][self.dmlist])
-        mass_gas    = np.sum(self.particle_data['mass'][self.glist])
-        mass_star   = np.sum(self.particle_data['mass'][self.slist])
+        mass_dm     = np.sum(self.obj.data_manager.mass[self.obj.data_manager.dmlist][self.dmlist])
+        mass_gas    = np.sum(self.obj.data_manager.mass[self.obj.data_manager.glist][self.glist])
+        mass_star   = np.sum(self.obj.data_manager.mass[self.obj.data_manager.slist][self.slist])
         mass_baryon = mass_gas + mass_star
 
         self.masses['dm']      = self.obj.yt_dataset.quan(mass_dm, self.obj.units['mass'])
@@ -119,6 +123,10 @@ class Group(object):
         self.masses['stellar'] = self.obj.yt_dataset.quan(mass_star, self.obj.units['mass'])
         self.masses['baryon']  = self.obj.yt_dataset.quan(mass_baryon, self.obj.units['mass'])
 
+        if self.obj.nbh > 0:
+            mass_bh = np.sum(self.obj.data_manager.mass[self.obj.data_manager.bhlist][self.bhlist])
+            self.masses['bh']  = self.obj.yt_dataset.quan(mass_bh, self.obj.units['mass'])
+        
         self._calculate_total_mass()
             
     def _calculate_center_of_mass_quantities(self):
@@ -126,7 +134,7 @@ class Group(object):
         def get_center_of_mass_quantity(quantity):  ## REFACTOR ME TO BE MORE GENERIC WITH SHAPE
             val  = np.zeros(3)
             for i in range(0,3):
-                val[i] = np.sum(self.particle_data['mass'] * self.particle_data[quantity][:,i])
+                val[i] = np.sum(self.obj.data_manager.mass[self.global_indexes] * getattr(self.obj.data_manager, quantity)[self.global_indexes,i])
             val /= self.masses['total'].d
             return val
 
@@ -151,12 +159,12 @@ class Group(object):
         self.unbind_iterations += 1
         
         cmpos = (self.pos.to('kpc')).d
-        ppos  = self.obj.yt_dataset.arr(self.particle_data['pos'], self.obj.units['length'])
+        ppos  = self.obj.yt_dataset.arr(self.obj.data_manager.pos[self.global_indexes], self.obj.units['length'])
         ppos  = (ppos.to('kpc')).d
         cmvel = (self.vel.to('kpc/s')).d
-        pvels = self.obj.yt_dataset.arr(self.particle_data['vel'], self.obj.units['velocity'])
+        pvels = self.obj.yt_dataset.arr(self.obj.data_manager.vel[self.global_indexes], self.obj.units['velocity'])
         pvels = (pvels.to('kpc/s')).d
-        mass  = self.obj.yt_dataset.arr(self.particle_data['mass'], self.obj.units['mass'])
+        mass  = self.obj.yt_dataset.arr(self.obj.data_manager.mass[self.global_indexes], self.obj.units['mass'])
         mass  = (mass.to('Msun')).d
 
         init_mass = (self.masses['total'].to('Msun')).d
@@ -174,15 +182,12 @@ class Group(object):
         if len(positive) > 0:
             positive = positive[::-1]
             for i in positive:
-                self.unbound_indexes[self.particle_data['ptype'][i]].append(self.particle_data['indexes'][i])
-                del self.particle_indexes[i]
+                global_index = self.global_indexes[i]
+                self.unbound_indexes[self.obj.data_manager.ptype[global_index]].append(self.obj.data_manager.index[global_index])
+                del self.global_indexes[i]
 
-            self._assign_particle_data()
-            self._assign_local_indexes()
-
-            if not self._valid:
-                return
-            
+            self._assign_local_data()                        
+            if not self._valid: return            
             self._calculate_total_mass()
             self._calculate_center_of_mass_quantities()
             self._unbind()
@@ -238,8 +243,8 @@ class Group(object):
             v_diff = filtered_v - v_mean
             return np.std(v_diff)
 
-        ptypes = self.particle_data['ptype']
-        particle_vel = self.particle_data['vel']
+        ptypes = self.obj.data_manager.ptype[self.global_indexes]
+        particle_vel = self.obj.data_manager.vel[self.global_indexes]
         v = np.sqrt( particle_vel[:,0]**2 +
                      particle_vel[:,1]**2 +
                      particle_vel[:,2]**2 )
@@ -257,9 +262,9 @@ class Group(object):
             
     def _calculate_angular_quantities(self):
         """ Calculate angular momentum, spin, max_vphi and max_vr """
-        pos  = self.obj.yt_dataset.arr(self.particle_data['pos'],  self.obj.units['length'])
-        vel  = self.obj.yt_dataset.arr(self.particle_data['vel'],  self.obj.units['velocity'])
-        mass = self.obj.yt_dataset.arr(self.particle_data['mass'], self.obj.units['mass'])
+        pos  = self.obj.yt_dataset.arr(self.obj.data_manager.pos[self.global_indexes],  self.obj.units['length'])
+        vel  = self.obj.yt_dataset.arr(self.obj.data_manager.vel[self.global_indexes],  self.obj.units['velocity'])
+        mass = self.obj.yt_dataset.arr(self.obj.data_manager.mass[self.global_indexes], self.obj.units['mass'])
 
         px = mass * vel[:,0]
         py = mass * vel[:,1]
@@ -305,79 +310,42 @@ class Group(object):
 
         self.max_vphi = self.obj.yt_dataset.quan(np.max(vphi), self.obj.units['velocity'])
         self.max_vr   = self.obj.yt_dataset.quan(np.max(vr)  , self.obj.units['velocity'])
-
-        
+            
     def _calculate_radial_quantities(self):
-        """ Calculate various component radii and half radii """        
-        r = np.empty(len(self.particle_data['pos']), dtype=np.float64)
-        get_periodic_r(self.obj.simulation.boxsize.d, self.pos.d, self.particle_data['pos'], r)
+        """ Calculate various component radii and half radii """
+        from group_funcs import get_half_mass_radius, get_full_mass_radius
+        
+        r = np.empty(len(self.global_indexes), dtype=np.float64)
+        get_periodic_r(self.obj.simulation.boxsize.d, self.pos.d, self.obj.data_manager.pos[self.global_indexes], r)
         
         rsort = np.argsort(r)
         r     = r[rsort]
-        mass  = self.particle_data['mass'][rsort]
-        ptype = self.particle_data['ptype'][rsort]
+        mass  = self.obj.data_manager.mass[self.global_indexes][rsort]
+        ptype = self.obj.data_manager.ptype[self.global_indexes][rsort]
 
         radial_categories = dict(
-            total   = dict(ptypes=[ptype_ints['gas'],ptype_ints['star'],ptype_ints['dm'],ptype_ints['bh']],
-                           radius=0.0, cumulative_mass=0.0, HMradius=False),
-            baryon  = dict(ptypes=[ptype_ints['gas'],ptype_ints['star']],
-                           radius=0.0, cumulative_mass=0.0, HMradius=False),
-            gas     = dict(ptypes=[ptype_ints['gas']],
-                           radius=0.0, cumulative_mass=0.0, HMradius=False),
-            stellar = dict(ptypes=[ptype_ints['star']],
-                           radius=0.0, cumulative_mass=0.0, HMradius=False),
-            dm      = dict(ptypes=[ptype_ints['dm']],
-                           radius=0.0, cumulative_mass=0.0, HMradius=False),            
+            total   = [ptype_ints['gas'],ptype_ints['star'],ptype_ints['dm'],ptype_ints['bh']],
+            baryon  = [ptype_ints['gas'],ptype_ints['star']],
+            gas     = [ptype_ints['gas']],
+            stellar = [ptype_ints['star']],
+            dm      = [ptype_ints['dm']],
         )
         
-        n_outer_radii_set = 0
-        if self.obj_type == 'galaxy': n_outer_radii_set += 1  #account for no DM
-
-        # lets reverse iterate through the list and define the outer radii
-        for i in reversed(range(0,len(r))):
-            for k,v in six.iteritems(radial_categories):
-                if k == 'dm' and self.obj_type == 'galaxy': continue
-
-                if v['radius'] == 0.0 and ptype[i] in v['ptypes']:
-                    v['radius'] = r[i]
-                    n_outer_radii_set += 1
-                    if n_outer_radii_set == len(radial_categories):
-                        break                    
-            if n_outer_radii_set == len(radial_categories):
-                break
-
-        for k,v in six.iteritems(radial_categories):
-            self.radii[k] = self.obj.yt_dataset.quan(v['radius'], self.obj.units['length'])
-            v['radius']   = 0.0   # reset radii
-
         half_masses = {}
         for k,v in six.iteritems(self.masses):
-            half_masses[k] = 0.5 * v
-
-        def update_radial_categories(k, i):
-            radial_categories[k]['cumulative_mass'] += mass[i]
-            if radial_categories[k]['cumulative_mass'] >= half_masses[k]:
-                radial_categories[k]['radius']   = r[i]
-                radial_categories[k]['HMradius'] = True
-            
-
-        n_half_radii_set = 0
-        if self.obj_type == 'galaxy': n_half_radii_set += 1
-                
-        for i in range(0,len(r)):
-            for k,v in six.iteritems(radial_categories):
-                if k == 'dm' and self.obj_type == 'galaxy': continue
-                if v['HMradius']: continue
-                if ptype[i] in v['ptypes']:
-                    update_radial_categories(k, i)
-                    if v['HMradius']: n_half_radii_set += 1
-                    if n_half_radii_set == len(radial_categories):
-                        break
-            if n_half_radii_set == len(radial_categories):
-                break
+            half_masses[k] = 0.5 * v            
 
         for k,v in six.iteritems(radial_categories):
-            self.radii['%s_half_mass' % k] = self.obj.yt_dataset.quan(v['radius'], self.obj.units['length'])
+            if k == 'dm' and self.obj_type == 'galaxy': continue
+            binary = 0
+            for p in v:
+                binary += 2**p
+
+            full_r = get_full_mass_radius(r[::-1], ptype[::-1], binary)
+            self.radii[k] = self.obj.yt_dataset.quan(full_r, self.obj.units['length'])
+            
+            half_r = get_half_mass_radius(mass, r, ptype, half_masses[k], binary)
+            self.radii['%s_half_mass' % k] = self.obj.yt_dataset.quan(half_r, self.obj.units['length'])
 
             
 class Galaxy(Group):

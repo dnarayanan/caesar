@@ -71,3 +71,49 @@ def rotator(
             
             vals[i,0] = beta_c * x - beta_s * z
             vals[i,2] = beta_s * x + beta_c * z
+
+@cython.cdivision(True)
+@cython.wraparound(False)
+@cython.boundscheck(False)
+def get_half_mass_radius(
+        np.ndarray[np.float64_t, ndim=1] mass,
+        np.ndarray[np.float64_t, ndim=1] radii,
+        np.ndarray[np.int32_t, ndim=1] ptype,
+        double half_mass,
+        int binary
+):
+
+    cdef int i
+    cdef int n = len(mass)
+    cdef double cumulative_mass = 0.0
+    cdef double r = 0.0
+    
+    for i in range(0,n):
+        if ((1<<ptype[i]) & (binary)) > 0:
+            cumulative_mass += mass[i]
+            if cumulative_mass >= half_mass:
+                r = radii[i]
+                break
+
+    return r
+
+
+@cython.cdivision(True)
+@cython.wraparound(False)
+@cython.boundscheck(False)
+def get_full_mass_radius(
+        np.ndarray[np.float64_t, ndim=1] radii,
+        np.ndarray[np.int32_t, ndim=1] ptype,
+        int binary
+):
+
+    cdef int i
+    cdef int n = len(radii)
+    cdef double r = 0.0
+    
+    for i in range(0,n):
+        if ((1<<ptype[i]) & (binary)) > 0:
+            r = radii[i]
+            break
+
+    return r
