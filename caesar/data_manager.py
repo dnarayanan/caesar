@@ -1,6 +1,6 @@
 import numpy as np
 
-from .property_getter import ptype_ints, get_particles_for_FOF
+from .property_getter import ptype_ints, get_particles_for_FOF, get_property
 
 class DataManager(object):
     def __init__(self, obj):
@@ -8,6 +8,7 @@ class DataManager(object):
         self.blackholes = False
         self.determine_ptypes()
         self.load_data()
+        self.load_gas_data()
         
     def determine_ptypes(self):
         self.ptypes = ['gas','star']
@@ -35,6 +36,18 @@ class DataManager(object):
         self.obj.nstar = len(self.slist)
         self.obj.ndm   = len(self.dmlist)
         self.obj.nbh   = len(self.bhlist)
-        
 
+    def load_gas_data(self):
+        if self.obj.ngas == 0:
+            return
+
+        sfr = get_property(self.obj, 'sfr', 'gas').to('%s/%s' % (self.obj.units['mass'], self.obj.units['time']))
+        gZ  = get_property(self.obj, 'metallicity', 'gas')
+        gT  = get_property(self.obj, 'temperature', 'gas').to(self.obj.units['temperature'])
+        
+        self.gsfr = sfr.d
+        self.gZ   = gZ.d
+        self.gT   = gT.d
+        
+        
         

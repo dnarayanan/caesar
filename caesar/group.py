@@ -34,7 +34,7 @@ class Group(object):
         self.masses = {}
         self.radii = {} 
         self.temperatures = {}
-
+        
     def _append_global_index(self, i):
         if not hasattr(self, 'global_indexes'):
             self.global_indexes = []
@@ -69,6 +69,7 @@ class Group(object):
     def _cleanup(self):
         """ cleanup function to delete attributes no longer needed """
         self._delete_attribute('global_indexes')
+        self._delete_attribute('_glist')
         self._remove_dm_references()
 
 
@@ -85,7 +86,8 @@ class Group(object):
                 self._calculate_radial_quantities()
                 self._calculate_virial_quantities()
                 self._calculate_velocity_dispersions()
-                self._calculate_angular_quantities()            
+                self._calculate_angular_quantities()
+                self._calculate_gas_quantities()
             
         self._cleanup()
 
@@ -94,6 +96,9 @@ class Group(object):
         ptypes  = self.obj.data_manager.ptype[self.global_indexes]
         indexes = self.obj.data_manager.index[self.global_indexes]
 
+        # lists for the concatinated global list
+        self._glist = np.where(ptypes == ptype_ints['gas'])[0]
+        
         # individual global lists
         self.glist  = indexes[np.where(ptypes == ptype_ints['gas'])[0]]
         self.slist  = indexes[np.where(ptypes == ptype_ints['star'])[0]]
@@ -122,11 +127,15 @@ class Group(object):
         self.masses['gas']     = self.obj.yt_dataset.quan(mass_gas, self.obj.units['mass'])
         self.masses['stellar'] = self.obj.yt_dataset.quan(mass_star, self.obj.units['mass'])
         self.masses['baryon']  = self.obj.yt_dataset.quan(mass_baryon, self.obj.units['mass'])
-
+        
         if self.obj.nbh > 0:
             mass_bh = np.sum(self.obj.data_manager.mass[self.obj.data_manager.bhlist][self.bhlist])
             self.masses['bh']  = self.obj.yt_dataset.quan(mass_bh, self.obj.units['mass'])
-        
+
+        self.gas_fraction = 0.0
+        if self.masses['baryon'] > 0:
+            self.gas_fraction = self.masses['gas'].d / self.masses['baryon'].d
+
         self._calculate_total_mass()
             
     def _calculate_center_of_mass_quantities(self):
@@ -192,10 +201,40 @@ class Group(object):
             self._calculate_center_of_mass_quantities()
             self._unbind()
 
+    def _calculate_gas_quantities(self):
+        self.sfr = self.obj.yt_dataset.quan(0.0, '%s/%s' % (self.obj.units['mass'],self.obj.units['time']))
+        self.metallicities = dict(
+            mass_weighted = self.obj.yt_dataset.quan(0.0, ''),
+            sfr_weighted  = self.obj.yt_dataset.quan(0.0, '')            
+        )
+        self.temperatures['mass_weighted'] = self.obj.yt_dataset.quan(0.0, self.obj.units['temperature'])
+        self.temperatures['sfr_weighted']  = self.obj.yt_dataset.quan(0.0, self.obj.units['temperature'])
+        if self.ngas == 0:
+            return
 
+        gas_mass = self.obj.data_manager.mass[self._glist]        
+        gas_sfr  = self.obj.data_manager.gsfr[self.glist]
+        gas_Z    = self.obj.data_manager.gZ[self.glist]
+        gas_T    = self.obj.data_manager.gT[self.glist]
+        
+        gas_mass_sum = np.sum(gas_mass)    
+        gas_sfr_sum  = np.sum(gas_sfr)
+
+        if gas_sfr_sum == 0:
+            gas_sfr_sum = 1.0
+        
+        self.metallicities = dict(
+            mass_weighted = self.obj.yt_dataset.quan(np.sum(gas_Z * gas_mass) / gas_mass_sum, ''),
+            sfr_weighted  = self.obj.yt_dataset.quan(np.sum(gas_Z * gas_sfr ) / gas_sfr_sum,  '')
+        )
+        
+        self.temperatures['mass_weighted'] = self.obj.yt_dataset.quan(np.sum(gas_T * gas_mass) / gas_mass_sum, self.obj.units['temperature'])
+        self.temperatures['sfr_weighted']  = self.obj.yt_dataset.quan(np.sum(gas_T * gas_sfr ) / gas_sfr_sum,  self.obj.units['temperature'])
+        self.sfr = self.obj.yt_dataset.quan(gas_sfr_sum, '%s/%s' % (self.obj.units['mass'], self.obj.units['time']))
+        
     def _calculate_virial_quantities(self):
         """ Calculates virial quantities such as r200, circular velocity, and virial temperature """
-        sim = self.obj.simulation        
+        sim      = self.obj.simulation        
         rho_crit = sim.critical_density   # in Msun/kpc^3 PHYSICAL
         mass     = self.masses['total'].to('Msun')
         

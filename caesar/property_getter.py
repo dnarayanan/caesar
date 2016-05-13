@@ -12,6 +12,7 @@ particle_data_aliases = {
     'mass':'particle_mass',
     'u':'thermal_energy',
     'temp':'Temperature',
+    'temperature':'Temperature',
     'ne':'ElectronAbundance',
     'nh':'NeutralHydrogenAbundance',
     'pid':'particle_index',
@@ -116,7 +117,9 @@ class DatasetType(object):
             prop = self._get_particle_property_name(requested_prop)
 
         if not self.check_for_field(prop, ptype):
-            raise IOError('could not find %s for %s!' % (prop, ptype))
+            #raise IOError('could not find %s for %s!' % (prop, ptype))
+            print('Could not find %s for %s!' % (prop, ptype))
+            return None
 
         data = self.dd[ptype, prop]
 

@@ -80,7 +80,7 @@ def _write_attrib(obj_list, k, v, hd):
 def _write_dict(obj_list, k, v, hd):
     for kk,vv in six.iteritems(v):
         unit = False        
-        if isinstance(vv, (YTQuantity, YTArray)):            
+        if isinstance(vv, (YTQuantity, YTArray)):
             data = np.array([getattr(i,k)[kk].d for i in obj_list])
             unit = True
         else:

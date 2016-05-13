@@ -15,7 +15,7 @@ class CAESAR(object):
             mass='Msun',
             length='kpccm',
             velocity='km/s',
-            time='year',
+            time='yr',
             temperature='K'
         )
 
