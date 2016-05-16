@@ -8,7 +8,8 @@ class SimulationAttributes(object):
         ds = obj.yt_dataset
 
         self.cosmological_simulation = ds.cosmological_simulation
-        
+
+        self.XH              = 0.76        
         self.redshift        = ds.current_redshift
         self.time            = 1.0 / (1.0 + self.redshift)
         self.omega_matter    = ds.omega_matter
@@ -17,7 +18,7 @@ class SimulationAttributes(object):
         self.basename        = ds.basename
         self.hubble_constant = ds.hubble_constant
         self.parameters      = ds.parameters
-
+        
         self.boxsize         = ds.domain_width[0].to(obj.units['length'])
         self.boxsize_units   = str(self.boxsize.units)
 

@@ -165,8 +165,8 @@ def get_high_density_gas_indexes(obj):
     nH_thresh = 0.13
 
     rho  = get_property(obj, 'rho', 'gas').in_cgs()
-    rho /= 1.67262178e-24  # to atoms/cm^3
-    rho *= 0.76            # to hydrogen atoms / cm^3
+    rho /= 1.67262178e-24      # to atoms/cm^3
+    rho *= obj.simulation.XH   # to hydrogen atoms / cm^3
 
     indexes = np.where(rho >= nH_thresh)[0]
     return indexes

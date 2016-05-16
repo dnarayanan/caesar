@@ -78,24 +78,20 @@ def hydrogen_mass_calc(obj,**kwargs):
 
     sim = obj.simulation
     
-    if np.log10(sim.redshift + 1.0) > uvb['logz'][len(uvb['logz'])-1]:
+    if np.log10(obj.simulation.redshift + 1.0) > uvb['logz'][len(uvb['logz'])-1]:
         gamma_HI = 0.0
     else:
-        gamma_HI = np.interp(np.log10(sim.redshift + 1.0),
+        gamma_HI = np.interp(np.log10(obj.simulation.redshift + 1.0),
                              uvb['logz'],uvb['gH0'])
 
-    import sys
-    print 'yay'
-    sys.exit()
-        
     ## density thresholds in atoms/cm^3
     cdef double    low_rho_thresh = 0.001       # atoms/cm^3
     cdef double    rho_thresh     = 0.13        # atoms/cm^3
 
-    cdef double    XH          = obj.XH
+    cdef double    XH          = obj.simulation.XH
     cdef double    proton_mass = 1.67262178e-24 # g
     cdef double    FSHIELD     = 0.99
-    cdef double    redshift    = obj.redshift
+    cdef double    redshift    = obj.simulation.redshift
     
     ## Leroy et al 2008, Fig17 (THINGS) Table 6 ##
     cdef double    P0BLITZ     = 1.7e4
@@ -109,33 +105,31 @@ def hydrogen_mass_calc(obj,**kwargs):
     cdef double T1 = 7.036e5                    # K
 
     cdef double sigHI     = 3.27e-18 * (1.0+redshift)**(-0.2)
-    cdef double fbaryon   = obj.omega_baryon / obj.omega_matter
+    cdef double fbaryon   = obj.simulation.omega_baryon / obj.simulation.omega_matter
     cdef double nHss_part = 6.73e-3 * (sigHI/2.49e-18)**(-2./3.) * (fbaryon / 0.17)**(-1./3.)
     
-    pl = obj.global_particle_lists
-    pd = obj.particle_data
-
     ## global lists
-    cdef np.int32_t[:] halo_glist   = np.array(pl.halo_glist,dtype=np.int32)
-    cdef np.int32_t[:] galaxy_glist = np.array(pl.galaxy_glist,dtype=np.int32)
+    cdef np.int32_t[:] halo_glist   = np.array(obj.global_particle_lists.halo_glist,dtype=np.int32)
+    cdef np.int32_t[:] galaxy_glist = np.array(obj.global_particle_lists.galaxy_glist,dtype=np.int32)
 
-    ## particle properties
-    cdef np.float64_t[:,:] gpos  = pd['gpos'].in_units(obj.unit_length).d
-    cdef np.float64_t[:]   gmass = pd['gmass'].in_units(obj.unit_mass).d * XH  # H Msun
-    cdef np.float64_t[:]   grhoH = pd['grho'].in_cgs().d * XH / proton_mass    # H protons/cm^3
-    cdef np.float64_t[:]   gtemp = pd['gtemp'].d                               # K
-    cdef np.float64_t[:]   gsfr  = pd['gsfr'].in_units(obj.unit_sfr).d
-    cdef np.float64_t[:]   gnh   = pd['gnh'].d
-    cdef np.float64_t[:]   gfH2
-    
+    ## gas properties
+    from .property_getter import get_property, has_property
+    cdef np.float64_t[:,:] gpos  = obj.data_manager.pos[obj.data_manager.glist]
+    cdef np.float64_t[:]   gmass = obj.data_manager.mass[obj.data_manager.glist]
+    cdef np.float64_t[:]   grhoH = get_property(obj, 'rho', 'gas').in_cgs().d * XH / proton_mass
+    cdef np.float64_t[:]   gtemp = obj.data_manager.gT.to('K').d
+    cdef np.float64_t[:]    gsfr = obj.data_manager.gsfr.d
+    cdef np.float64_t[:]     gnh = get_property(obj, 'nh', 'gas').d
+    cdef np.float64_t[:]    gfH2
+        
     cdef int i
     cdef int nhalos    = len(obj.halos)
     cdef int ngalaxies = len(obj.galaxies)
     cdef int ngas      = len(gmass)
         
     cdef bint H2_data_present = 0
-    if obj.particle_data._has_field('gfH2'):
-        gfH2  = pd['gfH2'].d
+    if has_property(obj, 'gas', 'fH2'):
+        gfH2  = get_property(obj, 'fH2', 'gas').d
         H2_data_present = 1
     else:
         mylog.warning('Could not locate molecular fraction data. Estimating via Leroy+08')
@@ -205,10 +199,14 @@ def hydrogen_mass_calc(obj,**kwargs):
         halo_HImass[halo_glist[i]] += HImass[i]
         halo_H2mass[halo_glist[i]] += H2mass[i]
 
+    for i in range(0,nhalos):
+        obj.halos[i].masses['HI'] = obj.yt_dataset.quan(0.0, obj.units['mass'])
+        obj.halos[i].masses['H2'] = obj.yt_dataset.quan(0.0, obj.units['mass'])
+        
     ## assign halo HI & H2 masses to respective halos
     for i in range(0,nhalos):
-        obj.halos[i].masses['HI'] += YTQuantity(halo_HImass[i],obj.unit_mass,registry=obj.unit_registry)
-        obj.halos[i].masses['H2'] += YTQuantity(halo_H2mass[i],obj.unit_mass,registry=obj.unit_registry)
+        obj.halos[i].masses['HI'] += obj.yt_dataset.quan(halo_HImass[i], obj.units['mass'])
+        obj.halos[i].masses['H2'] += obj.yt_dataset.quan(halo_H2mass[i], obj.units['mass'])
 
     if len(obj.galaxies) == 0:
         return HImass,H2mass
@@ -225,8 +223,8 @@ def hydrogen_mass_calc(obj,**kwargs):
 
     cdef int gas_galaxy_index, max_index, n_internal_galaxies,ngas_internal
     cdef double d2
-    cdef double boxsize = obj.boxsize.d
-    cdef double halfbox = obj.boxsize.d / 2.0
+    cdef double boxsize = obj.simulation.boxsize.d
+    cdef double halfbox = obj.simulation.boxsize.d / 2.0
 
     for h in halos:
 
@@ -253,10 +251,14 @@ def hydrogen_mass_calc(obj,**kwargs):
                                     low_rho_thresh,
                                     boxsize,halfbox)
 
+    for i in range(0,ngalaxies):
+        obj.galaxies[i].masses['HI'] = obj.yt_dataset.quan(0.0, obj.units['mass'])
+        obj.galaxies[i].masses['H2'] = obj.yt_dataset.quan(0.0, obj.units['mass'])
+        
     ## assign galaxy HI & H2 masses to respective galaxies
     for i in range(0,ngalaxies):
-        obj.galaxies[i].masses['HI'] += YTQuantity(galaxy_HImass[i],obj.unit_mass,registry=obj.unit_registry)
-        obj.galaxies[i].masses['H2'] += YTQuantity(galaxy_H2mass[i],obj.unit_mass,registry=obj.unit_registry)
+        obj.galaxies[i].masses['HI'] += obj.yt_dataset.quan(galaxy_HImass[i], obj.units['mass'])
+        obj.galaxies[i].masses['H2'] += obj.yt_dataset.quan(galaxy_H2mass[i], obj.units['mass'])
 
     return HImass,H2mass
 

@@ -89,6 +89,7 @@ def get_mean_interparticle_separation(obj):
 
     Om = obj.yt_dataset.cosmology.omega_matter
     Ob = (bmass / (bmass + dmmass) * Om).d
+    obj.simulation.omega_baryon = Ob
     rhodm = ((Om - Ob) * 3.0 * Hubble**2 / (8.0 * np.pi * G)).d
     rhodm = obj.yt_dataset.quan(rhodm, 'code_mass/code_length**3')
 

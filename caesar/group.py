@@ -127,6 +127,7 @@ class Group(object):
         self.masses['gas']     = self.obj.yt_dataset.quan(mass_gas, self.obj.units['mass'])
         self.masses['stellar'] = self.obj.yt_dataset.quan(mass_star, self.obj.units['mass'])
         self.masses['baryon']  = self.obj.yt_dataset.quan(mass_baryon, self.obj.units['mass'])
+        self.masses['H']       = self.masses['gas'] * self.obj.simulation.XH
         
         if self.obj.nbh > 0:
             mass_bh = np.sum(self.obj.data_manager.mass[self.obj.data_manager.bhlist][self.bhlist])
@@ -213,9 +214,9 @@ class Group(object):
             return
 
         gas_mass = self.obj.data_manager.mass[self.__glist]        
-        gas_sfr  = self.obj.data_manager.gsfr[self.glist]
-        gas_Z    = self.obj.data_manager.gZ[self.glist]
-        gas_T    = self.obj.data_manager.gT[self.glist]
+        gas_sfr  = self.obj.data_manager.gsfr[self.glist].d
+        gas_Z    = self.obj.data_manager.gZ[self.glist].d
+        gas_T    = self.obj.data_manager.gT[self.glist].d
         
         gas_mass_sum = np.sum(gas_mass)    
         gas_sfr_sum  = np.sum(gas_sfr)

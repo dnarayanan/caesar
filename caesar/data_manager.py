@@ -45,9 +45,9 @@ class DataManager(object):
         gZ  = get_property(self.obj, 'metallicity', 'gas')
         gT  = get_property(self.obj, 'temperature', 'gas').to(self.obj.units['temperature'])
         
-        self.gsfr = sfr.d
-        self.gZ   = gZ.d
-        self.gT   = gT.d
+        self.gsfr = sfr
+        self.gZ   = gZ
+        self.gT   = gT
         
         
         
