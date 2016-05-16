@@ -1,4 +1,5 @@
-
+import numpy as np
+    
 def rotator(vals, ALPHA=0, BETA=0):
     """Rotate particle set around given angles.
 
@@ -17,8 +18,6 @@ def rotator(vals, ALPHA=0, BETA=0):
     rotated_pos = rotator(positions, 32.3, 55.2)
 
     """    
-    import numpy as np
-
     c  = np.cos(ALPHA)
     s  = np.sin(ALPHA)
     Rx = np.array([
@@ -48,3 +47,32 @@ def rotator(vals, ALPHA=0, BETA=0):
         rotator_cython(vals, Rx, Ry, ALPHA, BETA)
         
     return vals
+
+
+def calculate_local_densities(obj, group_list):
+    """Calculate the local number and mass density of objects.
+
+    Parameters
+    ----------
+    obj : SPHGR object
+    group_list : list
+        List of objects to perform this operation on.
+
+    """    
+    from .periodic_kdtree import PeriodicCKDTree
+
+    pos  = np.array([i.pos for i in group_list])
+    mass = np.array([i.masses['total'] for i in group_list])
+    box  = obj.simulation.boxsize
+    box  = np.array([box,box,box])
+    
+    TREE = PeriodicCKDTree(box, pos)
+
+    search_radius = obj.simulation.search_radius
+    search_volume = 4.0/3.0 * np.pi * search_radius**3
+
+    for group in group_list:
+        inrange = TREE.query_ball_point(group.pos, search_radius.d)
+        total_mass = obj.yt_dataset.quan(np.sum(mass[inrange]), obj.units['mass'])
+        group.local_mass_density   = total_mass / search_volume
+        group.local_number_density = float(len(inrange)) / search_volume

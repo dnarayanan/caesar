@@ -69,7 +69,7 @@ class Group(object):
     def _cleanup(self):
         """ cleanup function to delete attributes no longer needed """
         self._delete_attribute('global_indexes')
-        self._delete_attribute('_glist')
+        self._delete_attribute('__glist')
         self._remove_dm_references()
 
 
@@ -97,8 +97,8 @@ class Group(object):
         indexes = self.obj.data_manager.index[self.global_indexes]
 
         # lists for the concatinated global list
-        self._glist = np.where(ptypes == ptype_ints['gas'])[0]
-        
+        self.__glist = np.where(ptypes == ptype_ints['gas'])[0]
+
         # individual global lists
         self.glist  = indexes[np.where(ptypes == ptype_ints['gas'])[0]]
         self.slist  = indexes[np.where(ptypes == ptype_ints['star'])[0]]
@@ -212,7 +212,7 @@ class Group(object):
         if self.ngas == 0:
             return
 
-        gas_mass = self.obj.data_manager.mass[self._glist]        
+        gas_mass = self.obj.data_manager.mass[self.__glist]        
         gas_sfr  = self.obj.data_manager.gsfr[self.glist]
         gas_Z    = self.obj.data_manager.gZ[self.glist]
         gas_T    = self.obj.data_manager.gT[self.glist]

@@ -21,6 +21,8 @@ class SimulationAttributes(object):
         self.boxsize         = ds.domain_width[0].to(obj.units['length'])
         self.boxsize_units   = str(self.boxsize.units)
 
+        self.search_radius   = ds.quan(500.0, 'kpc').to(obj.units['length'])
+
         H0 = self.hubble_constant * 100.0
         if self.cosmological_simulation:
             Om_0 = ds.cosmology.omega_matter

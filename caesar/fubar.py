@@ -2,6 +2,7 @@ import numpy as np
 from .group import create_new_group
 from .property_getter import get_property, get_particles_for_FOF, get_high_density_gas_indexes
 from .property_getter import ptype_ints
+from .utils import calculate_local_densities
 
 from yt.extern import six
 from yt.extern.tqdm import tqdm
@@ -174,7 +175,8 @@ def fubar(obj, find_type, **kwargs):
     setattr(obj.global_particle_lists, '%s_glist'  % find_type, glist)
     setattr(obj.global_particle_lists, '%s_slist'  % find_type, slist)
     setattr(obj.global_particle_lists, '%s_dmlist' % find_type, dmlist)       
-
+    
+    calculate_local_densities(obj, group_list)
     
     if find_type == 'halo':
         obj.halos  = group_list
