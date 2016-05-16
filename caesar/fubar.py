@@ -83,9 +83,18 @@ def get_mean_interparticle_separation(obj):
     ndm    = len(dmmass)
     dmmass = np.sum(dmmass)
 
-    gmass = get_property(obj, 'mass', 'gas').to('code_mass')
-    smass = get_property(obj, 'mass', 'star').to('code_mass')
-    bmass = np.sum(gmass) + np.sum(smass)
+    gmass  = np.array([0.0])
+    smass  = np.array([0.0])
+    bhmass = np.array([0.0])
+
+    from .property_getter import has_ptype
+    if has_ptype(obj, 'gas'):
+        gmass = get_property(obj, 'mass', 'gas').to('code_mass')
+    if has_ptype(obj, 'star'):
+        smass = get_property(obj, 'mass', 'star').to('code_mass')
+    if obj.data_manager.blackholes and has_ptype(obj, 'bh'):
+        bhmass= get_property(obj, 'mass', 'bh').to('code_mass')        
+    bmass = np.sum(gmass) + np.sum(smass) + np.sum(bhmass)
 
     Om = obj.yt_dataset.cosmology.omega_matter
     Ob = (bmass / (bmass + dmmass) * Om).d
@@ -106,6 +115,9 @@ def fubar(obj, find_type, **kwargs):
     pos = obj.data_manager.pos
 
     if find_type == 'galaxy':
+        if not obj.simulation.baryons_present:
+            return
+        
         LL *= 0.2
 
         # here we want to perform FOF on high density gas + stars

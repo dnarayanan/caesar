@@ -55,7 +55,12 @@ class SimulationAttributes(object):
         self.critical_density = ds.quan(
             (3.0 * self.H_z.d**2) / (8.0 * np.pi * self.G.d),
             'Msun / kpc**3'
-        )        
+        )
+
+        from .property_getter import has_ptype
+        self.baryons_present = False
+        if has_ptype(obj, 'gas') or has_ptype(obj, 'star'):
+            self.baryons_present = True
 
         
     def _serialize(self, obj, hd):

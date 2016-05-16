@@ -9,7 +9,7 @@ def assign_galaxies_to_halos(obj):
     each halo.
 
     """
-    if not obj.has_galaxies:
+    if not obj._has_galaxies:
         return
     
     h_glist = obj.global_particle_lists.halo_glist

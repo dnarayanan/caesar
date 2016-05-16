@@ -8,7 +8,7 @@ def link_galaxies_and_halos(obj):
     each CAESAR file.
 
     """
-    if not obj.has_galaxies:
+    if not obj._has_galaxies:
         return
 
     # halos

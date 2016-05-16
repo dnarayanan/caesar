@@ -59,6 +59,8 @@ def hydrogen_mass_calc(obj,**kwargs):
         Contains the HImass and H2 mass of each individual particle.
 
     """
+    if not obj.simulation.baryons_present:
+        return 0,0
     if not check_values(obj):
         return 0,0
 

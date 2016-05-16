@@ -49,7 +49,7 @@ class CAESAR(object):
         self._assign_simulation_attributes()
 
     @property
-    def has_galaxies(self):
+    def _has_galaxies(self):
         """ ngalaxies gets assigned during fubar() """
         if hasattr(self,'ngalaxies'):
             return True
