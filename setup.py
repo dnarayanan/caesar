@@ -9,6 +9,9 @@ cython_extensions = [
     Extension('caesar.group_funcs',
               ['caesar/group_funcs/group_funcs.pyx'],
               include_dirs = [np.get_include()]),
+    Extension('caesar.hydrogen_mass_calc',
+              ['caesar/hydrogen_mass_calc/hydrogen_mass_calc.pyx'],
+              include_dirs = [np.get_include()]),
 ]
 
 setup(

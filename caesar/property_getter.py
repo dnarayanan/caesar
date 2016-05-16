@@ -46,6 +46,7 @@ class DatasetType(object):
     def __init__(self, ds):
         self.ds      = ds
         self.ds_type = ds.__class__.__name__
+        self.dd      = ds.all_data()
 
         if self.ds_type not in ptype_aliases.keys():
             raise NotImplementedError('%s not yet supported' % ds_type)
@@ -59,73 +60,79 @@ class DatasetType(object):
         else:
             self.grid = False
 
+    def has_ptype(self, requested_ptype):
+        """ Returns True/False if requested ptype is present """
+        requested_ptype = requested_ptype.lower()
+        if requested_ptype in self.ptype_aliases.keys():
+            ptype = self.ptype_aliases[requested_ptype]
+            if requested_ptype == 'gas' and self.grid:
+                for field in self.ds.derived_field_list:
+                    if field[0] == ptype:
+                        return True
+            else:
+                if ptype in self.ds.particle_fields_by_type:
+                    return True
+                for field in self.ds.derived_field_list:
+                    if field[0] == ptype:
+                        return True
+        return False
 
-    def check_for_field(self, prop, ptype):
-        present = False
-        fields = self.ds.particle_fields_by_type[ptype]
-        if prop in fields:
-            present = True
+    def get_ptype_name(self, requested_ptype):
+        if not self.has_ptype(requested_ptype):
+            raise NotImplementedError('Could not find %s ptype!' % requested_ptype)
+        return self.ptype_aliases[requested_ptype.lower()]
+
+    def get_property_name(self, requested_ptype, requested_prop):
+        prop  = requested_prop.lower()
+        ptype = requested_ptype.lower()
+        if ptype == 'gas' and self.grid:
+            if prop in grid_gas_aliases.keys():
+                return grid_gas_aliases[prop]
         else:
-            fields = self.ds.derived_field_list
-            for f in fields:
-                if f[0] == ptype and f[1] == prop:
-                    present = True
-                    break
-        return present
-        
-    def _get_particle_property_name(self, request):
-        if request in particle_data_aliases.keys():
-            prop = particle_data_aliases[request]
-        else:
-            prop = request
+            if prop in particle_data_aliases.keys():
+                return particle_data_aliases[prop]
         return prop
+            
+    def has_property(self, requested_ptype, requested_prop):
+        prop  = self.get_property_name(requested_ptype, requested_prop)
+        ptype = self.get_ptype_name(requested_ptype)
 
-    def _get_grid_property_name(self, request):
-        if request in grid_gas_aliases.keys():
-            prop = grid_gas_aliases[request]
-        else:
-            prop = request
-        return prop
+        if ptype in self.ds.particle_fields_by_type:
+            fields = self.ds.particle_fields_by_type[ptype]
+            if prop in fields:
+                return True
+    
+        fields = self.ds.derived_field_list
+        for f in fields:
+            if f[0] == ptype and f[1] == prop:
+                return True
 
-    def _get_ptype_name(self, request):
-        if request in self.ptype_aliases.keys():
-            return self.ptype_aliases[request]
-        else:
-            raise NotImplementedError('could not find %s ptype!' % request)
+        return False
 
+
+    def get_property(self, requested_ptype, requested_prop):
+        if not self.has_ptype(requested_ptype):
+            raise NotImplementedError('ptype %s not found!' % requested_ptype)
+        if not self.has_property(requested_ptype, requested_prop):
+            raise NotImplementedError('prop %s not found!' % requested_prop)
+
+        ptype = self.get_ptype_name(requested_ptype)
+        prop  = self.get_property_name(requested_ptype, requested_prop)
+
+        if self.ds_type == 'EnzoDataset':
+            self._set_indexes_for_enzo(ptype, requested_ptype)
+
+        data = self.dd[ptype, prop]
+        if not isinstance(self.indexes, str):
+            data = data[self.indexes]
+        return data
         
+
     def _set_indexes_for_enzo(self, proper_ptype, requested_ptype):
         ptype_vals = dict(gas=0, dm=1, star=2)
         if ptype_vals[requested_ptype] > 0:
             self.indexes = np.where(self.dd[proper_ptype, 'particle_type'] == ptype_vals[requested_ptype])[0]
             
-    def get_property(self, requested_prop, requested_ptype, indexes='all'):
-        self.indexes = indexes
-        if not hasattr(self, 'dd'):
-            self.dd = self.ds.all_data()
-
-        ptype = self._get_ptype_name(requested_ptype)
-
-        ## special enzo case
-        if self.ds_type == 'EnzoDataset':
-            self._set_indexes_for_enzo(ptype, requested_ptype)
-        ##
-        
-        if requested_ptype == 'gas' and self.grid:
-            prop = self._get_grid_property_name(requested_prop)
-        else:
-            prop = self._get_particle_property_name(requested_prop)
-
-        if not self.check_for_field(prop, ptype):
-            #raise IOError('could not find %s for %s!' % (prop, ptype))
-            print('Could not find %s for %s!' % (prop, ptype))
-            return None
-
-        data = self.dd[ptype, prop]
-
-        if not isinstance(self.indexes, str):
-            data = data[self.indexes]
-        return data
 
 """    
 def filter_enzo_results(obj, data, ptype, requested_ptype):
@@ -141,23 +148,17 @@ def filter_enzo_results(obj, data, ptype, requested_ptype):
         indexes = np.where(obj._ds_type.dd[ptype, 'particle_type'] == ptype_val)[0]
         data = data[indexes]
     return data
-"""    
+"""
 
-def ptype_present(obj, requested_ptype):
-    requested_ptype = requested_ptype.lower()
-    ptype = obj._ds_type._get_ptype_name(requested_ptype)
-    if ptype in obj._ds_type.ds.particle_fields_by_type:
-        return True
-    else:
-        return False    
+def has_ptype(obj, requested_ptype):
+    return obj._ds_type.has_ptype(requested_ptype)
+        
+def has_property(obj, requested_ptype, requested_prop):
+    return obj._ds_type.has_property(requested_ptype, requested_prop)
 
-def get_property(obj, requested_prop, requested_ptype, indexes='all'):
-    requested_prop  = requested_prop.lower()
-    requested_ptype = requested_ptype.lower()
-
-    ds_type = obj._ds_type
-    
-    return obj._ds_type.get_property(requested_prop, requested_ptype, indexes=indexes)
+def get_property(obj, requested_prop, requested_ptype):
+    ds_type = obj._ds_type    
+    return obj._ds_type.get_property(requested_ptype, requested_prop)
 
 
 def get_high_density_gas_indexes(obj):
@@ -180,30 +181,21 @@ def get_particles_for_FOF(obj, ptypes, find_type=None):
     indexes = np.empty(0,dtype=np.int32)
     
     for p in ptypes:
-        if not ptype_present(obj, p):
+        if not has_ptype(obj, p):
             continue
-        
-        ind = 'all'
-        #if p == 'gas' and find_type == 'galaxy':
-        #    ind = get_high_density_gas_indexes(obj)
-            
-        data = get_property(obj, 'pos', p, indexes=ind).to(obj.units['length'])
+                    
+        data = get_property(obj, 'pos', p).to(obj.units['length'])
         pos  = np.append(pos, data.d, axis=0)
         
-        data = get_property(obj, 'vel', p, indexes=ind).to(obj.units['velocity'])
+        data = get_property(obj, 'vel', p).to(obj.units['velocity'])
         vel  = np.append(vel, data.d, axis=0)
         
-        data = get_property(obj, 'mass', p, indexes=ind).to(obj.units['mass'])
+        data = get_property(obj, 'mass', p).to(obj.units['mass'])
         mass = np.append(mass, data.d, axis=0)
 
         nparts = len(data)
         
         ptype   = np.append(ptype,   np.full(nparts, ptype_ints[p], dtype=np.int32), axis=0)
-
-        if isinstance(ind, str):
-            i = np.arange(0, nparts, dtype=np.int32)
-        else:
-            i = ind.astype(np.int32)        
-        indexes = np.append(indexes, i, axis=0) 
+        indexes = np.append(indexes, np.arange(0, nparts, dtype=np.int32))
 
     return dict(pos=pos,vel=vel,mass=mass,ptype=ptype,indexes=indexes)

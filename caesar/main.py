@@ -93,4 +93,6 @@ class CAESAR(object):
         link.link_galaxies_and_halos(self)
         assign.assign_central_galaxies(self)
         link.create_sublists(self)
-
+        
+        import hydrogen_mass_calc as mass_calc
+        mass_calc.hydrogen_mass_calc(self)
