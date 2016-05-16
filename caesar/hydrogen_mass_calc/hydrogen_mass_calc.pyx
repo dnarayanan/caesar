@@ -64,7 +64,7 @@ def hydrogen_mass_calc(obj,**kwargs):
     if not check_values(obj):
         return 0,0
 
-    tmp_str = 'calculating H/HI/H2 masses for'
+    tmp_str = 'calculating HI/H2 masses for'
     cdef bint all_gas = 0
     if 'calculate_H_for_all_gas' in kwargs and kwargs['calculate_H_for_all_gas']:
         all_gas = 1

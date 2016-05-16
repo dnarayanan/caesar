@@ -43,7 +43,7 @@ def assign_central_galaxies(obj):
     a central and all other satellites.
 
     """
-    if not obj.has_galaxies:
+    if not obj._has_galaxies:
         return
     
     obj.central_galaxies   = []

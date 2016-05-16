@@ -34,7 +34,7 @@ def create_sublists(obj):
         - unassigned_galaxies (those without a halo)
 
     """
-    if not obj.has_galaxies:
+    if not obj._has_galaxies:
         return
     
     obj.central_galaxies   = []
