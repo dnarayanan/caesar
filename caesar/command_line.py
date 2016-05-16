@@ -73,6 +73,6 @@ def run_multiple_caesar(dir):
         try:
             run_caesar(f)
         except:
-            print 'failed on %s' % f
+            print('failed on %s' % f)
             pass
         

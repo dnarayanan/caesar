@@ -38,12 +38,12 @@ def fof(obj, positions, LL):
     rgi = RockstarGroupiesInterface(ds)
     rgi.setup_rockstar(ds.mass_unit * ds.parameters['MassTable'][1], force_res = LL / 0.2 / 50.)
     ind = np.argsort(group_tags)
-    print 'running rs'
+    print('running rs')
     
-    print pdata.keys()
+    print(pdata.keys())
     #pcounts = rgi.make_rockstar_fof(ind, group_tags, pdata['pos'], pdata['vel'], pdata['mass'], pdata['ptype'])
     pcounts = rgi.make_rockstar_fof(ind, group_tags, pdata['pos'], pdata['vel'])
-    print 'pcounts:',pcounts
+    print('pcounts:',pcounts)
     #rgi.output_halos()
     halos = rgi.return_halos()
     #import ipdb; ipdb.set_trace()
@@ -100,8 +100,8 @@ def get_mean_interparticle_separation(obj):
     Ob = (bmass / (bmass + dmmass) * Om).d
     obj.simulation.omega_baryon = Ob
 
-    #print len(bhmass)
-    #print 'Ob= %f' % (Ob)
+    #print(len(bhmass))
+    #print('Ob= %f' % (Ob))
     
     rhodm = ((Om - Ob) * 3.0 * Hubble**2 / (8.0 * np.pi * G)).d
     rhodm = obj.yt_dataset.quan(rhodm, 'code_mass/code_length**3')

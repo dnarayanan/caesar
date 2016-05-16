@@ -105,7 +105,7 @@ def serialize_global_attribs(obj, hd):
         elif isinstance(v, (int, float, bool, np.number)):
             hd.attrs.create(k, v)
         #else:
-        #    print k,type(v)
+        #    print(k,type(v))
 
     if len(units) > 0:
         uhd = hd.create_group('global_attribute_units')
