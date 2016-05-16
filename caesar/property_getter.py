@@ -25,7 +25,9 @@ grid_gas_aliases = {
     'mass':'cell_mass',
     'rho':'density',
     'temp':'temperature',
-    'metallicity':'metallicity',   
+    'metallicity':'metallicity',
+    'pos':'x',
+    'vel':'velocity_x',
 }
 
 ptype_ints = dict(
@@ -119,15 +121,31 @@ class DatasetType(object):
         ptype = self.get_ptype_name(requested_ptype)
         prop  = self.get_property_name(requested_ptype, requested_prop)
 
-        if self.ds_type == 'EnzoDataset':
+        if self.ds_type == 'EnzoDataset' and requested_ptype != 'gas':
             self._set_indexes_for_enzo(ptype, requested_ptype)
-
-        data = self.dd[ptype, prop]
+            
+        if self.grid and (requested_prop == 'pos' or requested_prop == 'vel'):
+            data = self._get_gas_grid_posvel(requested_prop)
+        else:
+            data = self.dd[ptype, prop]
+            
         if not isinstance(self.indexes, str):
             data = data[self.indexes]
+            self.indexes = 'all'
         return data
         
-
+    def _get_gas_grid_posvel(self,request):
+        if request == 'pos':
+            x = self.dd['gas','x']
+            y = self.dd['gas','y']
+            z = self.dd['gas','z']
+            return self.ds.arr(np.column_stack((x.d,y.d,z.d)), x.units)
+        elif request == 'vel':
+            vx = self.dd['gas','velocity_x']
+            vy = self.dd['gas','velocity_y']
+            vz = self.dd['gas','velocity_z']
+            return self.ds.arr(np.column_stack((vx.d,vy.d,vz.d)), vx.units)
+            
     def _set_indexes_for_enzo(self, proper_ptype, requested_ptype):
         ptype_vals = dict(gas=0, dm=1, star=2)
         if ptype_vals[requested_ptype] > 0:
@@ -183,7 +201,7 @@ def get_particles_for_FOF(obj, ptypes, find_type=None):
     for p in ptypes:
         if not has_ptype(obj, p):
             continue
-                    
+        
         data = get_property(obj, 'pos', p).to(obj.units['length'])
         pos  = np.append(pos, data.d, axis=0)
         

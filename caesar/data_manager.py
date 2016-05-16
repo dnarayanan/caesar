@@ -1,6 +1,6 @@
 import numpy as np
 
-from .property_getter import ptype_ints, get_particles_for_FOF, get_property
+from .property_getter import ptype_ints, get_particles_for_FOF, get_property, has_property
 
 class DataManager(object):
     def __init__(self, obj):
@@ -15,7 +15,11 @@ class DataManager(object):
         if 'blackholes' in self.obj._kwargs and self.obj._kwargs['blackholes']:
             self.ptypes.append('bh')
             self.blackholes = True
-        self.ptypes.append('dm')            
+        self.ptypes.append('dm')
+
+        #if self.obj._ds_type.grid:
+        #    self.ptypes.remove('gas')
+        #print self.ptypes
         
     def load_data(self):
         pdata = get_particles_for_FOF(self.obj, self.ptypes)
@@ -37,14 +41,26 @@ class DataManager(object):
         self.obj.ndm   = len(self.dmlist)
         self.obj.nbh   = len(self.bhlist)
 
+
     def load_gas_data(self):
         if self.obj.ngas == 0:
             return
 
-        sfr = get_property(self.obj, 'sfr', 'gas').to('%s/%s' % (self.obj.units['mass'], self.obj.units['time']))
-        gZ  = get_property(self.obj, 'metallicity', 'gas')
-        gT  = get_property(self.obj, 'temperature', 'gas').to(self.obj.units['temperature'])
-        
+        sfr_unit = '%s/%s' % (self.obj.units['mass'], self.obj.units['time'])
+
+        sfr = self.obj.yt_dataset.arr(np.zeros(self.obj.ngas), sfr_unit)
+        gZ  = self.obj.yt_dataset.arr(np.zeros(self.obj.ngas), '')        
+        gT  = self.obj.yt_dataset.arr(np.zeros(self.obj.ngas), self.obj.units['temperature'])
+            
+        if has_property(self.obj, 'gas', 'sfr'):
+            sfr = get_property(self.obj, 'sfr', 'gas').to(sfr_unit)
+
+        if has_property(self.obj, 'gas', 'metallicity'):            
+            gZ  = get_property(self.obj, 'metallicity', 'gas')
+
+        if has_property(self.obj, 'gas', 'temperature'):
+            gT  = get_property(self.obj, 'temperature', 'gas').to(self.obj.units['temperature'])
+
         self.gsfr = sfr
         self.gZ   = gZ
         self.gT   = gT

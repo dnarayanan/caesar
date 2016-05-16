@@ -147,7 +147,10 @@ def fubar(obj, find_type, **kwargs):
         if GroupID < 0: continue
         groupings[GroupID] = create_new_group(obj, find_type)
 
-    if len(groupings) == 0: return
+    if len(groupings) == 0:
+        print('No objects of type %s found!' % find_type)
+        return
+    
     tags = fof_tags
         
     nparts = len(tags)
