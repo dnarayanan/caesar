@@ -4,14 +4,21 @@ import os
 
 def run():
     parser = argparse.ArgumentParser()
-    parser.add_argument('infile', help='input file', type=str)
+    parser.add_argument('input', help='input file or input directory', type=str)
     args = parser.parse_args()
     
-    infile = args.infile
+    input = args.input
 
+    if os.path.isdir(input):
+        run_multiple_caesar(input)
+        return
+
+    if not os.path.isfile(input):
+        raise IOException('not a valid file!')
+    
     caesar_file = False
     try:
-        hd = h5py.File(infile, 'r')
+        hd = h5py.File(input, 'r')
         if 'caesar' in hd.attrs.keys() and hd.attrs['caesar']:
             caesar_file = True
         hd.close()
@@ -19,10 +26,11 @@ def run():
         pass
     
     if caesar_file:
-        open_caesar_file(infile)        
+        open_caesar_file(input)        
     else:
-        run_caesar(infile)
+        run_caesar(input)
 
+        
 def open_caesar_file(infile):
     import IPython
     from loader import load
@@ -48,3 +56,23 @@ def run_caesar(infile):
     obj = CAESAR(yt.load(infile))
     obj.member_search()
     obj.save(outfile)
+
+
+def run_multiple_caesar(dir):
+    import glob
+
+    # look for hdf5 files
+    infiles = glob.glob('*.hdf5')
+    if len(infiles) == 0:
+        infiles = glob.glob('*.bin')
+    if len(infiles) == 0:
+        raise IOError('Could not locate any hdf5 or bin files in %s!' % dir)
+
+
+    for f in infiles:
+        try:
+            run_caesar(f)
+        except:
+            print 'failed on %s' % f
+            pass
+        

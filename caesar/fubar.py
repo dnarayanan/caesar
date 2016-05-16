@@ -141,12 +141,13 @@ def fubar(obj, find_type, **kwargs):
         
     tag_sort = np.argsort(fof_tags)
 
-    unique_groupIDs = np.unique(fof_tags)    
+    unique_groupIDs = np.unique(fof_tags)
     groupings = {}
     for GroupID in unique_groupIDs:
         if GroupID < 0: continue
         groupings[GroupID] = create_new_group(obj, find_type)
 
+    if len(groupings) == 0: return
     tags = fof_tags
         
     nparts = len(tags)
