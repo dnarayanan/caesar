@@ -26,6 +26,11 @@ Contents:
 	:undoc-members:
 	:show-inheritance:
 
+.. automodule:: utils
+	:members:
+	:undoc-members:
+	:show-inheritance:
+
 
 Indices and tables
 ==================

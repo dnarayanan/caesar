@@ -59,7 +59,7 @@ def calculate_local_densities(obj, group_list):
         List of objects to perform this operation on.
 
     """    
-    from .periodic_kdtree import PeriodicCKDTree
+    from caesar.periodic_kdtree import PeriodicCKDTree
 
     pos  = np.array([i.pos for i in group_list])
     mass = np.array([i.masses['total'] for i in group_list])
