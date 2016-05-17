@@ -10,3 +10,4 @@ Code Reference
    group
    utils
    assignment_linking
+   property_getter

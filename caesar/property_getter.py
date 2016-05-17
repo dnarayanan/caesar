@@ -45,6 +45,8 @@ ptype_aliases = dict(
 )
 
 class DatasetType(object):
+    """Class to help check for, or load data from different dataset 
+    types."""
     def __init__(self, ds):
         self.ds      = ds
         self.ds_type = ds.__class__.__name__
@@ -63,7 +65,18 @@ class DatasetType(object):
             self.grid = False
 
     def has_ptype(self, requested_ptype):
-        """ Returns True/False if requested ptype is present """
+        """Returns True/False if requested ptype is present.
+
+        Parameters
+        ----------
+        requested_ptype : str
+            Typically 'gas','dm','star','bh'
+
+        Returns
+        -------
+        bolean
+
+        """
         requested_ptype = requested_ptype.lower()
         if requested_ptype in self.ptype_aliases.keys():
             ptype = self.ptype_aliases[requested_ptype]
@@ -80,11 +93,39 @@ class DatasetType(object):
         return False
 
     def get_ptype_name(self, requested_ptype):
+        """Gets the correct ptype name for this dataset.
+
+        Parameters
+        ----------
+        requested_ptype : str
+            Typically 'gas','dm','star','bh'
+
+        Returns
+        -------
+        str
+            The proper ptype name for a given dataset.
+
+        """        
         if not self.has_ptype(requested_ptype):
             raise NotImplementedError('Could not find %s ptype!' % requested_ptype)
         return self.ptype_aliases[requested_ptype.lower()]
 
     def get_property_name(self, requested_ptype, requested_prop):
+        """Gets the correct property/field name for this dataset.
+
+        Parameters
+        ----------
+        requested_ptype : str
+            Typically 'gas','dm','star','bh'
+        requested_prop : str
+            Requested property/field.
+
+        Returns
+        -------
+        str
+            The proper property name for a given dataset.
+
+        """        
         prop  = requested_prop.lower()
         ptype = requested_ptype.lower()
         if ptype == 'gas' and self.grid:
@@ -96,6 +137,20 @@ class DatasetType(object):
         return prop
             
     def has_property(self, requested_ptype, requested_prop):
+        """Returns True/False if requested property/field is present.
+
+        Parameters
+        ----------
+        requested_ptype : str
+            Typically 'gas','dm','star','bh'
+        requested_prop : str
+            Requested property/field.
+
+        Returns
+        -------
+        bolean
+
+        """
         prop  = self.get_property_name(requested_ptype, requested_prop)
         ptype = self.get_ptype_name(requested_ptype)
 
@@ -113,6 +168,21 @@ class DatasetType(object):
 
 
     def get_property(self, requested_ptype, requested_prop):
+        """Returns the requested property if present.
+
+        Parameters
+        ----------
+        requested_ptype : str
+            Typically 'gas','dm','star','bh'
+        requested_prop : str
+            Requested property/field.
+
+        Returns
+        -------
+        np.ndarray
+            The requested property values.
+
+        """
         if not self.has_ptype(requested_ptype):
             raise NotImplementedError('ptype %s not found!' % requested_ptype)
         if not self.has_property(requested_ptype, requested_prop):
@@ -169,17 +239,72 @@ def filter_enzo_results(obj, data, ptype, requested_ptype):
 """
 
 def has_ptype(obj, requested_ptype):
+    """Helper function to check if ptype/field is present.
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main caesar object.
+    requested_ptype : str
+        Requested ptype ('gas','star','dm','bh')
+
+    Returns
+    -------
+    boolean
+
+    """
     return obj._ds_type.has_ptype(requested_ptype)
         
 def has_property(obj, requested_ptype, requested_prop):
+    """Helper function to check if property is present.
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main caesar object.
+    requested_ptype : str
+        Requested ptype ('gas','star','dm','bh')
+    requested_prop : str
+        Requested property name
+
+    Returns
+    -------
+    boolean
+
+    """
     return obj._ds_type.has_property(requested_ptype, requested_prop)
 
 def get_property(obj, requested_prop, requested_ptype):
+    """Helper function to return a property.
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main caesar object.
+    requested_prop : str
+        Requested property name
+    requested_ptype : str
+        Requested ptype ('gas','star','dm','bh')
+
+    Returns
+    -------
+    np.ndarray
+        The requested property for the requested particle/field type.
+
+    """
     ds_type = obj._ds_type    
     return obj._ds_type.get_property(requested_ptype, requested_prop)
 
 
 def get_high_density_gas_indexes(obj):
+    """Returns the indexes of gas with densities above 0.13 protons/cm^3.
+    
+    Returns
+    -------
+    np.ndarray
+        Index array of high density gas.
+
+    """
     nH_thresh = 0.13
 
     rho  = get_property(obj, 'rho', 'gas').in_cgs()
@@ -190,7 +315,25 @@ def get_high_density_gas_indexes(obj):
     return indexes
 
 def get_particles_for_FOF(obj, ptypes, find_type=None):
+    """This function concats all of the valid particle/field types
+    into pos/vel/mass/ptype/index arrays for use throughout the 
+    analysis.
 
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main caesar object.
+    ptypes : list
+        List containing which ptypes to concat.
+    find_type : str (optional)
+        Depreciated.
+
+    Returns
+    -------
+    dict
+        Dictionary containing the keys 'pos','vel','mass','ptype','indexes'.
+
+    """    
     pos  = np.empty((0,3))
     vel  = np.empty((0,3))
     mass = np.empty(0)

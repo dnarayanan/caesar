@@ -94,7 +94,7 @@ def get_mean_interparticle_separation(obj):
 
     Parameters
     ----------
-    obj : :class:`main.CAESAR'
+    obj : :class:`main.CAESAR`
         Main caesar object.
 
     Returns

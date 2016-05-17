@@ -1,10 +1,12 @@
 import numpy as np
 
 class SimulationAttributes(object):
+    """A class to hold simulation attributes."""
     def __init__(self):
         pass
 
-    def create_attributes(self, obj):    
+    def create_attributes(self, obj):
+        """After loading in a yt dataset, store local attributes here."""
         ds = obj.yt_dataset
 
         self.cosmological_simulation = ds.cosmological_simulation

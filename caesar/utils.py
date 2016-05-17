@@ -15,7 +15,7 @@ def rotator(vals, ALPHA=0, BETA=0):
 
     Examples
     --------
-    rotated_pos = rotator(positions, 32.3, 55.2)
+    >>> rotated_pos = rotator(positions, 32.3, 55.2)
 
     """    
     c  = np.cos(ALPHA)
