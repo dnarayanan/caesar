@@ -1,8 +1,8 @@
 import six
 import numpy as np
 
-from .property_getter import ptype_ints
-from .group_funcs import get_periodic_r
+from caesar.property_getter import ptype_ints
+from caesar.group_funcs import get_periodic_r
 
 UNBIND_HALOS    = False
 UNBIND_GALAXIES = False
@@ -16,7 +16,7 @@ class GroupList(object):
     def __get__(self, instance, owner):
         if not hasattr(instance, '_%s' % self.name) or \
            isinstance(getattr(instance, '_%s' % self.name), int):
-            from .loader import restore_single_list
+            from caesar.loader import restore_single_list
             restore_single_list(instance.obj, instance, self.name)
         return getattr(instance, '_%s' % self.name)
 
@@ -334,7 +334,7 @@ class Group(object):
         ey = np.sin(THETA) * np.sin(PHI)
         ez = np.cos(THETA)
 
-        from .utils import rotator
+        from caesar.utils import rotator
         ALPHA = np.arctan2(Ly.d, Lz.d)
         p     = rotator(np.array([ex,ey,ez]), ALPHA)
         BETA  = np.arctan2(p[0],p[2])
@@ -353,7 +353,7 @@ class Group(object):
             
     def _calculate_radial_quantities(self):
         """ Calculate various component radii and half radii """
-        from group_funcs import get_half_mass_radius, get_full_mass_radius
+        from caesar.group_funcs import get_half_mass_radius, get_full_mass_radius
         
         r = np.empty(len(self.global_indexes), dtype=np.float64)
         get_periodic_r(self.obj.simulation.boxsize.d, self.pos.d, self.obj.data_manager.pos[self.global_indexes], r)

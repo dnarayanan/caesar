@@ -1,8 +1,8 @@
 import numpy as np
-from .group import create_new_group
-from .property_getter import get_property, get_particles_for_FOF, get_high_density_gas_indexes
-from .property_getter import ptype_ints
-from .utils import calculate_local_densities
+from caesar.group import create_new_group
+from caesar.property_getter import get_property, get_particles_for_FOF, get_high_density_gas_indexes
+from caesar.property_getter import ptype_ints
+from caesar.utils import calculate_local_densities
 
 from yt.extern import six
 from yt.extern.tqdm import tqdm

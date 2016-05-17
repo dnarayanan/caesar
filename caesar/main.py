@@ -1,10 +1,11 @@
-from .property_getter import DatasetType
-from .particle_list import ParticleListContainer
-from .simulation_attributes import SimulationAttributes
+from caesar.property_getter import DatasetType
+from caesar.particle_list import ParticleListContainer
+from caesar.simulation_attributes import SimulationAttributes
 
 from yt.funcs import mylog, get_hash
 
 class CAESAR(object):
+    """ Master CAESAR class """
 
     def __init__(self, ds=0, *args, **kwargs):
         self.args   = args
@@ -57,24 +58,24 @@ class CAESAR(object):
             return False
 
     def _load_data(self):
-        from .data_manager import DataManager
+        from caesar.data_manager import DataManager
         self.data_manager = DataManager(self)
         
     def _assign_simulation_attributes(self):
         self.simulation.create_attributes(self)
 
     def _assign_objects(self):
-        import assignment as assign
+        import caesar.assignment as assign
         assign.assign_galaxies_to_halos(self)
         assign.assign_central_galaxies(self)
         
     def _link_objects(self):
-        import linking as link
+        import caesar.linking as link
         link.link_galaxies_and_halos(self)
         link.create_sublists(self)
 
     def save(self, filename):
-        from saver import save
+        from caesar.saver import save
         save(self, filename)
     
     def member_search(self, *args, **kwargs):
@@ -83,16 +84,16 @@ class CAESAR(object):
 
         self._load_data()
         
-        from .fubar import fubar
+        from caesar.fubar import fubar
         fubar(self, 'halo')
         fubar(self, 'galaxy')
 
-        import assignment as assign
-        import linking as link
+        import caesar.assignment as assign
+        import caesar.linking as link
         assign.assign_galaxies_to_halos(self)
         link.link_galaxies_and_halos(self)
         assign.assign_central_galaxies(self)
         link.create_sublists(self)
         
-        import hydrogen_mass_calc as mass_calc
+        import caesar.hydrogen_mass_calc as mass_calc
         mass_calc.hydrogen_mass_calc(self)
