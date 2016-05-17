@@ -58,9 +58,7 @@ class DataManager(object):
         if self.obj.ngas == 0:
             return
 
-        sfr_unit
-
-        = '%s/%s' % (self.obj.units['mass'], self.obj.units['time'])
+        sfr_unit = '%s/%s' % (self.obj.units['mass'], self.obj.units['time'])
 
         sfr = self.obj.yt_dataset.arr(np.zeros(self.obj.ngas), sfr_unit)
         gZ  = self.obj.yt_dataset.arr(np.zeros(self.obj.ngas), '')        
