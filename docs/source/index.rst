@@ -13,7 +13,7 @@ Contents
    :maxdepth: 2
 
    getting_started
-   code_reference/reference   
+   reference   
    
 
 Indices and tables
