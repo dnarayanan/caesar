@@ -31,6 +31,40 @@ Contents:
 	:undoc-members:
 	:show-inheritance:
 
+.. automodule:: assignment
+	:members:
+	:undoc-members:
+	:show-inheritance:
+
+.. automodule:: linking
+	:members:
+	:undoc-members:
+	:show-inheritance:
+
+.. automodule:: loader
+	:members:
+	:undoc-members:
+	:show-inheritance:
+
+.. automodule:: saver
+	:members:
+	:undoc-members:
+	:show-inheritance:
+
+.. automodule:: particle_list
+	:members:
+	:undoc-members:
+	:show-inheritance:
+
+.. automodule:: data_manager
+	:members:
+	:undoc-members:
+	:show-inheritance:
+           
+.. automodule:: simulation_attributes
+	:members:
+	:undoc-members:
+	:show-inheritance:
 
 Indices and tables
 ==================

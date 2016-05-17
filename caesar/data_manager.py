@@ -1,6 +1,6 @@
 import numpy as np
 
-from .property_getter import ptype_ints, get_particles_for_FOF, get_property, has_property
+from caesar.property_getter import ptype_ints, get_particles_for_FOF, get_property, has_property
 
 class DataManager(object):
     def __init__(self, obj):

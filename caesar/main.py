@@ -5,7 +5,7 @@ from caesar.simulation_attributes import SimulationAttributes
 from yt.funcs import mylog, get_hash
 
 class CAESAR(object):
-    """ Master CAESAR class """
+    """Master CAESAR class"""
 
     def __init__(self, ds=0, *args, **kwargs):
         self.args   = args

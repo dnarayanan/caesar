@@ -1,8 +1,8 @@
 import h5py
 import numpy as np
 
-from .group import Halo, Galaxy
-from .saver import blacklist
+from caesar.group import Halo, Galaxy
+from caesar.saver import blacklist
 
 from yt.extern import six
 from yt.units.yt_array import YTQuantity, YTArray, UnitRegistry
@@ -108,7 +108,7 @@ def load(filename, ds = None, obj = None):
 
     if obj is None:
         import os
-        from .main import CAESAR
+        from caesar.main import CAESAR
         obj = CAESAR()
         obj.data_file = os.path.abspath(filename)
 
