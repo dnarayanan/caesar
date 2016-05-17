@@ -25,6 +25,7 @@ class GroupList(object):
 
 
 class Group(object):
+    """Parent class for both halo and galaxy objects."""
     glist = GroupList('glist')
     slist = GroupList('slist')    
     
@@ -42,6 +43,8 @@ class Group(object):
 
     @property
     def _valid(self):
+        """Check against the minimum number of particles to see if
+        this object is 'valid'."""
         if self.obj_type == 'halo' and self.ndm < MINIMUM_DM_PER_HALO:
             return False
         elif self.obj_type == 'galaxy' and self.nstar < MINIMUM_STARS_PER_GALAXY:
@@ -50,14 +53,17 @@ class Group(object):
             return True
 
     def _delete_attribute(self,a):
+        """Helper method to delete an attribute if present."""
         if hasattr(self,a):
             delattr(self,a)
 
     def _delete_key(self,d,k):
+        """Helper method to delete a dict key."""
         if k in d:
             del d[k]
             
     def _remove_dm_references(self):
+        """Galaxies do not have DM, so remove references."""
         if self.obj_type != 'galaxy' or not self._valid:
             return
         self._delete_attribute('ndm')        
@@ -74,6 +80,11 @@ class Group(object):
 
 
     def _process_group(self):
+        """Process each group after creation.  This entails 
+        calculating the total mass, iteratively unbinding (if enabled),
+        then calculating more masses, radial quants, virial quants, 
+        velocity dispersions, angular quants, and final gas quants.
+        """
         self._assign_local_data()
 
         if self._valid:
@@ -93,6 +104,8 @@ class Group(object):
 
         
     def _assign_local_data(self):
+        """Assign glist/slist/dmlist/bhlist for this group.  Also 
+        sets the ngas/nstar/ndm/nbh attributes."""
         ptypes  = self.obj.data_manager.ptype[self.global_indexes]
         indexes = self.obj.data_manager.index[self.global_indexes]
 
@@ -113,11 +126,11 @@ class Group(object):
             self.nbh    = len(self.bhlist)
 
     def _calculate_total_mass(self):
-        """ calculate the total mass of the object """
+        """Calculate the total mass of the object."""
         self.masses['total'] = self.obj.yt_dataset.quan(np.sum(self.obj.data_manager.mass[self.global_indexes]), self.obj.units['mass'])
         
     def _calculate_masses(self):
-        """ calculate various total masses """
+        """Calculate various total masses."""
         mass_dm     = np.sum(self.obj.data_manager.mass[self.obj.data_manager.dmlist][self.dmlist])
         mass_gas    = np.sum(self.obj.data_manager.mass[self.obj.data_manager.glist][self.glist])
         mass_star   = np.sum(self.obj.data_manager.mass[self.obj.data_manager.slist][self.slist])
@@ -140,7 +153,7 @@ class Group(object):
         self._calculate_total_mass()
             
     def _calculate_center_of_mass_quantities(self):
-        """ calculate center-of-mass position and velocity """
+        """Calculate center-of-mass position and velocity."""
         def get_center_of_mass_quantity(quantity):  ## REFACTOR ME TO BE MORE GENERIC WITH SHAPE
             val  = np.zeros(3)
             for i in range(0,3):
@@ -152,7 +165,7 @@ class Group(object):
         self.vel = self.obj.yt_dataset.arr(get_center_of_mass_quantity('vel'), self.obj.units['velocity'])
 
     def _unbind(self):
-        """ Iterative procedure to unbind objects. """        
+        """Iterative procedure to unbind objects."""        
         if self.obj_type == 'halo' and not UNBIND_HALOS:
             return
         elif self.obj_type == 'galaxy' and not UNBIND_GALAXIES:
@@ -203,6 +216,7 @@ class Group(object):
             self._unbind()
 
     def _calculate_gas_quantities(self):
+        """Calculate gas quantities: SFR/Metallicity/Temperature."""
         self.sfr = self.obj.yt_dataset.quan(0.0, '%s/%s' % (self.obj.units['mass'],self.obj.units['time']))
         self.metallicities = dict(
             mass_weighted = self.obj.yt_dataset.quan(0.0, ''),
@@ -234,7 +248,8 @@ class Group(object):
         self.sfr = self.obj.yt_dataset.quan(gas_sfr_sum, '%s/%s' % (self.obj.units['mass'], self.obj.units['time']))
         
     def _calculate_virial_quantities(self):
-        """ Calculates virial quantities such as r200, circular velocity, and virial temperature """
+        """Calculates virial quantities such as r200, circular velocity, 
+        and virial temperature."""
         sim      = self.obj.simulation        
         rho_crit = sim.critical_density   # in Msun/kpc^3 PHYSICAL
         mass     = self.masses['total'].to('Msun')
@@ -275,7 +290,7 @@ class Group(object):
 
 
     def _calculate_velocity_dispersions(self):
-        """ Calculate velocity dispersions for the various components """
+        """Calculate velocity dispersions for the various components."""
         def get_sigma(filtered_v):
             if len(filtered_v) == 0:
                 return 0.0            
@@ -301,7 +316,7 @@ class Group(object):
             self.velocity_dispersions[k] = self.obj.yt_dataset.quan(v, self.obj.units['velocity'])
             
     def _calculate_angular_quantities(self):
-        """ Calculate angular momentum, spin, max_vphi and max_vr """
+        """Calculate angular momentum, spin, max_vphi and max_vr."""
         pos  = self.obj.yt_dataset.arr(self.obj.data_manager.pos[self.global_indexes],  self.obj.units['length'])
         vel  = self.obj.yt_dataset.arr(self.obj.data_manager.vel[self.global_indexes],  self.obj.units['velocity'])
         mass = self.obj.yt_dataset.arr(self.obj.data_manager.mass[self.global_indexes], self.obj.units['mass'])
@@ -389,12 +404,14 @@ class Group(object):
 
             
 class Galaxy(Group):
+    """Galaxy class which has the central boolean."""
     obj_type = 'galaxy'    
     def __init__(self,obj):
         super(Galaxy, self).__init__(obj)
         self.central = False
         
 class Halo(Group):
+    """Halo class which has the dmlist attribute, and child boolean."""
     obj_type = 'halo'
     dmlist   = GroupList('dmlist')
     def __init__(self,obj):
@@ -402,6 +419,22 @@ class Halo(Group):
         self.child = False
 
 def create_new_group(obj, group_type):
+    """Simple function to create a new instance of a specified 
+    :class:`group.Group`.
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main caesar object.
+    group_type : str
+        Which type of group?  Options are: `halo` and `galaxy`.
+
+    Returns
+    -------
+    group : :class:`group.Group`
+        Subclass :class:`group.Halo` or :class:`group.Galaxy`.
+
+    """
     if group_type == 'halo':
         return Halo(obj)
     elif group_type == 'galaxy':

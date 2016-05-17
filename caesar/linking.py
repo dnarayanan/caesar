@@ -7,6 +7,11 @@ def link_galaxies_and_halos(obj):
     halo-->galaxy objects.  Is run during creation, and loading in of
     each CAESAR file.
 
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Object containing halos and galaxies lists.
+
     """
     if not obj._has_galaxies:
         return
@@ -32,6 +37,11 @@ def create_sublists(obj):
         - central_galaxies
         - satellite_galaxies
         - unassigned_galaxies (those without a halo)
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Object containing halos and galaxies lists already linked.
 
     """
     if not obj._has_galaxies:

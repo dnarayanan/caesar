@@ -34,7 +34,9 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'numpydoc'
+    'sphinx.ext.autosummary',
+    'sphinx.ext.inheritance_diagram',
+    'numpydoc',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -115,7 +117,8 @@ todo_include_todos = False
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 _html_theme = 'alabaster'
 if on_rtd:
-    _html_theme = 'default'
+    #_html_theme = 'default'
+    _html_theme = 'sphinx_rtd_theme'
 html_theme = _html_theme
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for

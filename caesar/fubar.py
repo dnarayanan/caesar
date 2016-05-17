@@ -13,6 +13,27 @@ from yt.geometry.selection_routines import AlwaysSelector
 #from yt.analysis_modules.halo_finding.rockstar.rockstar_groupies import RockstarGroupiesInterface
 
 def fof(obj, positions, LL):
+    """Friends of friends.
+
+    Perform 3D friends of friends via yt's ParticleContourTree method.
+    
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Object containing the yt_dataset parameter.
+    positions : np.ndarray
+        Nx3 position array of the particles to perform the FOF on.
+    LL : float
+        Linking length for the FOF procedure.
+
+    Returns
+    -------
+    group_tags : np.ndarray
+        Returns an integer array containing the GroupID that each 
+        particle belongs to.  GroupIDs of -1 mean the particle is 
+        *not* grouped.
+
+    """
     pct = ParticleContourTree(LL)
 
     pos = YTPositionArray(obj.yt_dataset.arr(positions, obj.units['length']))
@@ -55,6 +76,7 @@ def fof(obj, positions, LL):
 
 
 def get_ptypes(obj, find_type):
+    """Unused function."""
     ptypes = ['dm','gas','star']
     
     if 'blackholes' in obj._kwargs and obj._kwargs['blackholes']:
@@ -68,6 +90,21 @@ def get_ptypes(obj, find_type):
 
 
 def get_mean_interparticle_separation(obj):
+    """Calculate the mean interparticle separation and Omega Baryon.
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR'
+        Main caesar object.
+
+    Returns
+    -------
+    mips : float
+        Mean inter-particle separation used for calculating FOF's b
+        parameter.
+
+    """
+    
     if hasattr(obj, 'mean_interparticle_separation'):
         return obj.mean_interparticle_separation
     
@@ -112,6 +149,25 @@ def get_mean_interparticle_separation(obj):
     return obj.mean_interparticle_separation
     
 def fubar(obj, find_type, **kwargs):
+    """Group finding procedure.
+
+    FUBAR stands for Friends-of-friends Unbinding after Reduction; the 
+    name is no longer valid, but it stuck.  Here we perform an FOF 
+    operation for each grouping and create the master caesar lists.
+
+    For halos we consider dark matter + gas + stars.  For galaxies
+    however, we only consider high density gas and stars (and
+    blackholes if included).
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main caesar object.
+    find_type : str
+        Can be either 'halo' or 'galaxy'; determines what objects
+        we find with FOF.
+
+    """
     # REPLACE find_type with group_type
 
     LL = get_mean_interparticle_separation(obj) * 0.2

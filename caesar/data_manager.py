@@ -3,7 +3,12 @@ import numpy as np
 from caesar.property_getter import ptype_ints, get_particles_for_FOF, get_property, has_property
 
 class DataManager(object):
+    """Class to handle the initial IO and data storage for the duration of
+    a CAESAR run.
+    """
+    
     def __init__(self, obj):
+        """Requires an `caesar.main.CAESAR` object."""
         self.obj = obj
         self.blackholes = False
         self.determine_ptypes()
@@ -11,6 +16,7 @@ class DataManager(object):
         self.load_gas_data()
         
     def determine_ptypes(self):
+        """Determines what particle/field types to collect."""
         self.ptypes = ['gas','star']
         if 'blackholes' in self.obj._kwargs and self.obj._kwargs['blackholes']:
             self.ptypes.append('bh')
@@ -22,13 +28,18 @@ class DataManager(object):
         #print self.ptypes
         
     def load_data(self):
-        pdata = get_particles_for_FOF(self.obj, self.ptypes)
+        """Loads positions, velocities, masses, particle types, and indexes.
+        Assigns a global glist, slist, dmlist, and bhlist used
+        throughout the group analysis.  Finally assigns
+        ngas/nstar/ndm/nbh values."""
+
+        pdata      = get_particles_for_FOF(self.obj, self.ptypes)
         self.pos   = pdata['pos']
         self.vel   = pdata['vel']
         self.mass  = pdata['mass']
         self.ptype = pdata['ptype']
         self.index = pdata['indexes']
-        pdata = None
+        pdata      = None
                 
         self.glist  = np.where(self.ptype == ptype_ints['gas'])[0]
         self.slist  = np.where(self.ptype == ptype_ints['star'])[0]
@@ -43,10 +54,13 @@ class DataManager(object):
 
 
     def load_gas_data(self):
+        """If gas is present loads gas SFR/Metallicity/Temperatures."""
         if self.obj.ngas == 0:
             return
 
-        sfr_unit = '%s/%s' % (self.obj.units['mass'], self.obj.units['time'])
+        sfr_unit
+
+        = '%s/%s' % (self.obj.units['mass'], self.obj.units['time'])
 
         sfr = self.obj.yt_dataset.arr(np.zeros(self.obj.ngas), sfr_unit)
         gZ  = self.obj.yt_dataset.arr(np.zeros(self.obj.ngas), '')        
@@ -64,6 +78,3 @@ class DataManager(object):
         self.gsfr = sfr
         self.gZ   = gZ
         self.gT   = gT
-        
-        
-        

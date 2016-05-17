@@ -5,9 +5,24 @@ from caesar.simulation_attributes import SimulationAttributes
 from yt.funcs import mylog, get_hash
 
 class CAESAR(object):
-    """Master CAESAR class"""
+    """Master CAESAR class.
 
-    def __init__(self, ds=0, *args, **kwargs):
+    CAESAR objects contain all references to halos and galaxies for
+    a single snapshot.  Its output format is portable and global
+    object statistics can be examined without the raw simulation file.
+    
+    Parameters
+    ----------
+    ds : yt dataset (optional)
+        A dataset via ``ds = yt.load(snapshot)``
+
+    Examples
+    --------
+    >>> import caesar
+    >>> obj = caesar.main.CAESAR()
+    """
+
+    def __init__(self, ds=0, *args, **kwargs):        
         self.args   = args
         self.kwargs = kwargs
         self._ds    = 0
@@ -26,6 +41,7 @@ class CAESAR(object):
         
     @property
     def yt_dataset(self):
+        """The yt dataset to perform actions on."""
         return self._ds
     @yt_dataset.setter
     def yt_dataset(self,value):
@@ -51,34 +67,70 @@ class CAESAR(object):
 
     @property
     def _has_galaxies(self):
-        """ ngalaxies gets assigned during fubar() """
+        """Checks if self.ngalaxies exists."""
         if hasattr(self,'ngalaxies'):
             return True
         else:
             return False
 
     def _load_data(self):
+        """Performs disk IO for particle/field data."""
         from caesar.data_manager import DataManager
         self.data_manager = DataManager(self)
         
     def _assign_simulation_attributes(self):
+        """Populate the `caesar.simulation_attributes.SimulationAttributes`
+        class."""
         self.simulation.create_attributes(self)
 
     def _assign_objects(self):
+        """Assign galaxies to halos, and central galaxies."""
         import caesar.assignment as assign
         assign.assign_galaxies_to_halos(self)
         assign.assign_central_galaxies(self)
         
     def _link_objects(self):
+        """Link galaxies to halos and create sublists."""
         import caesar.linking as link
         link.link_galaxies_and_halos(self)
         link.create_sublists(self)
 
     def save(self, filename):
+        """Save CAESAR file.
+
+        Parameters
+        ----------
+        filename : str
+            The name of the output file.
+
+        Examples
+        --------
+        >>> obj.save('output.hdf5')
+        """
+        
         from caesar.saver import save
         save(self, filename)
     
     def member_search(self, *args, **kwargs):
+        """Meat and potatoes of CAESAR.
+
+        This method is responsible for loading particle/field data
+        from disk, creating halos and galaxies, linking objects
+        together, and finally calculating HI/H2 masses if necessary.
+
+        Parameters 
+        ---------- 
+        blackholes : boolean 
+            Indicate if blackholes are present in your simulation.  
+            This must be toggled on manually as there is no clear 
+            cut way to determine if PartType5 is a low-res particle, 
+            or a black hole.
+        
+        Examples
+        --------
+        >>> obj.member_search(blackholes=False)
+        """
+
         self._args   = args
         self._kwargs = kwargs
 

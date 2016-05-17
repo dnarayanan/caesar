@@ -8,6 +8,11 @@ def assign_galaxies_to_halos(obj):
     within each galaxy lie.  Finally we assign the .galaxies list to
     each halo.
 
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Object containing the galaxies and halos lists.    
+
     """
     if not obj._has_galaxies:
         return
@@ -41,6 +46,12 @@ def assign_central_galaxies(obj):
 
     Iterate through halos and consider the most massive galaxy within
     a central and all other satellites.
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Object containing the galaxies to assign centrals.  Halos 
+        must already be assigned via `assign_galaxies_to_halos`.
 
     """
     if not obj._has_galaxies:
