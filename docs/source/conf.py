@@ -16,6 +16,38 @@ import sys
 import os
 import shlex
 
+class Mock(object):
+    __all__ = []
+    
+    def __init__(self, *args, **kwargs):
+        pass
+    def __call__(self, *args, **kwargs):
+        return Mock()
+
+    @classmethod
+    def __getattr__(cls,name):
+        if name in ('__file__', '__path__'):
+            return '/dev/null'
+        elif name[0] == name[0].upper():
+            mockType = type(name, (), {})
+            mockType.__module__ = __name__
+            return mockType
+        else:
+            return Mock()
+
+MOCK_MODULES = [
+    'yt',
+    'yt.funcs', 'yt.funcs.mylog', 'yt.funcs.get_hash',
+    'yt.units.yt_array.YTQuantity', 'yt.units.yt_array.UnitRegistry',
+    'yt.extern', 'yt.extern.six', 'yt.extern.tqdm', 'yt.extern.tqdm.tqdm',
+    'yt.units', 'yt.units.yt_array', 'yt.units.yt_array.uconcatenate', 'yt.units.yt_array.YTArray',
+    'yt.geometry', 'yt.geometry.selection_routines', 'yt.geometry.selection_routines.AlwaysSelector',
+    'yt.data_objects', 'yt.data_objects.octree_subset','yt.data_objects.octree_subset.YTPositionArray',
+    'yt.utilities', 'yt.utilities.lib', 'yt.utilities.lib.contour_finding', 'yt.utilities.lib.contour_finding.ParticleContourTree',
+]
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = Mock()
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.

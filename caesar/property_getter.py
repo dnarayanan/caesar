@@ -1,7 +1,6 @@
 # RENAME TO PROPERTY_MANAGER?
 
 import numpy as np
-from yt.units.yt_array import YTArray
 
 particle_data_aliases = {
     'pos':'particle_position',
