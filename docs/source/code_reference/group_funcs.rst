@@ -1,6 +1,6 @@
 
-Misc. Group Functions
-=====================
+External Group Functions
+========================
 
 .. automodule:: group_funcs
    :members:

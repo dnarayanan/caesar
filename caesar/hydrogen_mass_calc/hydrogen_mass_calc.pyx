@@ -19,7 +19,7 @@ def check_values(obj):
     Returns
     -------
     bool
-        Returns true if all fields are present, false if otherwise.
+        Returns True if all fields are present, False otherwise.
 
     """
     from .property_getter import has_property
@@ -57,7 +57,7 @@ def hydrogen_mass_calc(obj,**kwargs):
 
     Returns
     -------
-    HImass, H2mass : 2 np.ndarray
+    HImass, H2mass : np.ndarray, np.ndarray
         Contains the HImass and H2 mass of each individual particle.
 
     """
@@ -287,6 +287,18 @@ def assign_halo_gas_to_galaxies(
         double boxsize,
         double halfbox
 ):    
+    """Function to assign halo gas to galaxies.
+
+    When we assign galaxies in CAESAR, we only consider dense gas.
+    But when considering HI gas however, it is often desirable to
+    also consider low-density gas 'outside' of the galaxy.  This
+    function calculates the mass weighted distance to each galaxy
+    within a given halo and assigns low-density gas to the 'nearest'
+    galaxy.
+
+    Typically called from :func:`hydrogen_mass_calc.hydrogen_mass_calc`.
+
+    """
     cdef int ngas_internal       = internal_glist.shape[0]
     cdef int n_internal_galaxies = internal_galaxy_mass.shape[0]
 
