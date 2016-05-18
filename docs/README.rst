@@ -3,7 +3,7 @@ to build the docs locally you will need the Sphinx python extension:
 
 http://www.sphinx-doc.org/
 
-This can typically be installed via `pip` **or** `conda`:
+This can typically be installed via *pip* OR *conda*:
 
     $> pip install sphinx
 
