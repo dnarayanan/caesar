@@ -7,7 +7,7 @@ CAESAR
 
 CAESAR is a python framework for analyzing the outputs from
 cosmological simulations.  The general idea is to identify halos and
-galaxies within the simulation, then store store information about
+galaxies within the simulation, then store information about
 them in an intuitive, portable, and easy to access manner.  CAESAR
 builds upon the `yt <http://yt-project.org/>`_ package enabling it to
 read a `multitude of different simulation types

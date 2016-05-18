@@ -20,6 +20,18 @@ def _write_dataset(key, data, hd):
     hd.create_dataset(key, data=data)
 
 def check_and_write_dataset(obj, key, hd):
+    """General function for writing an HDF5 dataset.
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main caesar object to save.
+    key : str
+        Name of dataset to write.
+    hd : h5py.Group
+        Open HDF5 group.
+
+    """
     if not hasattr(obj, key): return
     if isinstance(getattr(obj, key), int): return
     _write_dataset(key, getattr(obj, key), hd)
@@ -27,6 +39,18 @@ def check_and_write_dataset(obj, key, hd):
 ######################################################################
 
 def serialize_list(obj_list, key, hd):
+    """Function that serializes a index list (glist/etc) for objects.
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main caesar object.
+    key : str
+        Name of the index list.
+    hd : h5py.Group
+        Open HDF5 group.
+
+    """
     if key in blacklist: return
     if not hasattr(obj_list[0], key): return
     data = _get_serialized_list(obj_list, key)
@@ -47,6 +71,19 @@ def _get_serialized_list(obj_list, key):
 ######################################################################
 
 def serialize_attributes(obj_list, hd, hd_dicts):
+    """Function that goes through a list full of halos/galaxies and
+    serializes their attributes.
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main caesar object.
+    hd : h5py.Group
+        Open HDF5 group for lists.
+    hd_dicts : h5py.Group
+        Open HDF5 group for dictionaries.
+
+    """
     for k,v in six.iteritems(obj_list[0].__dict__):
         if k in blacklist: continue
 
@@ -93,6 +130,17 @@ def _write_dict(obj_list, k, v, hd):
 ######################################################################
 
 def serialize_global_attribs(obj, hd):
+    """Function that goes through a caesar object and saves general 
+    attributes.
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main caesar object.
+    hd : h5py.File
+        Open HDF5 dataset.
+
+    """
     units = {}
     for k,v in six.iteritems(obj.__dict__):
         if k in blacklist: continue
@@ -115,6 +163,20 @@ def serialize_global_attribs(obj, hd):
 ######################################################################
     
 def save(obj, filename='test.hdf5'):
+    """Function to save a CAESAR file to disk.
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main caesar object to save.
+    filename : str (optional)
+        Filename of the output file.
+
+    Examples
+    --------
+    >>> obj.save('output.hdf5')
+    
+    """
     if os.path.isfile(filename):
         os.remove(filename)
 

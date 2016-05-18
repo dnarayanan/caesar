@@ -10,6 +10,18 @@ from yt.units.yt_array import YTQuantity, YTArray, UnitRegistry
 ######################################################################
 
 def restore_single_list(obj, group, key):
+    """Function for restoring a single list.
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main CAESAR object.
+    group : object
+        Object we are restoring the list to.
+    key : str
+        Name of the list to restore.
+
+    """
     infile = h5py.File(obj.data_file,'r')
     data   = np.array(infile['%s_data/lists/%s' % (group.obj_type, key)])
     infile.close()
@@ -20,6 +32,23 @@ def restore_single_list(obj, group, key):
 ######################################################################
 
 def get_unit_quant(v, data):
+    """Function for restoring CAESAR global attributes.
+
+    Parameters
+    ----------
+    v : h5py object
+        Object to check for unit attributes.
+    data : object
+        The actual data.
+
+    Returns
+    -------
+    unit, quant : str, boolean
+        Returns the unit string and a boolean.  The boolean says if 
+        the returned value should be a quantity (True) or an array
+        (False).
+
+    """
     unit  = None
     quant = True
     if 'unit' in v.attrs:
@@ -31,6 +60,16 @@ def get_unit_quant(v, data):
 ######################################################################
 
 def restore_global_attributes(obj, hd):
+    """Function for restoring CAESAR global attributes.
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main CAESAR object.
+    hd : h5py.Group
+        Open HDF5 dataset.
+
+    """
     for k,v in six.iteritems(hd.attrs):
         if k in blacklist: continue
         setattr(obj, k, v)
@@ -43,6 +82,18 @@ def restore_global_attributes(obj, hd):
 ######################################################################            
             
 def restore_object_list(obj_list, key, hd):
+    """Function for restoring halo/galaxy sublists.
+
+    Parameters
+    ----------
+    obj_list : list
+        List of objects we are restoring attributes to.
+    key : str
+        Name of list to restore.
+    hd : h5py.Group
+        Open HDF5 dataset.
+
+    """
     if ('lists/%s' % key) not in hd: return
     if key in blacklist: return    
     data = np.array(hd['lists/%s' % key])
@@ -56,6 +107,18 @@ def restore_object_list(obj_list, key, hd):
 ######################################################################                    
         
 def restore_object_dicts(obj_list, hd, unit_reg):
+    """Function for restoring halo/galaxy dictionary attributes.
+
+    Parameters
+    ----------
+    obj_list : list
+        List of objects we are restoring attributes to.
+    hd : h5py.Group
+        Open HDF5 dataset.
+    unit_reg : yt unit registry
+        Unit registry.    
+
+    """
     if 'dicts' not in hd: return
     hdd = hd['dicts']
     for k,v in six.iteritems(hdd):
@@ -82,6 +145,18 @@ def restore_object_dicts(obj_list, hd, unit_reg):
 ######################################################################
 
 def restore_object_attributes(obj_list, hd, unit_reg):
+    """Function for restoring halo/galaxy attributes.
+
+    Parameters
+    ----------
+    obj_list : list
+        List of objects we are restoring attributes to.
+    hd : h5py.Group
+        Open HDF5 dataset.
+    unit_reg : yt unit registry
+        Unit registry.    
+
+    """
     for k,v in six.iteritems(hd):
         if k in blacklist: continue
         if k == 'lists' or k == 'dicts': continue
@@ -101,6 +176,25 @@ def restore_object_attributes(obj_list, hd, unit_reg):
 ######################################################################        
 
 def load(filename, ds = None, obj = None):
+    """Function to load a CAESAR object from disk.
+
+    Parameters
+    ----------
+    filename : str
+        Input file.
+    ds : yt dataset (optional)
+        yt dataset to link to.
+    obj : :class:`main.CAESAR`
+        For loading into an already created CAESAR object.
+
+    Examples
+    --------
+    >>> import caesar
+    >>> import yt
+    >>> ds  = yt.load('snapshot')
+    >>> obj = caesar.load(ds)
+
+    """
     try:
         infile = h5py.File(filename, 'r')
     except IOError:
