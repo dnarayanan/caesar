@@ -6,6 +6,7 @@ http://www.sphinx-doc.org/
 This can typically be installed via `pip` **or** `conda`:
 
     $> pip install sphinx
+
     $> conda install sphinx
 
 Once that is present you should be able to issue the following command
