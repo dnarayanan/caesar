@@ -2,8 +2,6 @@
 ## if you want to see the source please examine     ##
 ## caesar/hydrogen_mass_calc/hydrogen_mass_calc.pyx ##
 
-import numpy as np
-
 def check_values(obj):
     """Check to make sure that we have the required fields available to
     perform the hydrogen mass frac calculation.
@@ -48,21 +46,21 @@ def hydrogen_mass_calc(obj,**kwargs):
 
 def assign_halo_gas_to_galaxies(
         ## internal to the halo
-        np.ndarray[np.float64_t,ndim=2]   internal_galaxy_pos,
-        np.ndarray[np.float64_t,ndim=1]   internal_galaxy_mass,
-        np.ndarray[np.int32_t,ndim=1]     internal_glist,
-        np.ndarray[np.int32_t,ndim=1]     internal_galaxy_index_list,
+        internal_galaxy_pos,
+        internal_galaxy_mass,
+        internal_glist,
+        internal_galaxy_index_list,
         ## global values
-        np.int32_t[:]     galaxy_glist,
-        np.float64_t[:]   grhoH,
-        np.float64_t[:,:] gpos,
-        np.float64_t[:]   galaxy_HImass,
-        np.float64_t[:]   galaxy_H2mass,
-        np.float64_t[:]   HImass,
-        np.float64_t[:]   H2mass,
-        double low_rho_thresh,
-        double boxsize,
-        double halfbox
+        galaxy_glist,
+        grhoH,
+        gpos,
+        galaxy_HImass,
+        galaxy_H2mass,
+        HImass,
+        H2mass,
+        low_rho_thresh,
+        boxsize,
+        halfbox
 ):    
     """Function to assign halo gas to galaxies.
 

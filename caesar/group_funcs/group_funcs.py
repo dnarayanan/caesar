@@ -2,13 +2,12 @@
 ## if you want to see the source please examine     ##
 ## caesar/group_funcs/group_funcs.pyx               ##
 
-import numpy as np
 
 def get_periodic_r(
-        double boxsize,
-        np.ndarray[np.float64_t, ndim=1] center,
-        np.ndarray[np.float64_t, ndim=2] pos,
-        np.ndarray[np.float64_t, ndim=1] r
+        boxsize,
+        center,
+        pos,
+        r
 ):
     """Get periodic radii.
 
@@ -28,10 +27,11 @@ def get_periodic_r(
 
 
 def rotator(
-        np.ndarray[np.float64_t, ndim=2] vals,
-        np.ndarray[np.float64_t, ndim=2] Rx,
-        np.ndarray[np.float64_t, ndim=2] Ry,        
-        double ALPHA, double BETA
+        vals,
+        Rx,
+        Ry,        
+        ALPHA,
+        BETA
 ):
     """Rotate a number of vectors around ALPHA, BETA
 
@@ -61,11 +61,11 @@ def rotator(
 
 
 def get_half_mass_radius(
-        np.ndarray[np.float64_t, ndim=1] mass,
-        np.ndarray[np.float64_t, ndim=1] radii,
-        np.ndarray[np.int32_t, ndim=1] ptype,
-        double half_mass,
-        int binary
+        mass,
+        radii,
+        ptype,
+        half_mass,
+        binary
 ):
     """Get half mass radius for a set of particles.
 
@@ -88,9 +88,9 @@ def get_half_mass_radius(
     pass
 
 def get_full_mass_radius(
-        np.ndarray[np.float64_t, ndim=1] radii,
-        np.ndarray[np.int32_t, ndim=1] ptype,
-        int binary
+        radii,
+        ptype,
+        binary
 ):
     """Get full mass radius for a set of particles.
 
