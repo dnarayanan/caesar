@@ -147,7 +147,8 @@ class DatasetType(object):
 
         Returns
         -------
-        bolean
+        boolean
+            True if property/field is present, False otherwise.
 
         """
         prop  = self.get_property_name(requested_ptype, requested_prop)
@@ -250,6 +251,7 @@ def has_ptype(obj, requested_ptype):
     Returns
     -------
     boolean
+        True if ptype present, False otherwise.
 
     """
     return obj._ds_type.has_ptype(requested_ptype)
@@ -269,6 +271,7 @@ def has_property(obj, requested_ptype, requested_prop):
     Returns
     -------
     boolean
+        True if property/field is present, False otherwise.
 
     """
     return obj._ds_type.has_property(requested_ptype, requested_prop)
@@ -297,7 +300,12 @@ def get_property(obj, requested_prop, requested_ptype):
 
 def get_high_density_gas_indexes(obj):
     """Returns the indexes of gas with densities above 0.13 protons/cm^3.
-    
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main caesar object.
+
     Returns
     -------
     np.ndarray

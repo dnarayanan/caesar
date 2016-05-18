@@ -19,9 +19,9 @@ class CAESAR(object):
     Examples
     --------
     >>> import caesar
-    >>> obj = caesar.main.CAESAR()
-    """
+    >>> obj = caesar.CAESAR()
 
+    """
     def __init__(self, ds=0, *args, **kwargs):        
         self.args   = args
         self.kwargs = kwargs
@@ -106,8 +106,8 @@ class CAESAR(object):
         Examples
         --------
         >>> obj.save('output.hdf5')
-        """
-        
+
+        """        
         from caesar.saver import save
         save(self, filename)
     
@@ -129,8 +129,8 @@ class CAESAR(object):
         Examples
         --------
         >>> obj.member_search(blackholes=False)
-        """
 
+        """
         self._args   = args
         self._kwargs = kwargs
 

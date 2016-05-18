@@ -3,5 +3,6 @@ Group Class
 ===========
 
 .. automodule:: group
-	:members:
-	:show-inheritance:
+   :members:
+   :show-inheritance:
+   :private-members:

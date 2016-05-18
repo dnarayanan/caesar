@@ -53,6 +53,8 @@ for mod_name in MOCK_MODULES:
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('../../caesar'))
+sys.path.insert(1, os.path.abspath('../../caesar/group_funcs'))
+sys.path.insert(2, os.path.abspath('../../caesar/hydrogen_mass_calc'))
 
 # -- General configuration ------------------------------------------------
 

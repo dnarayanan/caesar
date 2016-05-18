@@ -1,5 +1,8 @@
 
 class ParticleList(object):
+    """Class for a generic particle list.  Contains methods for 
+    retrieving data from disk if it is not already loaded.
+    """
     def __init__(self, name):
         self.name = name
 
@@ -12,6 +15,7 @@ class ParticleList(object):
         setattr(instance, '_%s' % self.name, value)
 
 class ParticleListContainer(object):
+    """Container that holds global particle/field index lists."""
     halo_dmlist  = ParticleList('halo_dmlist')
     halo_glist   = ParticleList('halo_glist')
     halo_slist   = ParticleList('halo_slist')

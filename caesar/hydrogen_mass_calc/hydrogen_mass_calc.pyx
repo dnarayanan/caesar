@@ -13,7 +13,8 @@ def check_values(obj):
 
     Parameters
     ----------
-    obj : `yt.analysis_modules.sphgr.sphgr.SPHGR` object
+    obj : :class:`main.CAESAR`
+        Main CAESAR object.
     
     Returns
     -------
@@ -51,7 +52,8 @@ def hydrogen_mass_calc(obj,**kwargs):
 
     Parameters
     ----------
-    obj : `yt.analysis_modules.sphgr.sphgr.SPHGR` object
+    obj : :class:`main.CAESAR`
+        Main CAESAR object.
 
     Returns
     -------
