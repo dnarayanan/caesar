@@ -27,12 +27,14 @@ data.  No more will you forget if you properly accounted for little
 ``CAESAR`` supports the following codes/formats, with more coming
 online in the near future:
 
-1. Gadget
-2. GIZMO
-3. TIPSY
-4. ENZO
+1. `GADGET <http://wwwmpa.mpa-garching.mpg.de/~volker/gadget/>`_
+2. `GIZMO <http://www.tapir.caltech.edu/~phopkins/Site/GIZMO.html>`_
+3. `TIPSY <http://www-hpcc.astro.washington.edu/tools/tipsy/tipsy.html>`_
+4. `ENZO <http://enzo-project.org/>`_
 
 To get started, follow the Getting Started link below!
+
+----
 
 Contents
 ========
@@ -41,8 +43,18 @@ Contents
    :maxdepth: 2
 
    getting_started
-   code_reference/reference   
+   running
+   loading
+
+
+----
+
+.. toctree::
+   :maxdepth: 2
+
+   code_reference/reference
    
+----
 
 Indices and tables
 ==================

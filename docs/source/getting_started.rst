@@ -6,7 +6,7 @@ Getting Started
    :local:
    :depth: 3
 
--------------
+----
            
 Requirements
 ============
@@ -21,7 +21,7 @@ Requirements
 
     * `sympy <http://www.sympy.org/en/index.html>`_
       
--------------    
+----
     
 Installation
 ============
@@ -75,7 +75,7 @@ environment paths.
 
    $> pip install numpy cython h5py mercurial sympy
 
--------------
+----
    
 yt dev
 ------
@@ -106,10 +106,10 @@ compile:
 
    $> python setup.py install
 
--------------
+----
    
-Installing CAESAR
------------------
+CAESAR
+------
 
 Now that we have all of the prerequisites out of the way we can clone
 and install ``CAESAR``:

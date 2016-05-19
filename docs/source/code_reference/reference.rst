@@ -5,13 +5,14 @@ Code Reference
 .. toctree::
    :maxdepth: 2
 
-   Caesar<main>
-   Group Finding<fubar>
-   Group<group>
-   utils
-   assignment_linking
-   property_getter
-   saving_loading
+   CAESAR object<main>
+   FUBAR (group finding)<fubar>
+   Halo and Galaxy Class<group>
    data_manager
+   property_getter
+   assignment_linking
+   utils
    group_funcs
    hydrogen_mass_calc
+   saving_loading
+
