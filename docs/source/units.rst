@@ -43,4 +43,4 @@ That was easy right?  What if we want to convert to physical *kpc/h*?
 Keeping track of units suddenly becomes much more intuitive and
 easier.  For further information and tutorials regarding yt's units
 please visit the `symbolic unit
-<http://yt-project.org/doc/analyzing/units/index.htm>`_ page.
+<http://yt-project.org/doc/analyzing/units/index.html>`_ page.
