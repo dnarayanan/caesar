@@ -1,4 +1,9 @@
 
+Below you will find references for the various modules and functions
+contained within the ``CAESAR`` package.  This information is all
+pulled from docstrings within the source code and can also be accessed
+from within python by putting a ``?`` after the function.
+
 Code Reference
 ==============
 
@@ -16,3 +21,8 @@ Code Reference
    hydrogen_mass_calc
    saving_loading
 
+----   
+   
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

@@ -29,7 +29,7 @@ Scripted
 
 Scripting ``CAESAR`` is also quite simple.  The following is a simple
 example of how one might write a script to perform the same action as
-was done in the above section (Simple Usage):
+was done in the above section (Command Line):
 
 .. code-block:: python
 

@@ -3,6 +3,9 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. image:: https://dl.dropboxusercontent.com/u/6920345/CAESAR/CAESAR_bust.png
+   :align: center
+   
 Welcome to CAESAR's documentation!
 ==================================
 
@@ -45,7 +48,8 @@ Contents
    getting_started
    running
    loading
-
+   usage
+   units
 
 ----
 
