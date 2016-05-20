@@ -131,9 +131,9 @@ class Group(object):
         
     def _calculate_masses(self):
         """Calculate various total masses."""
-        mass_dm     = np.sum(self.obj.data_manager.mass[self.obj.data_manager.dmlist][self.dmlist])
-        mass_gas    = np.sum(self.obj.data_manager.mass[self.obj.data_manager.glist][self.glist])
-        mass_star   = np.sum(self.obj.data_manager.mass[self.obj.data_manager.slist][self.slist])
+        mass_dm     = np.sum(self.obj.data_manager.mass[self.obj.data_manager.dmlist[self.dmlist]])
+        mass_gas    = np.sum(self.obj.data_manager.mass[self.obj.data_manager.glist[self.glist]])
+        mass_star   = np.sum(self.obj.data_manager.mass[self.obj.data_manager.slist[self.slist]])
         mass_baryon = mass_gas + mass_star
 
         self.masses['dm']      = self.obj.yt_dataset.quan(mass_dm, self.obj.units['mass'])
