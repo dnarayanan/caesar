@@ -1,5 +1,6 @@
 import numpy as np
-    
+from yt.funcs import mylog
+
 def rotator(vals, ALPHA=0, BETA=0):
     """Rotate particle set around given angles.
 
@@ -58,8 +59,16 @@ def calculate_local_densities(obj, group_list):
     group_list : list
         List of objects to perform this operation on.
 
-    """    
-    from caesar.periodic_kdtree import PeriodicCKDTree
+    """
+    try:
+        from scipy.spatial import KDTree, cKDTree
+        from caesar.periodic_kdtree import PeriodicCKDTree
+        #mylog.info('Calculating local densities')
+    except:
+        mylog.warning('Could not import scipy.spatial! '   \
+                      'Please install scipy to allow for ' \
+                      'local density calculations.')
+        return
 
     pos  = np.array([i.pos for i in group_list])
     mass = np.array([i.masses['total'] for i in group_list])

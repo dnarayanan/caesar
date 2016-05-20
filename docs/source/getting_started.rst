@@ -15,6 +15,7 @@ Requirements
 
   * `mercurial <https://www.mercurial-scm.org/>`_
   * `numpy <http://www.numpy.org/>`_
+  * `scipy <https://www.scipy.org/>`_
   * `cython <http://cython.org/>`_
   * `h5py <http://www.h5py.org/>`_
   * `yt dev <https://bitbucket.org/yt_analysis/yt>`_
@@ -59,7 +60,7 @@ easily be installed via the ``conda`` command:
 
 .. code-block:: bash
 
-   $> conda install numpy cython h5py mercurial sympy
+   $> conda install numpy scipy cython h5py mercurial sympy
 
 pip
 ^^^
@@ -73,7 +74,7 @@ environment paths.
 
 .. code-block:: bash
 
-   $> pip install numpy cython h5py mercurial sympy
+   $> pip install numpy scipy cython h5py mercurial sympy
 
 ----
    
