@@ -121,3 +121,21 @@ and install ``CAESAR``:
    $> python setup.py install
 
 Once it finishes you should be ready to finally get some work done!
+
+----
+
+Updating
+========
+
+To update the code you simply need to pull down changes and reinstall:
+
+.. code-block:: bash
+
+   $> cd caesar
+   $> hg pull
+   $> hg update
+   $> python setup.py install
+
+The same procedure applies to yt-dev if you would like to keep that up
+to date.  The difference of course is that you execute the ``hg``
+commands in the ``yt`` directory.
