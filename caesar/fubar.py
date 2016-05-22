@@ -175,11 +175,15 @@ def get_b(obj, group_type):
 
     """
     b = 0.2
-    key = 'b_%s' % group_type
-    if key in obj._kwargs and isinstance(obj._kwargs[key], (int, float)):
-        b = float(obj._kwargs[key])
-    elif group_type == 'galaxy':
-        b *= 0.2
+
+    if 'b_halo' in obj._kwargs and isinstance(obj._kwargs['b_halo'], (int, float)):
+        b = float(obj._kwargs['b_halo'])
+
+    if group_type == 'galaxy':
+        if 'b_galaxy' in obj._kwargs and isinstance(obj._kwargs['b_galaxy'], (int, float)):
+            b = float(obj._kwargs['b_galaxy'])
+        else:
+            b *= 0.2
         
     mylog.info('Using b=%g for %s' % (b, group_types[group_type]))
     return b
