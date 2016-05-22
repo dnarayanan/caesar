@@ -80,14 +80,14 @@ def fof(obj, positions, LL, group_type=None):
 
 
 
-def get_ptypes(obj, find_type):
+def get_ptypes(obj, group_type):
     """Unused function."""
     ptypes = ['dm','gas','star']
     
     if 'blackholes' in obj._kwargs and obj._kwargs['blackholes']:
         ptypes.append('bh')
     
-    if find_type == 'galaxy':
+    if group_type == 'galaxy':
         ptypes.remove('dm')
     if obj._ds_type.grid:
         ptypes.remove('gas')
@@ -154,7 +154,7 @@ def get_mean_interparticle_separation(obj):
     obj.mean_interparticle_separation = mips
     return obj.mean_interparticle_separation
     
-def fubar(obj, find_type, **kwargs):
+def fubar(obj, group_type, **kwargs):
     """Group finding procedure.
 
     FUBAR stands for Friends-of-friends Unbinding after Rockstar; the
@@ -169,18 +169,17 @@ def fubar(obj, find_type, **kwargs):
     ----------
     obj : :class:`main.CAESAR`
         Main caesar object.
-    find_type : str
+    group_type : str
         Can be either 'halo' or 'galaxy'; determines what objects
         we find with FOF.
 
     """
-    # REPLACE find_type with group_type
 
     LL = get_mean_interparticle_separation(obj) * 0.2
 
     pos = obj.data_manager.pos
 
-    if find_type == 'galaxy':
+    if group_type == 'galaxy':
         if not obj.simulation.baryons_present:
             return
         
@@ -194,9 +193,9 @@ def fubar(obj, find_type, **kwargs):
             pos[obj.data_manager.bhlist]
         ))        
         
-    fof_tags = fof(obj, pos, LL, group_type=find_type)
+    fof_tags = fof(obj, pos, LL, group_type=group_type)
 
-    if find_type == 'galaxy':
+    if group_type == 'galaxy':
         gtags = np.full(obj.ngas, -1, dtype=np.int64)
         gtags[high_rho_indexes] = fof_tags[0:len(high_rho_indexes)]
         fof_tags = np.concatenate((gtags,fof_tags[len(high_rho_indexes)::]))
@@ -207,10 +206,10 @@ def fubar(obj, find_type, **kwargs):
     groupings = {}
     for GroupID in unique_groupIDs:
         if GroupID < 0: continue
-        groupings[GroupID] = create_new_group(obj, find_type)
+        groupings[GroupID] = create_new_group(obj, group_type)
 
     if len(groupings) == 0:
-        print('No %s found!' % group_types[find_type])
+        print('No %s found!' % group_types[group_type])
         return
     
     tags = fof_tags
@@ -225,7 +224,7 @@ def fubar(obj, find_type, **kwargs):
     
     for v in tqdm(groupings.itervalues(),
                   total=len(groupings),
-                  desc='Processing %s' % group_types[find_type]):
+                  desc='Processing %s' % group_types[group_type]):
         v._process_group()
 
     n_invalid = 0
@@ -236,7 +235,7 @@ def fubar(obj, find_type, **kwargs):
             continue
         group_list.append(v)
 
-    mylog.info('Disregarding %d invalid %s' % (n_invalid, group_types[find_type]))
+    mylog.info('Disregarding %d invalid %s' % (n_invalid, group_types[group_type]))
         
     # sort by mass
     group_list.sort(key = lambda x: x.masses['total'], reverse=True)
@@ -261,15 +260,15 @@ def fubar(obj, find_type, **kwargs):
         slist[group.unbound_indexes[ptype_ints['star']]] = -2
         dmlist[group.unbound_indexes[ptype_ints['dm']]]  = -2
             
-    setattr(obj.global_particle_lists, '%s_glist'  % find_type, glist)
-    setattr(obj.global_particle_lists, '%s_slist'  % find_type, slist)
-    setattr(obj.global_particle_lists, '%s_dmlist' % find_type, dmlist)       
+    setattr(obj.global_particle_lists, '%s_glist'  % group_type, glist)
+    setattr(obj.global_particle_lists, '%s_slist'  % group_type, slist)
+    setattr(obj.global_particle_lists, '%s_dmlist' % group_type, dmlist)       
     
     calculate_local_densities(obj, group_list)
     
-    if find_type == 'halo':
+    if group_type == 'halo':
         obj.halos  = group_list
         obj.nhalos = len(obj.halos)
-    elif find_type == 'galaxy':
+    elif group_type == 'galaxy':
         obj.galaxies  = group_list
         obj.ngalaxies = len(obj.galaxies)
