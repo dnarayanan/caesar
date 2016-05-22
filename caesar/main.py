@@ -132,12 +132,12 @@ class CAESAR(object):
         b_halo : float
             Quantity used in the linking length (LL) for halos.
             LL = mean_interparticle_separation * b_halo.  Defaults to 
-            b_halo = 0.2.
+            ``b_halo = 0.2``.
 
         b_galaxy : float
             Quantity used in the linking length (LL) for galaxies.
             LL = mean_interparticle_separation * b_galaxy.  Defaults 
-            to b_galaxy = b_halo * 0.2.
+            to ``b_galaxy = b_halo * 0.2``.
 
         Examples
         --------
