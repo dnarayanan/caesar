@@ -177,9 +177,13 @@ def save(obj, filename='test.hdf5'):
     >>> obj.save('output.hdf5')
     
     """
+    from yt.funcs import mylog
+    
     if os.path.isfile(filename):
+        mylog.warning('%s already present, overwriting!' % filename)
         os.remove(filename)
-
+    mylog.info('Writing %s' % filename)
+        
     outfile = h5py.File(filename, 'w')
     outfile.attrs.create('caesar', True)
     

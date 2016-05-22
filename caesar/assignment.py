@@ -1,5 +1,7 @@
 import numpy as np
 
+from yt.funcs import mylog
+
 def assign_galaxies_to_halos(obj):
     """Assign galaxies to halos.
 
@@ -16,6 +18,8 @@ def assign_galaxies_to_halos(obj):
     """
     if not obj._has_galaxies:
         return
+
+    mylog.info('Assigning galaxies to halos')
     
     h_glist = obj.global_particle_lists.halo_glist
     h_slist = obj.global_particle_lists.halo_slist
@@ -56,6 +60,8 @@ def assign_central_galaxies(obj):
     """
     if not obj._has_galaxies:
         return
+
+    mylog.info('Assigning central galaxies')
     
     obj.central_galaxies   = []
     obj.satellite_galaxies = []

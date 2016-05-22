@@ -1,5 +1,7 @@
 import numpy as np
 
+from yt.funcs import mylog
+
 def link_galaxies_and_halos(obj):
     """Link galaxies and halos to one another.
 
@@ -16,6 +18,8 @@ def link_galaxies_and_halos(obj):
     if not obj._has_galaxies:
         return
 
+    mylog.info('Linking galaxies and halos')
+    
     # halos
     for halo in obj.halos:
         halo.galaxies = []
@@ -46,6 +50,8 @@ def create_sublists(obj):
     """
     if not obj._has_galaxies:
         return
+
+    mylog.info('Creating sublists')
     
     obj.central_galaxies   = []
     obj.satellite_galaxies = []

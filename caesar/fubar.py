@@ -1,10 +1,11 @@
 import numpy as np
-from caesar.group import create_new_group
+from caesar.group import create_new_group, group_types
 from caesar.property_getter import get_property, get_particles_for_FOF, get_high_density_gas_indexes
 from caesar.property_getter import ptype_ints
 from caesar.utils import calculate_local_densities
 
 from yt.extern import six
+from yt.funcs import mylog
 from yt.extern.tqdm import tqdm
 from yt.units.yt_array import uconcatenate, YTArray
 from yt.data_objects.octree_subset import YTPositionArray
@@ -12,7 +13,7 @@ from yt.utilities.lib.contour_finding import ParticleContourTree
 from yt.geometry.selection_routines import AlwaysSelector
 #from yt.analysis_modules.halo_finding.rockstar.rockstar_groupies import RockstarGroupiesInterface
 
-def fof(obj, positions, LL):
+def fof(obj, positions, LL, group_type=None):
     """Friends of friends.
 
     Perform 3D friends of friends via yt's ParticleContourTree method.
@@ -34,6 +35,10 @@ def fof(obj, positions, LL):
         *not* grouped.
 
     """
+    if group_type is not None:
+        mylog.info('Performing 3D FOF on %d positions for %s identification' %
+                   (len(positions), group_type))
+                                                                             
     pct = ParticleContourTree(LL)
 
     pos = YTPositionArray(obj.yt_dataset.arr(positions, obj.units['length']))
@@ -139,6 +144,7 @@ def get_mean_interparticle_separation(obj):
 
     #print(len(bhmass))
     #print('Ob= %f' % (Ob))
+    mylog.info('Calculated Omega_Baryon=%0.3f' % Ob)
     
     rhodm = ((Om - Ob) * 3.0 * Hubble**2 / (8.0 * np.pi * G)).d
     rhodm = obj.yt_dataset.quan(rhodm, 'code_mass/code_length**3')
@@ -151,8 +157,8 @@ def get_mean_interparticle_separation(obj):
 def fubar(obj, find_type, **kwargs):
     """Group finding procedure.
 
-    FUBAR stands for Friends-of-friends Unbinding after Reduction; the 
-    name is no longer valid, but it stuck.  Here we perform an FOF 
+    FUBAR stands for Friends-of-friends Unbinding after Rockstar; the
+    name is no longer valid, but it stuck.  Here we perform an FOF
     operation for each grouping and create the master caesar lists.
 
     For halos we consider dark matter + gas + stars.  For galaxies
@@ -188,7 +194,7 @@ def fubar(obj, find_type, **kwargs):
             pos[obj.data_manager.bhlist]
         ))        
         
-    fof_tags = fof(obj, pos, LL)
+    fof_tags = fof(obj, pos, LL, group_type=find_type)
 
     if find_type == 'galaxy':
         gtags = np.full(obj.ngas, -1, dtype=np.int64)
@@ -204,7 +210,7 @@ def fubar(obj, find_type, **kwargs):
         groupings[GroupID] = create_new_group(obj, find_type)
 
     if len(groupings) == 0:
-        print('No objects of type %s found!' % find_type)
+        print('No %s found!' % group_types[find_type])
         return
     
     tags = fof_tags
@@ -216,16 +222,22 @@ def fubar(obj, find_type, **kwargs):
         if tag < 0: continue
         groupings[tag]._append_global_index(index)
 
+    
     for v in tqdm(groupings.itervalues(),
                   total=len(groupings),
-                  desc='Processing %s' % find_type):
+                  desc='Processing %s' % group_types[find_type]):
         v._process_group()
 
+    n_invalid = 0
     group_list = []
     for v in six.itervalues(groupings):
-        if not v._valid: continue
+        if not v._valid:
+            n_invalid += 1
+            continue
         group_list.append(v)
 
+    mylog.info('Disregarding %d invalid %s' % (n_invalid, group_types[find_type]))
+        
     # sort by mass
     group_list.sort(key = lambda x: x.masses['total'], reverse=True)
     for i in range(0,len(group_list)):

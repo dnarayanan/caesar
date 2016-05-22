@@ -195,6 +195,9 @@ def load(filename, ds = None, obj = None):
     >>> obj = caesar.load(ds)
 
     """
+    from yt.funcs import mylog
+
+    mylog.info('Reading %s' % filename)
     try:
         infile = h5py.File(filename, 'r')
     except IOError:

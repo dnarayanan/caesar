@@ -32,7 +32,7 @@ def check_values(obj):
         if not prop:
             missing.append(rd)
     if len(missing) > 0:
-        mylog.warning('could not find the following fields: %s; skipping H/HI/H2 calc' % missing)
+        mylog.warning('Could not find the following fields: %s; skipping HI/H2 calc' % missing)
         return False
     return True
 
@@ -66,11 +66,11 @@ def hydrogen_mass_calc(obj,**kwargs):
     if not check_values(obj):
         return 0,0
 
-    tmp_str = 'calculating HI/H2 masses for'
+    tmp_str = 'Calculating HI/H2 masses for'
     cdef bint all_gas = 0
     if 'calculate_H_for_all_gas' in kwargs and kwargs['calculate_H_for_all_gas']:
         all_gas = 1
-        tmp_str = '%s all gas...' % tmp_str
+        tmp_str = '%s all gas' % tmp_str
     else:
         tmp_str = '%s dense halo gas' % tmp_str
 

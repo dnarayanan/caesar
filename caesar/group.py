@@ -9,6 +9,11 @@ UNBIND_GALAXIES = False
 MINIMUM_STARS_PER_GALAXY = 32
 MINIMUM_DM_PER_HALO      = 32
 
+group_types = dict(
+    halo='halos',
+    galaxy='galaxies',
+)
+
 class GroupList(object):
     def __init__(self, name):
         self.name = name
