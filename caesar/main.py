@@ -38,6 +38,9 @@ class CAESAR(object):
         self.global_particle_lists = ParticleListContainer(self)
         self.simulation = SimulationAttributes()
         self.yt_dataset = ds
+
+        self.nhalos    = 0
+        self.ngalaxies = 0
         
     @property
     def yt_dataset(self):
@@ -67,8 +70,8 @@ class CAESAR(object):
 
     @property
     def _has_galaxies(self):
-        """Checks if self.ngalaxies exists."""
-        if hasattr(self,'ngalaxies'):
+        """Checks if any galaxies are present."""
+        if self.ngalaxies > 0:
             return True
         else:
             return False
@@ -126,6 +129,16 @@ class CAESAR(object):
             cut way to determine if PartType5 is a low-res particle, 
             or a black hole.
         
+        b_halo : float
+            Quantity used in the linking length (LL) for halos.
+            LL = mean_interparticle_separation * b_halo.  Defaults to 
+            b_halo = 0.2.
+
+        b_galaxy : float
+            Quantity used in the linking length (LL) for galaxies.
+            LL = mean_interparticle_separation * b_galaxy.  Defaults 
+            to b_galaxy = b_halo * 0.2.
+
         Examples
         --------
         >>> obj.member_search(blackholes=False)

@@ -217,6 +217,7 @@ def load(filename, ds = None, obj = None):
     
     # restore halo data
     if 'halo_data' in infile:
+        mylog.info('Restoring halo attributes')
         hd = infile['halo_data']
         obj.halos = []
         for i in range(0,obj.nhalos):
@@ -231,6 +232,7 @@ def load(filename, ds = None, obj = None):
    
     # restore galaxy data
     if 'galaxy_data' in infile:
+        mylog.info('Restoring galaxy attributes')
         hd = infile['galaxy_data']
         obj.galaxies = []
         for i in range(0,obj.ngalaxies):

@@ -108,10 +108,9 @@ def get_mean_interparticle_separation(obj):
         Mean inter-particle separation used for calculating FOF's b
         parameter.
 
-    """
-    
-    if hasattr(obj, 'mean_interparticle_separation'):
-        return obj.mean_interparticle_separation
+    """    
+    if hasattr(obj.simulation, 'mean_interparticle_separation'):
+        return obj.simulation.mean_interparticle_separation
     
     UT = obj.yt_dataset.time_unit.to('s/h')/obj.yt_dataset.scale_factor
     UL = obj.yt_dataset.length_unit.to('cmcm/h')
@@ -140,19 +139,51 @@ def get_mean_interparticle_separation(obj):
 
     Om = obj.yt_dataset.cosmology.omega_matter
     Ob = (bmass / (bmass + dmmass) * Om).d
-    obj.simulation.omega_baryon = Ob
-
-    #print(len(bhmass))
-    #print('Ob= %f' % (Ob))
-    mylog.info('Calculated Omega_Baryon=%0.3f' % Ob)
     
     rhodm = ((Om - Ob) * 3.0 * Hubble**2 / (8.0 * np.pi * G)).d
     rhodm = obj.yt_dataset.quan(rhodm, 'code_mass/code_length**3')
+    
+    mips  = ((dmmass / ndm / rhodm)**(1./3.)).to(obj.units['length'])
+    efres = int(obj.simulation.boxsize.d / mips.d)
+    
+    obj.simulation.omega_baryon = float(Ob)
+    obj.simulation.effective_resolution = efres
+    obj.simulation.mean_interparticle_separation = mips
 
-    mips = ((dmmass / ndm / rhodm)**(1./3.)).to(obj.units['length'])
+    mylog.info('Calculated Omega_Baryon=%g and %d^3 effective resolution' % (Ob, efres))
+    
+    return obj.simulation.mean_interparticle_separation
 
-    obj.mean_interparticle_separation = mips
-    return obj.mean_interparticle_separation
+
+def get_b(obj, group_type):
+    """Function to return *b*, the fraction of the mean interparticle
+    separation.
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main caesar object.
+    group_type : str
+        Can be either 'halo' or 'galaxy'; determines what objects
+        we find with FOF.
+
+    Returns
+    -------
+    b : float
+        Fraction of the mean interparticle separation used for FOF 
+        linking length.
+
+    """
+    b = 0.2
+    key = 'b_%s' % group_type
+    if key in obj._kwargs and isinstance(obj._kwargs[key], (int, float)):
+        b = float(obj._kwargs[key])
+    elif group_type == 'galaxy':
+        b *= 0.2
+        
+    mylog.info('Using b=%g for %s' % (b, group_types[group_type]))
+    return b
+    
     
 def fubar(obj, group_type, **kwargs):
     """Group finding procedure.
@@ -174,16 +205,13 @@ def fubar(obj, group_type, **kwargs):
         we find with FOF.
 
     """
-
-    LL = get_mean_interparticle_separation(obj) * 0.2
-
+    LL = get_mean_interparticle_separation(obj) * get_b(obj, group_type)
+    
     pos = obj.data_manager.pos
 
     if group_type == 'galaxy':
         if not obj.simulation.baryons_present:
             return
-        
-        LL *= 0.2
 
         # here we want to perform FOF on high density gas + stars
         high_rho_indexes = get_high_density_gas_indexes(obj)
@@ -209,7 +237,7 @@ def fubar(obj, group_type, **kwargs):
         groupings[GroupID] = create_new_group(obj, group_type)
 
     if len(groupings) == 0:
-        print('No %s found!' % group_types[group_type])
+        mylog.warning('No %s found!' % group_types[group_type])
         return
     
     tags = fof_tags
@@ -235,7 +263,7 @@ def fubar(obj, group_type, **kwargs):
             continue
         group_list.append(v)
 
-    mylog.info('Disregarding %d invalid %s' % (n_invalid, group_types[group_type]))
+    mylog.info('Disregarding %d invalid %s (%d left)' % (n_invalid, group_types[group_type], len(group_list)))
         
     # sort by mass
     group_list.sort(key = lambda x: x.masses['total'], reverse=True)

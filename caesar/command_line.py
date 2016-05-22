@@ -4,13 +4,15 @@ import os
 
 def run():
     parser = argparse.ArgumentParser()
-    parser.add_argument('input', help='input file or input directory', type=str)
+    parser.add_argument('input',     type=str,   help='Input file or input directory')
+    parser.add_argument('-b_halo',   type=float, help='Halo linking length')
+    parser.add_argument('-b_galaxy', type=float, help='Galaxy linking length')
     args = parser.parse_args()
     
     input = args.input
 
     if os.path.isdir(input):
-        run_multiple_caesar(input)
+        run_multiple_caesar(input, vars(args))
         return
 
     if not os.path.isfile(input):
@@ -28,7 +30,7 @@ def run():
     if caesar_file:
         open_caesar_file(input)        
     else:
-        run_caesar(input)
+        run_caesar(input, vars(args))
 
         
 def open_caesar_file(infile):
@@ -42,7 +44,7 @@ def open_caesar_file(infile):
 
     IPython.embed()
 
-def run_caesar(infile):
+def run_caesar(infile, args):
     import yt
     
     #if outfile is None:
@@ -52,13 +54,13 @@ def run_caesar(infile):
         outfile = 'caesar_%s' % (infile) 
 
     from .main import CAESAR
-        
+
     obj = CAESAR(yt.load(infile))
-    obj.member_search()
+    obj.member_search(**args)
     obj.save(outfile)
 
 
-def run_multiple_caesar(dir):
+def run_multiple_caesar(dir, args):
     import glob
 
     # look for hdf5 files
@@ -71,7 +73,7 @@ def run_multiple_caesar(dir):
 
     for f in infiles:
         try:
-            run_caesar(f)
+            run_caesar(f, args)
         except:
             print('failed on %s' % f)
             pass
