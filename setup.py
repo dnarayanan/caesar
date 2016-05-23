@@ -3,7 +3,9 @@ from setuptools.extension import Extension
 import numpy as np
 from Cython.Build import cythonize
 
-VERSION = '0.1'
+import sys
+sys.path.insert(0,'caesar')
+from main import VERSION
 
 cython_extensions = [
     Extension('caesar.group_funcs',

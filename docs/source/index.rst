@@ -10,7 +10,7 @@ Welcome to CAESAR's documentation!
 ==================================
 
 ``CAESAR`` is a python framework for analyzing the outputs from
-cosmological simulations.  It aims to provide a simple yet intuitive
+cosmological simulations.  It aims to provide a simple and intuitive
 interface for exploring data within your outputs.  It starts by
 identifying objects (halos and galaxies), calculates a number of
 properties for each individual object, and finally links objects to
@@ -20,7 +20,7 @@ original simulation binary.
 
 ``CAESAR`` builds upon the `yt <http://yt-project.org>`_ project,
 which provides support for a number of `simulation codes
-<http://yt-project.org/doc/reference/code_support.html>`_, and
+<http://yt-project.org/doc/reference/code_support.html>`_ and
 `symbolic units
 <http://yt-project.org/doc/analyzing/units/index.html>`_.  All
 meaningful quantities stored within a ``CAESAR`` output have these

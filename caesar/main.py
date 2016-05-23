@@ -4,6 +4,8 @@ from caesar.simulation_attributes import SimulationAttributes
 
 from yt.funcs import mylog, get_hash
 
+VERSION = '0.1'
+
 class CAESAR(object):
     """Master CAESAR class.
 
