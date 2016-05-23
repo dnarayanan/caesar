@@ -452,7 +452,7 @@ def create_new_group(obj, group_type):
     ----------
     obj : :class:`main.CAESAR`
         Main caesar object.
-    group_type : str
+    group_type : {'halo', 'galaxy'}
         Which type of group?  Options are: `halo` and `galaxy`.
 
     Returns

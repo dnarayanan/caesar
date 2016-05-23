@@ -7,6 +7,27 @@ import caesar
 from caesar.progen import progen_finder
 
 class Snapshot(object):
+    """Class for tracking paths and data for simulation snapshots.
+
+    Parameters
+    ----------
+    snapdir : str
+        Path to snapshot
+    snapname : str
+        Name of snapshot minus number and extension
+    snapnum : int
+        Snapshot number
+    extension : str, optional
+        File extension of your snapshot, 'hdf5' by default.
+
+    Notes
+    -----
+    This class attempts to concat strings to form a full path to your
+    simulation snapshot in the following manner:
+    
+    >>> '%s/%s%03d.%s' % (snapdir, snapname, snapnum, extension)
+
+    """    
     def __init__(self, snapdir, snapname, snapnum, extension='hdf5'):
         self.snapdir  = snapdir
         self.snapname = snapname
@@ -15,6 +36,7 @@ class Snapshot(object):
                                            snapnum, extension)
 
     def set_output_information(self, ds):
+        """Set the name of the CAESAR output file."""
         if ds.cosmological_simulation == 0:
             time = 't%0.3f' % ds.current_time
         else:
@@ -26,6 +48,7 @@ class Snapshot(object):
                                                     time)
 
     def _make_output_dir(self):
+        """If output directory is not present, create it."""
         if not os.path.isdir(self.outdir):
             try:
                 os.makedirs(self.outdir)
@@ -33,6 +56,7 @@ class Snapshot(object):
                 pass
             
     def member_search(self, skipran, **kwargs):
+        """Perform the member_search() method on this snapshot."""
         if not os.path.isfile(self.snap):
             mylog.warning('%s NOT found, skipping' % self.snap)
             return
@@ -53,6 +77,7 @@ class Snapshot(object):
         ds = None
 
 def print_art():
+    """Print some ascii art."""
     from caesar.main import VERSION
     copywrite = '    (C) 2016 Robert Thompson'
     version   = '    Version %s' % VERSION
@@ -69,9 +94,50 @@ def print_art():
     print('\n%s\n%s\n%s\n' % (art, copywrite, version))
 
         
-def run(snapdirs, snapnames, snapnums,
+def run(snapdirs, snapname, snapnums,
         progen=False, skipran=False, member_search=True,
         **kwargs):
+    """Driver function for running ``CAESAR`` on multiple snapshots.
+
+    Can utilize mpi4py to run analysis in parallel given that ``MPI`` 
+    and ``mpi4py`` is correctly installed.  To do this you must create
+    a script similar to the example below, then execute it via:
+
+    >>> mpirun -np 8 python my_script.py
+
+    Parameters
+    ----------
+    snapdirs : str or list
+        A path to your snapshot directory, or a list of paths to your
+        snapshot directories.
+    snapname : str
+        Formatting of your snapshot name disregarding any integer 
+        numbers or file extensions; for example: ``snap_N256L16_``
+    snapnums : int or list or array
+        A single integer, a list of integers, or an array of integers.
+        These are the snapshot numbers you would like to run CAESAR
+        on.
+    progen : boolean, optional
+        Perform most massive progenitor search.  Defaults to False.
+    skipran : boolean, optional
+        Skip running member_search() if CAESAR outputs are already
+        present.  Defaults to False.
+    member_search : boolean, optional
+        Perform the member_search() method on each snapshot.  Defaults
+        to True.  This is useful to set to False if you want to just
+        perform progen for instance.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> snapdir  = '/Users/bob/Research/N256L16/some_sim'
+    >>> snapname = 'snap_N256L16_'
+    >>> snapnums = np.arange(0,86)
+    >>>
+    >>> import caesar
+    >>> caesar.driver(snapdir, snapname, snapnums, skipran=False, progen=True)
+    
+    """
     
     if isinstance(snapdirs, str):
         snapdirs = [snapdirs]
@@ -95,7 +161,7 @@ def run(snapdirs, snapnames, snapnums,
     snaps = []
     for snapdir in snapdirs:
         for snapnum in snapnums:
-            snaps.append(Snapshot(snapdir, snapnames, snapnum))
+            snaps.append(Snapshot(snapdir, snapname, snapnum))
         
     if member_search:
         rank_snaps = snaps[rank::nprocs]

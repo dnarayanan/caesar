@@ -15,7 +15,7 @@ class CAESAR(object):
     
     Parameters
     ----------
-    ds : yt dataset (optional)
+    ds : yt dataset, optional
         A dataset via ``ds = yt.load(snapshot)``
 
     Examples

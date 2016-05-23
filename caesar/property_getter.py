@@ -332,7 +332,7 @@ def get_particles_for_FOF(obj, ptypes, find_type=None):
         Main caesar object.
     ptypes : list
         List containing which ptypes to concat.
-    find_type : str (optional)
+    find_type : str, optional
         Depreciated.
 
     Returns

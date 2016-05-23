@@ -169,7 +169,7 @@ def save(obj, filename='test.hdf5'):
     ----------
     obj : :class:`main.CAESAR`
         Main caesar object to save.
-    filename : str (optional)
+    filename : str, optional
         Filename of the output file.
 
     Examples

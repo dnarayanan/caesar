@@ -182,9 +182,9 @@ def load(filename, ds = None, obj = None):
     ----------
     filename : str
         Input file.
-    ds : yt dataset (optional)
+    ds : yt dataset, optional
         yt dataset to link to.
-    obj : :class:`main.CAESAR`
+    obj : :class:`main.CAESAR`, optional
         For loading into an already created CAESAR object.
 
     Examples

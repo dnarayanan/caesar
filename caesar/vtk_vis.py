@@ -62,7 +62,7 @@ class vtk_render(object):
         ----------
         pos: np.ndarray
             3D positions of points.
-        color: list, np.ndarray, optional
+        color: list or np.ndarray, optional
             Color of points.  This can be a single RGB value
             or a list of RGB values (one per point).
         opacity: float, optional
@@ -132,7 +132,7 @@ class vtk_render(object):
 
         Parameters
         ----------
-        center: list, np.ndarray
+        center: list or np.ndarray
             Center of the box in 3D space.
         size: float
             How large the box should be on a side.
@@ -174,15 +174,15 @@ class vtk_render(object):
 
         Parameters
         ----------
-        center: list, np.ndarray
+        center: list or np.ndarray
             Center of the sphere in 3D space.
         r: float
             Radius of the sphere.
         color: list, optional
             Color of the sphere in RGB.
-        opacity: float
+        opacity: float, optional
             Transparency of the sphere.
-        res: int
+        res: int, optional
             Resolution of the sphere.
 
         """
@@ -281,15 +281,15 @@ class vtk_render(object):
 
         Parameters
         ----------
-        pos : tuple, np.ndarray
+        pos : tuple or np.ndarray
             Position in 3D space where to place the label.
         text : str
             Label text.
-        text_color : list, np.ndarray, optional
+        text_color : list or np.ndarray, optional
             Color of the label text in RGB.
         text_font_size : int, optional
             Text size of the label.
-        label_box_color : list, np.ndarray, optional
+        label_box_color : list or np.ndarray, optional
             Background color of the label box in RGB.
         label_box: int, optional
             0=do not show the label box, 1=show the label box.
@@ -390,9 +390,9 @@ class vtk_render(object):
             Horizontal size of the window in pixels.
         ysize : int, optional
             Vertical size of the window in pixels.
-        bg_color : tuple, np.array, optional
+        bg_color : tuple or np.array, optional
             Background color in RGB.
-        focal_point : tuple, np.array, optional
+        focal_point : tuple or np.array, optional
             Where to focus the camera on rendering.
         orient_widget : int, optional
             Show the orient widget?
