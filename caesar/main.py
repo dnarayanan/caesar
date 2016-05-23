@@ -78,6 +78,10 @@ class CAESAR(object):
 
     def _load_data(self):
         """Performs disk IO for particle/field data."""
+        if hasattr(self, 'DataManager'):
+            return
+        if isinstance(self.yt_dataset, int):
+            raise Exception("No yt_dataset assigned!")
         from caesar.data_manager import DataManager
         self.data_manager = DataManager(self)
         
