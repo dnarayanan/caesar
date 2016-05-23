@@ -5,7 +5,7 @@ from Cython.Build import cythonize
 
 import sys
 sys.path.insert(0,'caesar')
-from main import VERSION
+from version import VERSION
 
 cython_extensions = [
     Extension('caesar.group_funcs',

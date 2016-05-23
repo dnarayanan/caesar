@@ -78,7 +78,7 @@ class Snapshot(object):
 
 def print_art():
     """Print some ascii art."""
-    from caesar.main import VERSION
+    from caesar.version import VERSION
     copywrite = '    (C) 2016 Robert Thompson'
     version   = '    Version %s' % VERSION
 
@@ -223,4 +223,4 @@ def run(snapdirs, snapname, snapnums,
                           snap_current, snap_progens)
 
 if __name__ == '__main__':
-    run()
+    print_art()
