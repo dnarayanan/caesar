@@ -8,11 +8,25 @@ from caesar.group import group_types
 DEBUG = False
 attribute_name = 'progen_index'
 
-def find_progens(
-        pids_current, pids_progens,
-        list_current, list_progens,
-        nobjs_current
-):
+def find_progens(pids_current, pids_progens,
+                 list_current, list_progens,
+                 nobjs_current):
+    """Primary most massive progenitor funciton.
+    
+    Parameters
+    ----------
+    pids_current : np.ndarray
+       Particle IDs from the current snapshot.
+    pids_progens : np.ndarray
+       Particle IDs from the previous snapshot.
+    list_current : list
+        Group indexes for the current snapshot
+    list_progens : list
+        Group indexes fro the previous snapshot
+    nobjs_current : int
+        Number of objects we are searching for progenitors.
+
+    """
     ## number of particles we are comparing against
     nids_progens = len(pids_progens)
 
@@ -63,11 +77,13 @@ def find_progens(
     return prev_obj_indexes
 
 def write_progen_data(obj,data,data_type, outfile):
+    """Write progen indexes to disk."""
     f = h5py.File(outfile)
     f.create_dataset('%s_data/%s' % (data_type, attribute_name), data=data)
     f.close()
 
 def check_if_progen_is_present(data_type, outfile):
+    """Check CAESAR file for progen indexes."""
     f = h5py.File(outfile)
     present = False
     if '%s_data/%s' % (data_type,attribute_name) in f:
@@ -82,6 +98,21 @@ def check_if_progen_is_present(data_type, outfile):
 
 
 def progen_finder(obj_current, obj_progens, snap_current, snap_progens):
+    """Function to find the most massive progenitor of each CAESAR
+    object in the previous snapshot.
+
+    Parameters
+    ----------
+    obj_current : :class:`main.CAESAR`
+        Will search for the progenitors of the objects in this object.
+    obj_progens : :class:`main.CAESAR`
+        Looking for progenitors in this object.
+    snap_current : str
+        Name (including path) of the primary snapshot
+    snap_progens : yt dataset
+        Name (including path) of the secondary snapshot
+
+    """
     try:
         from pygadgetreader import readsnap
     except:

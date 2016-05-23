@@ -126,6 +126,19 @@ def run(snapdirs, snapname, snapnums,
         Perform the member_search() method on each snapshot.  Defaults
         to True.  This is useful to set to False if you want to just
         perform progen for instance.
+    b_halo : float, optional
+        Quantity used in the linking length (LL) for halos.
+        LL = mean_interparticle_separation * b_halo.  Defaults to 
+        ``b_halo = 0.2``.
+    b_galaxy : float, optional
+        Quantity used in the linking length (LL) for galaxies.
+        LL = mean_interparticle_separation * b_galaxy.  Defaults 
+        to ``b_galaxy = b_halo * 0.2``.
+    blackholes : boolean, optional
+        Indicate if blackholes are present in your simulation.  
+        This must be toggled on manually as there is no clear 
+        cut way to determine if PartType5 is a low-res particle, 
+        or a black hole.
 
     Examples
     --------
