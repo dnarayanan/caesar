@@ -408,11 +408,25 @@ class Group(object):
             self.radii['%s_half_mass' % k] = self.obj.yt_dataset.quan(half_r, self.obj.units['length'])
 
 
-    def vtk_vis(self):
-        self.obj._load_data()
+    def vtk_vis(self, rotate=False):
+        """Method to render this group's points via VTK.
+
+        Parameters
+        ----------
+        rotate : boolean
+            Align angular momentum vector with the z-axis before 
+            rendering?
+
+        Notes
+        -----
+        Opens up a pyVTK window; you must have VTK installed to use
+        this method.  It is easiest to install via 
+        ``conda install vtk``.
         
-        from vtk_funcs import group_vis
-        group_vis(self)
+        """
+        self.obj._load_data()
+        from caesar.vtk_funcs import group_vis
+        group_vis(self, rotate=rotate)
         
             
 class Galaxy(Group):

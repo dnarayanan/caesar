@@ -166,3 +166,27 @@ class CAESAR(object):
         
         import caesar.hydrogen_mass_calc as mass_calc
         mass_calc.hydrogen_mass_calc(self)
+
+
+    def vtk_vis(self, **kwargs):
+        """Method to visualize an entire simulation with VTK.
+        
+        Parameters
+        ----------
+        obj : :class:`main.CAESAR`
+            Simulation object to visualize.
+        ptypes : list
+            List containing one or more of the following: 
+            'dm','gas','star', which dictates which particles to 
+            render.
+        halo_only : boolean
+            If True only render particles belonging to halos.
+        galaxy_only: boolean
+            If True only render particles belonging to galaxies.  Note 
+            that this overwrites ``halo_only``.
+        
+        """    
+        self._load_data()
+        from caesar.vtk_funcs import sim_vis
+        sim_vis(self, **kwargs)
+        
