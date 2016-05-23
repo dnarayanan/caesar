@@ -36,7 +36,7 @@ class Mock(object):
             return Mock()
 
 MOCK_MODULES = [
-    'yt',
+    'vtk','yt',
     'yt.funcs', 'yt.funcs.mylog', 'yt.funcs.get_hash',
     'yt.units.yt_array.YTQuantity', 'yt.units.yt_array.UnitRegistry',
     'yt.extern', 'yt.extern.six', 'yt.extern.tqdm', 'yt.extern.tqdm.tqdm',
