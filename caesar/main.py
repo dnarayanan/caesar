@@ -23,9 +23,9 @@ class CAESAR(object):
 
     """
     def __init__(self, ds=0, *args, **kwargs):        
-        self.args   = args
-        self.kwargs = kwargs
-        self._ds    = 0
+        self._args   = args
+        self._kwargs = kwargs
+        self._ds     = 0
 
         self.units = dict(
             mass='Msun',

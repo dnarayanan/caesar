@@ -407,6 +407,13 @@ class Group(object):
             half_r = get_half_mass_radius(mass, r, ptype, half_masses[k], binary)
             self.radii['%s_half_mass' % k] = self.obj.yt_dataset.quan(half_r, self.obj.units['length'])
 
+
+    def vtk_vis(self):
+        self.obj._load_data()
+        
+        from vtk_funcs import group_vis
+        group_vis(self)
+        
             
 class Galaxy(Group):
     """Galaxy class which has the central boolean."""
