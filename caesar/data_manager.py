@@ -5,16 +5,23 @@ from caesar.property_getter import ptype_ints, get_particles_for_FOF, get_proper
 class DataManager(object):
     """Class to handle the initial IO and data storage for the duration of
     a CAESAR run.
-    """
-    
-    def __init__(self, obj):
-        """Requires an `caesar.main.CAESAR` object."""
+
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main CAESAR object.
+    gas_data : boolean
+        If True load additional gas data (sfr/temp/etc)
+
+    """    
+    def __init__(self, obj, gas_data):
         self.obj = obj
         self.blackholes = False
         self.determine_ptypes()
         self.load_data()
-        self.load_gas_data()
-        
+        if gas_data:
+            self.load_gas_data()
+            
     def determine_ptypes(self):
         """Determines what particle/field types to collect."""
         self.ptypes = ['gas','star']

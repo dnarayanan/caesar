@@ -76,14 +76,14 @@ class CAESAR(object):
         else:
             return False
 
-    def _load_data(self):
+    def _load_data(self, gas_data=True):
         """Performs disk IO for particle/field data."""
         if hasattr(self, 'DataManager'):
             return
         if isinstance(self.yt_dataset, int):
             raise Exception("No yt_dataset assigned!")
         from caesar.data_manager import DataManager
-        self.data_manager = DataManager(self)
+        self.data_manager = DataManager(self, gas_data)
         
     def _assign_simulation_attributes(self):
         """Populate the `caesar.simulation_attributes.SimulationAttributes`
@@ -184,7 +184,7 @@ class CAESAR(object):
             that this overwrites ``halo_only``.
         
         """    
-        self._load_data()
+        self._load_data(gas_data=False)
         from caesar.vtk_funcs import sim_vis
         sim_vis(self, **kwargs)
         

@@ -424,7 +424,7 @@ class Group(object):
         ``conda install vtk``.
         
         """
-        self.obj._load_data()
+        self.obj._load_data(gas_data=False)
         from caesar.vtk_funcs import group_vis
         group_vis(self, rotate=rotate)
         
