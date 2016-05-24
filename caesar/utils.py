@@ -85,3 +85,66 @@ def calculate_local_densities(obj, group_list):
         total_mass = obj.yt_dataset.quan(np.sum(mass[inrange]), obj.units['mass'])
         group.local_mass_density   = total_mass / search_volume
         group.local_number_density = float(len(inrange)) / search_volume
+
+
+def info_printer(obj, group_type, top):
+    """General method to print data.
+    
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Main CAESAR object.
+    group_type : {'halo','galaxy'}
+        Type of group to print data for.
+    top : int
+        Number of objects to print.
+
+    """
+    from caesar.group import group_types
+    if group_type == 'halo':
+        group_list = obj.halos
+    elif group_type == 'galaxy':
+        group_list = obj.galaxies
+    nobjs = len(group_list)
+    if top > nobjs:
+        top = nobjs
+
+    if obj.simulation.cosmological_simulation:
+        time = 'z=%0.3f' % obj.simulation.redshift
+    else:
+        time = 't=%0.3f' % obj.simulation.time
+
+    output  = '\n'
+    output += '## Largest %d %s\n' % (top, group_types[group_type])
+    if hasattr(obj, 'data_file'): output += '## from: %s\n' % obj.data_file
+    output += '## %d @ %s' % (nobjs, time)
+    output += '\n\n'
+
+    cnt = 1
+    if group_type == 'halo':
+        output += ' ID    Mdm       Mstar     Mgas      r         fgas   nrho\t|  CentralGalMstar\n'
+        #         ' 0000  4.80e+09  4.80e+09  4.80e+09  7.64e-09  0.000  7.64e-09\t|  7.64e-09'
+        output += ' ---------------------------------------------------------------------------------\n'
+        for o in group_list:
+            cgsm = -1
+            if hasattr(o,'central_galaxy'): cgsm = o.central_galaxy.masses['stellar']
+            output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.3f  %0.2e\t|  %0.2e \n' % \
+                      (o.GroupID, o.masses['dm'], o.masses['stellar'],
+                       o.masses['gas'],o.radii['total'], o.gas_fraction,
+                       o.local_number_density, cgsm)
+            cnt += 1
+            if cnt > top: break
+    elif group_type == 'galaxy':
+        output += ' ID    Mstar     Mgas      SFR       r         fgas   nrho      Central\t|  Mhalo     HID\n'
+        output += ' ----------------------------------------------------------------------------------------\n'
+        #         ' 0000  4.80e+09  4.80e+09  4.80e+09  7.64e-09  0.000  7.64e-09  False
+        for o in group_list:
+            output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.3f  %0.2e  %s\t|  %0.2e  %d \n' % \
+                      (o.GroupID, o.masses['stellar'], o.masses['gas'],
+                       o.sfr, o.radii['total'], o.gas_fraction,
+                       o.local_number_density, o.central,
+                       o.halo.masses['total'], o.halo.GroupID)
+            cnt += 1
+            if cnt > top: break
+                
+    print(output)
