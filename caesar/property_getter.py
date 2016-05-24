@@ -37,6 +37,7 @@ ptype_ints = dict(
 )
 
 ptype_aliases = dict(
+    GizmoDataset      = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
     GadgetHDF5Dataset = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
     GadgetDataset     = {'gas':'Gas','star':'Stars','dm':'Halo'},
     TipsyDataset      = {'gas':'Gas','star':'Stars','dm':'DarkMatter'},
@@ -52,7 +53,7 @@ class DatasetType(object):
         self.dd      = ds.all_data()
 
         if self.ds_type not in ptype_aliases.keys():
-            raise NotImplementedError('%s not yet supported' % ds_type)
+            raise NotImplementedError('%s not yet supported' % self.ds_type)
 
         self.ptype_aliases = ptype_aliases[self.ds_type]
 
