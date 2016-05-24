@@ -4,7 +4,8 @@ import os
 
 def run():
     parser = argparse.ArgumentParser()
-    parser.add_argument('input',     type=str,   help='Input file or input directory')
+    parser.add_argument('input', type=str, help='Input file or input directory')
+    parser.add_argument('-o', '--output', type=str, help='Output file name')
     parser.add_argument('-b_halo',   type=float, help='Halo linking length')
     parser.add_argument('-b_galaxy', type=float, help='Galaxy linking length')
     args = parser.parse_args()
@@ -47,9 +48,15 @@ def open_caesar_file(infile):
 def run_caesar(infile, args):
     import yt
     
-    #if outfile is None:
-    if infile.endswith('.bin') or infile.endswith('.dat'):
+    if args['output'] is not None:
+        if args['output'].endswith('.hdf5'):
+            outfile = args['output']
+        else:
+            outfile = '%s.hdf5' % args['output']
+
+    elif infile.endswith('.bin') or infile.endswith('.dat'):
         outfile = 'caesar_%s.hdf5' % (infile[:-4])
+
     else:
         outfile = 'caesar_%s' % (infile) 
 
