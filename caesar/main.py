@@ -2,6 +2,7 @@ from caesar.property_getter import DatasetType
 from caesar.particle_list import ParticleListContainer
 from caesar.simulation_attributes import SimulationAttributes
 
+from yt.extern import six
 from yt.funcs import mylog, get_hash
 
 class CAESAR(object):
@@ -15,6 +16,16 @@ class CAESAR(object):
     ----------
     ds : yt dataset, optional
         A dataset via ``ds = yt.load(snapshot)``
+    mass : str, optional
+        Mass unit to store data with. Defaults to 'Msun'.
+    length : str, optional
+        Length unit to store data with. Defaults to 'kpccm'.
+    velocity : str, optional
+        Velocity unit to store data with. Defaults to 'km/s'.
+    time : str, optional
+        Time unit to store data with. Defaults to 'yr'.
+    temperature : str, optional
+        Temperature unit to store data with. Defaults to 'K'.
 
     Examples
     --------
@@ -34,6 +45,11 @@ class CAESAR(object):
             time='yr',
             temperature='K'
         )
+
+        # check for unit overrides
+        for k,v in six.iteritems(kwargs):
+            if k.lower() in self.units:
+                self.units[k.lower()] = v
 
         self.global_particle_lists = ParticleListContainer(self)
         self.simulation = SimulationAttributes()
