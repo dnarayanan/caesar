@@ -14,6 +14,14 @@ group_types = dict(
     galaxy='galaxies',
 )
 
+info_blacklist = [
+    '_glist','glist_end','glist_start',
+    '_slist','slist_end','slist_start',
+    '_dmlist','dmlist_end','dmlist_start',
+    'obj', 'halo', 'galaxies', 'satellites',
+    'galaxy_index_list_end', 'galaxy_index_list_start',
+]
+
 class GroupList(object):
     def __init__(self, name):
         self.name = name
@@ -427,6 +435,17 @@ class Group(object):
         self.obj._load_data(gas_data=False)
         from caesar.vtk_funcs import group_vis
         group_vis(self, rotate=rotate)
+
+
+    def info(self):
+        """Method to quickly print out object attributes."""
+        pdict = {}
+        for k,v in six.iteritems(self.__dict__):
+            if k in info_blacklist: continue
+            pdict[k] = v
+        from pprint import pprint
+        pprint(pdict)
+        pdict = None
         
             
 class Galaxy(Group):
