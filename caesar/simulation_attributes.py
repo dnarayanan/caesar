@@ -13,7 +13,8 @@ class SimulationAttributes(object):
 
         self.XH              = 0.76        
         self.redshift        = ds.current_redshift
-        self.time            = 1.0 / (1.0 + self.redshift)
+        self.scale_factor    = 1.0 / (1.0 + self.redshift)
+        self.time            = ds.current_time
         self.omega_matter    = ds.omega_matter
         self.omega_lambda    = ds.omega_lambda
         self.fullpath        = ds.fullpath

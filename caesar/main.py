@@ -1,6 +1,7 @@
 from caesar.property_getter import DatasetType
 from caesar.particle_list import ParticleListContainer
 from caesar.simulation_attributes import SimulationAttributes
+from caesar.group import group_types
 
 from yt.extern import six
 from yt.funcs import mylog, get_hash
@@ -203,4 +204,100 @@ class CAESAR(object):
         self._load_data(gas_data=False)
         from caesar.vtk_funcs import sim_vis
         sim_vis(self, **kwargs)
+
         
+    def galinfo(self, top=10):
+        """Method to print general info for the most massive galaxies
+        identified via CAESAR.
+
+        Parameters
+        ----------
+        top : int, optional
+            Number of results to print.  Defaults to 10.
+
+        Notes
+        -----
+        This prints to terminal, and is meant for use in an 
+        interactive session.
+
+        """
+        self._info('galaxy', top)
+
+    def haloinfo(self, top=10):
+        """Method to print general info for the most massive halos
+        identified via CAESAR.
+
+        Parameters
+        ----------
+        top : int, optional
+            Number of results to print.  Defaults to 10.
+
+        Notes
+        -----
+        This prints to terminal, and is meant for use in an 
+        interactive session.
+
+        """
+        self._info('halo', top)
+        
+    def _info(self, group_type, top):
+        """General method to print data.
+
+        Parameters
+        ----------
+        group_type : {'halo','galaxy'}
+            Type of group to print data for.
+        top : int
+            Number of objects to print.
+
+        """
+        if group_type == 'halo':
+            group_list = self.halos
+        elif group_type == 'galaxy':
+            group_list = self.galaxies
+        nobjs = len(group_list)
+        if top > nobjs:
+            top = nobjs
+
+        if self.simulation.cosmological_simulation:
+            time = 'z=%0.3f' % self.simulation.redshift
+        else:
+            time = 't=%0.3f' % self.simulation.time
+
+        output  = '\n'
+        output += '## Largest %d %s from:\n' % (top, group_types[group_type])
+        output += '## %s\n' % self.data_file
+        output += '## %d @ %s' % (nobjs, time)
+        output += '\n\n'
+
+        cnt = 1
+        if group_type == 'halo':
+            output += ' ID    Mdm       Mstar     Mgas      r         fgas   nrho\t|  CentralGalMstar\n'
+            #         ' 0000  4.80e+09  4.80e+09  4.80e+09  7.64e-09  0.000  7.64e-09\t|  7.64e-09'
+            output += ' ---------------------------------------------------------------------------------\n'
+            for o in group_list:
+                cgsm = -1
+                if hasattr(o,'central_galaxy'):
+                    cgsm = o.central_galaxy.masses['stellar']
+                output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.3f  %0.2e\t|  %0.2e \n' % \
+                          (o.GroupID, o.masses['dm'], o.masses['stellar'],
+                           o.masses['gas'],o.radii['total'], o.gas_fraction,
+                           o.local_number_density, cgsm)
+                cnt += 1
+                if cnt > top: break
+        elif group_type == 'galaxy':
+            output += ' ID    Mstar     Mgas      SFR       r         fgas   nrho      Central\t|  Mhalo     HID\n'
+            output += ' ----------------------------------------------------------------------------------------\n'
+            #         ' 0000  4.80e+09  4.80e+09  4.80e+09  7.64e-09  0.000  7.64e-09  False
+            for o in group_list:
+                output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.3f  %0.2e  %s\t|  %0.2e  %d \n' % \
+                          (o.GroupID, o.masses['stellar'], o.masses['gas'],
+                           o.sfr, o.radii['total'], o.gas_fraction,
+                           o.local_number_density, o.central,
+                           o.halo.masses['total'], o.halo.GroupID)
+                cnt += 1
+                if cnt > top: break
+        
+        print(output)
+            
+
