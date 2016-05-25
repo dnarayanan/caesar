@@ -26,6 +26,8 @@ class DataManager(object):
         """Determines what particle/field types to collect."""
         self.ptypes = ['gas','star']
         if 'blackholes' in self.obj._kwargs and self.obj._kwargs['blackholes']:
+            from yt.funcs import mylog
+            mylog.warning('Enabling black holes')
             self.ptypes.append('bh')
             self.blackholes = True
         self.ptypes.append('dm')

@@ -8,20 +8,26 @@ def run():
     parser.add_argument('-o', '--output', type=str, help='Output file name')
     parser.add_argument('-b_halo',   type=float, help='Halo linking length')
     parser.add_argument('-b_galaxy', type=float, help='Galaxy linking length')
+    parser.add_argument('-bh', '--blackholes', help='Black holes present?',
+                        dest='OPTIONS', action='append_const', const='blackholes')
     args = parser.parse_args()
     
-    input = args.input
-
-    if os.path.isdir(input):
-        run_multiple_caesar(input, vars(args))
+    var_dict = vars(args)
+    if args.OPTIONS is not None:
+        for opt in args.OPTIONS:
+            if opt not in var_dict:
+                var_dict[opt] = True
+            
+    if os.path.isdir(args.input):
+        run_multiple_caesar(args.input, var_dict)
         return
 
-    if not os.path.isfile(input):
+    if not os.path.isfile(args.input):
         raise IOException('not a valid file!')
     
     caesar_file = False
     try:
-        hd = h5py.File(input, 'r')
+        hd = h5py.File(args.input, 'r')
         if 'caesar' in hd.attrs.keys() and hd.attrs['caesar']:
             caesar_file = True
         hd.close()
@@ -29,9 +35,9 @@ def run():
         pass
     
     if caesar_file:
-        open_caesar_file(input)        
+        open_caesar_file(args.input)        
     else:
-        run_caesar(input, vars(args))
+        run_caesar(args.input, var_dict)
 
         
 def open_caesar_file(infile):
