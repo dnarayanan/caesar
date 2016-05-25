@@ -7,6 +7,8 @@ from caesar.saver import blacklist
 from yt.extern import six
 from yt.units.yt_array import YTQuantity, YTArray, UnitRegistry
 
+LOAD_OBJECT_LISTS = True
+
 ######################################################################
 
 def restore_single_list(obj, group, key):
@@ -22,6 +24,7 @@ def restore_single_list(obj, group, key):
         Name of the list to restore.
 
     """
+    if LOAD_OBJECT_LISTS: return
     infile = h5py.File(obj.data_file,'r')
     data   = np.array(infile['%s_data/lists/%s' % (group.obj_type, key)])
     infile.close()
@@ -94,6 +97,7 @@ def restore_object_list(obj_list, key, hd):
         Open HDF5 dataset.
 
     """
+    if not LOAD_OBJECT_LISTS and key is not 'galaxy_index_list': return
     if ('lists/%s' % key) not in hd: return
     if key in blacklist: return    
     data = np.array(hd['lists/%s' % key])
@@ -101,8 +105,8 @@ def restore_object_list(obj_list, key, hd):
         start = getattr(i, '%s_start' % key)
         end   = getattr(i, '%s_end'   % key)
         setattr(i, key, data[start:end])
-        #delattr(i, '%s_start' % key)
-        #delattr(i, '%s_end'   % key)
+        delattr(i, '%s_start' % key)
+        delattr(i, '%s_end'   % key)
 
 ######################################################################                    
         
