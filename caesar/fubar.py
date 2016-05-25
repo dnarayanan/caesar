@@ -228,7 +228,7 @@ def fubar(obj, group_type, **kwargs):
     fof_tags = fof(obj, pos, LL, group_type=group_type)
 
     if group_type == 'galaxy':
-        gtags = np.full(obj.ngas, -1, dtype=np.int64)
+        gtags = np.full(obj.simulation.ngas, -1, dtype=np.int64)
         gtags[high_rho_indexes] = fof_tags[0:len(high_rho_indexes)]
         fof_tags = np.concatenate((gtags,fof_tags[len(high_rho_indexes)::]))
         
@@ -276,9 +276,9 @@ def fubar(obj, group_type, **kwargs):
 
         
     # initialize global lists
-    glist  = np.full(obj.ngas,  -1, dtype=np.int32)
-    slist  = np.full(obj.nstar, -1, dtype=np.int32)
-    dmlist = np.full(obj.ndm,   -1, dtype=np.int32)
+    glist  = np.full(obj.simulation.ngas,  -1, dtype=np.int32)
+    slist  = np.full(obj.simulation.nstar, -1, dtype=np.int32)
+    dmlist = np.full(obj.simulation.ndm,   -1, dtype=np.int32)
 
     for group in group_list:
         glist[group.glist]   = group.GroupID

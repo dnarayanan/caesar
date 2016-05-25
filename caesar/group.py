@@ -159,7 +159,7 @@ class Group(object):
         self.nstar = len(self.slist)
         self.ndm   = len(self.dmlist)
 
-        if self.obj.nbh > 0:
+        if self.obj.simulation.nbh > 0:
             self.bhlist = indexes[np.where(ptypes == ptype_ints['bh'])[0]]
             self.nbh    = len(self.bhlist)
 
@@ -180,7 +180,7 @@ class Group(object):
         self.masses['baryon']  = self.obj.yt_dataset.quan(mass_baryon, self.obj.units['mass'])
         self.masses['H']       = self.masses['gas'] * self.obj.simulation.XH
         
-        if self.obj.nbh > 0:
+        if self.obj.simulation.nbh > 0:
             mass_bh = np.sum(self.obj.data_manager.mass[self.obj.data_manager.bhlist][self.bhlist])
             self.masses['bh']  = self.obj.yt_dataset.quan(mass_bh, self.obj.units['mass'])
 

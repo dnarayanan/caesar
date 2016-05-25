@@ -54,22 +54,22 @@ class DataManager(object):
         self.bhlist = np.where(self.ptype == ptype_ints['bh'])[0]
 
         # move these to obj.simulation?
-        self.obj.ngas  = len(self.glist)
-        self.obj.nstar = len(self.slist)
-        self.obj.ndm   = len(self.dmlist)
-        self.obj.nbh   = len(self.bhlist)
+        self.obj.simulation.ngas  = len(self.glist)
+        self.obj.simulation.nstar = len(self.slist)
+        self.obj.simulation.ndm   = len(self.dmlist)
+        self.obj.simulation.nbh   = len(self.bhlist)
 
 
     def load_gas_data(self):
         """If gas is present loads gas SFR/Metallicity/Temperatures."""
-        if self.obj.ngas == 0:
+        if self.obj.simulation.ngas == 0:
             return
-
+        
         sfr_unit = '%s/%s' % (self.obj.units['mass'], self.obj.units['time'])
 
-        sfr = self.obj.yt_dataset.arr(np.zeros(self.obj.ngas), sfr_unit)
-        gZ  = self.obj.yt_dataset.arr(np.zeros(self.obj.ngas), '')        
-        gT  = self.obj.yt_dataset.arr(np.zeros(self.obj.ngas), self.obj.units['temperature'])
+        sfr = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), sfr_unit)
+        gZ  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')        
+        gT  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), self.obj.units['temperature'])
             
         if has_property(self.obj, 'gas', 'sfr'):
             sfr = get_property(self.obj, 'sfr', 'gas').to(sfr_unit)
