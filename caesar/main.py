@@ -58,6 +58,8 @@ class CAESAR(object):
         self.nhalos    = 0
         self.ngalaxies = 0
         
+        self.reset_default_returns()
+        
     @property
     def yt_dataset(self):
         """The yt dataset to perform actions on."""
@@ -106,6 +108,83 @@ class CAESAR(object):
         class."""
         self.simulation.create_attributes(self)
 
+
+    def reset_default_returns(self, group_type='all'):
+        """Reset the default returns for object dictionaries.
+    
+        This function resets the default return quantities for CAESAR 
+        halo/galaxy objects including ``mass``, ``radius``, ``sigma``, 
+        ``metallicity``, and ``temperature``.
+    
+        Parameters
+        ----------
+        obj : :class:`main.CAESAR`
+            Main CAESAR object.
+        group_type : {'all', 'halo', 'galaxy'}, optional
+            Group to reset return values for.
+
+        """
+        self._default_returns = {}
+        dr = dict(
+            mass = 'total',
+            radius = 'total',
+            metallicity = 'mass_weighted',
+            temperature = 'mass_weighted',
+        )        
+        if group_type == 'halo' or group_type == 'all':
+            dr['sigma'] = 'dm'
+            self._default_returns['halo'] = dr
+        if group_type == 'galaxy' or group_type == 'all':
+            dr['sigma'] = 'stellar'
+            self._default_returns['galaxy'] = dr                
+
+    def _set_default_returns(self, group_type, category, value):
+        """Generic default return setter."""
+        from caesar.group import category_mapper, group_types
+        if group_type == 'halo':     group = self.halos[0]
+        elif group_type == 'galaxy': group = self.galaxies[0]
+        
+        if category not in category_mapper.keys():
+            raise ValueError('%s not a valid category!  Must pick one of %s' %
+                             (category, category_mapper.keys()))
+        if value not in getattr(group, category_mapper[category]):
+            raise ValueError('%s not a valid value!  Must pick one of %s' %
+                             (value, getattr(group, category_mapper[category]).keys()))
+        
+        mylog.warning('Setting default %s return for %s to "%s"' %
+                      (category, group_types[group_type], value))
+        self._default_returns[group_type][category] = value                
+        
+    def set_default_halo_returns(self, category, value):
+        """Set the default return quantity for a given halo attribute.
+        
+        Parameters
+        ----------
+        category : str
+            The attribute to redirect to a different quantity.
+        value : str
+            The internal name of the new quantity which must be 
+            present in the dictinoary
+        
+        """
+        self._set_default_returns('halo', category, value)
+        
+    def set_default_galaxy_returns(self, category, value):
+        """Set the default return quantity for a given galaxy
+        attribute.
+        
+        Parameters
+        ----------
+        category : str
+            The attribute to redirect to a different quantity.
+        value : str
+            The internal name of the new quantity which must be 
+            present in the dictinoary
+    
+        """
+        self._set_default_returns('galaxy', category, value)
+
+        
     def _assign_objects(self):
         """Assign galaxies to halos, and central galaxies."""
         import caesar.assignment as assign

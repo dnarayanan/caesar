@@ -22,17 +22,36 @@ info_blacklist = [
     'galaxy_index_list_end', 'galaxy_index_list_start',
 ]
 
+category_mapper = dict(
+    mass = 'masses',
+    radius = 'radii',
+    sigma = 'velocity_dispersions',
+    metallicity = 'metallicities',
+    temperature = 'temperatures',
+)
+
+class GroupProperty(object):
+    """Class to return default values for the quantities held in 
+    the category_mapper dictionaries."""
+    def __init__(self, source_dict, name):
+        self.name = name
+        self.source_dict = source_dict
+    def __get__(self, instance, owner):
+        key = instance.obj._default_returns[instance.obj_type][self.name]
+        return getattr(instance, self.source_dict)[key]
+    def __set__(self, instance, value):
+        pass
+
 class GroupList(object):
+    """Class to hold particle/field index lists."""
     def __init__(self, name):
         self.name = name
-
     def __get__(self, instance, owner):
         if not hasattr(instance, '_%s' % self.name) or \
            isinstance(getattr(instance, '_%s' % self.name), int):
             from caesar.loader import restore_single_list
             restore_single_list(instance.obj, instance, self.name)
         return getattr(instance, '_%s' % self.name)
-
     def __set__(self, instance, value):
         setattr(instance, '_%s' % self.name, value)
 
@@ -41,6 +60,12 @@ class Group(object):
     """Parent class for both halo and galaxy objects."""
     glist = GroupList('glist')
     slist = GroupList('slist')    
+
+    mass        = GroupProperty(category_mapper['mass'],   'mass')
+    radius      = GroupProperty(category_mapper['radius'], 'radius')
+    sigma       = GroupProperty(category_mapper['sigma'],  'sigma')
+    temperature = GroupProperty(category_mapper['temperature'], 'temperature')
+    metallicity = GroupProperty(category_mapper['metallicity'], 'metallicity')
     
     def __init__(self,obj):
         self.obj = obj
