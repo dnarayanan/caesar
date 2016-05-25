@@ -279,22 +279,26 @@ def fubar(obj, group_type, **kwargs):
     glist  = np.full(obj.simulation.ngas,  -1, dtype=np.int32)
     slist  = np.full(obj.simulation.nstar, -1, dtype=np.int32)
     dmlist = np.full(obj.simulation.ndm,   -1, dtype=np.int32)
-
+    bhlist = np.full(obj.simulation.nbh,   -1, dtype=np.int32)    
+    
     for group in group_list:
         glist[group.glist]   = group.GroupID
         slist[group.slist]   = group.GroupID
         dmlist[group.dmlist] = group.GroupID
-
+        bhlist[group.bhlist] = group.GroupID
+        
         if not hasattr(group, 'unbound_indexes'):
             continue
         
         glist[group.unbound_indexes[ptype_ints['gas']]]  = -2
         slist[group.unbound_indexes[ptype_ints['star']]] = -2
         dmlist[group.unbound_indexes[ptype_ints['dm']]]  = -2
+        dmlist[group.unbound_indexes[ptype_ints['bh']]]  = -2
             
     setattr(obj.global_particle_lists, '%s_glist'  % group_type, glist)
     setattr(obj.global_particle_lists, '%s_slist'  % group_type, slist)
-    setattr(obj.global_particle_lists, '%s_dmlist' % group_type, dmlist)       
+    setattr(obj.global_particle_lists, '%s_dmlist' % group_type, dmlist)
+    setattr(obj.global_particle_lists, '%s_bhlist' % group_type, bhlist)
     
     calculate_local_densities(obj, group_list)
     

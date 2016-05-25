@@ -154,14 +154,12 @@ class Group(object):
         self.glist  = indexes[np.where(ptypes == ptype_ints['gas'])[0]]
         self.slist  = indexes[np.where(ptypes == ptype_ints['star'])[0]]
         self.dmlist = indexes[np.where(ptypes == ptype_ints['dm'])[0]]
-
+        self.bhlist = indexes[np.where(ptypes == ptype_ints['bh'])[0]]
+        
         self.ngas  = len(self.glist)
         self.nstar = len(self.slist)
         self.ndm   = len(self.dmlist)
-
-        if self.obj.simulation.nbh > 0:
-            self.bhlist = indexes[np.where(ptypes == ptype_ints['bh'])[0]]
-            self.nbh    = len(self.bhlist)
+        self.nbh   = len(self.bhlist)
 
     def _calculate_total_mass(self):
         """Calculate the total mass of the object."""
