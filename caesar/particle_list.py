@@ -16,19 +16,23 @@ class ParticleList(object):
 
 class ParticleListContainer(object):
     """Container that holds global particle/field index lists."""
-    halo_dmlist  = ParticleList('halo_dmlist')
-    halo_glist   = ParticleList('halo_glist')
-    halo_slist   = ParticleList('halo_slist')
-
-    galaxy_glist = ParticleList('galaxy_glist')
-    galaxy_slist = ParticleList('galaxy_slist')
-
+    halo_dmlist   = ParticleList('halo_dmlist')
+    halo_glist    = ParticleList('halo_glist')
+    halo_slist    = ParticleList('halo_slist')
+    halo_bhlist   = ParticleList('halo_bhlist')
+    
+    galaxy_glist  = ParticleList('galaxy_glist')
+    galaxy_slist  = ParticleList('galaxy_slist')
+    galaxy_bhlist = ParticleList('galaxy_bhlist')
+    
     def __init__(self, obj):
-        self.halo_dmlist  = 0
-        self.halo_glist   = 0
-        self.halo_slist   = 0
-        self.galaxy_glist = 0
-        self.galaxy_slist = 0
+        self.halo_dmlist   = 0
+        self.halo_glist    = 0
+        self.halo_slist    = 0
+        self.halo_bhlist   = 0
+        self.galaxy_glist  = 0
+        self.galaxy_slist  = 0
+        self.galaxy_bhlist = 0
 
         self.obj = obj
 
@@ -44,4 +48,6 @@ class ParticleListContainer(object):
                 data = np.array(infile['global_lists/%s' % key])
                 setattr(self, key, data)
             else:
-                print('could not find what you were looking for')
+                from yt.funcs import mylog
+                mylog.warning('%s global list not present.' % key)
+                return 

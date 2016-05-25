@@ -198,7 +198,13 @@ def save(obj, filename='test.hdf5'):
         hdd  = hd.create_group('lists')
         hddd = hd.create_group('dicts')
 
-        for vals in ['galaxy_index_list', 'dmlist', 'glist', 'slist']:
+        # gather
+        index_lists = ['galaxy_index_list', 'dmlist', 'glist', 'slist']
+        if obj.data_manager.blackholes:
+            index_lists.append('bhlist')
+
+        #write        
+        for vals in index_lists:
             serialize_list(obj.halos, vals, hdd)
         serialize_attributes(obj.halos, hd, hddd)
         
@@ -206,15 +212,29 @@ def save(obj, filename='test.hdf5'):
         hd   = outfile.create_group('galaxy_data')
         hdd  = hd.create_group('lists')
         hddd = hd.create_group('dicts')
-        
-        for vals in ['glist', 'slist']:
+
+        # gather
+        index_lists = ['glist', 'slist']
+        if obj.data_manager.blackholes:
+            index_lists.append('bhlist')
+
+        # write
+        for vals in index_lists:
             serialize_list(obj.galaxies, vals, hdd)
         serialize_attributes(obj.galaxies, hd, hddd)
 
             
     if hasattr(obj, 'global_particle_lists'):
         hd = outfile.create_group('global_lists')
-        for vals in ['halo_dmlist','halo_glist','halo_slist', 'galaxy_glist', 'galaxy_slist']:
-            check_and_write_dataset(obj.global_particle_lists, vals, hd)
 
+        # gather
+        global_index_lists = ['halo_dmlist','halo_glist','halo_slist',
+                              'galaxy_glist','galaxy_slist']
+        if obj.data_manager.blackholes:
+            global_index_lists.extend(['halo_bhlist','galaxy_bhlist'])
+
+        # write
+        for vals in global_index_lists:
+            check_and_write_dataset(obj.global_particle_lists, vals, hd)
+            
     outfile.close()
