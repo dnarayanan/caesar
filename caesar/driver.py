@@ -148,7 +148,7 @@ def drive(snapdirs, snapname, snapnums,
     >>> snapnums = np.arange(0,86)
     >>>
     >>> import caesar
-    >>> caesar.driver(snapdir, snapname, snapnums, skipran=False, progen=True)
+    >>> caesar.drive(snapdir, snapname, snapnums, skipran=False, progen=True)
     
     """
     
