@@ -94,9 +94,9 @@ def print_art():
     print('\n%s\n%s\n%s\n' % (art, copywrite, version))
 
         
-def run(snapdirs, snapname, snapnums,
-        progen=False, skipran=False, member_search=True,
-        **kwargs):
+def drive(snapdirs, snapname, snapnums,
+          progen=False, skipran=False, member_search=True,
+          **kwargs):
     """Driver function for running ``CAESAR`` on multiple snapshots.
 
     Can utilize mpi4py to run analysis in parallel given that ``MPI`` 
