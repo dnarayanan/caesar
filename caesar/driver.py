@@ -139,6 +139,13 @@ def drive(snapdirs, snapname, snapnums,
         This must be toggled on manually as there is no clear 
         cut way to determine if PartType5 is a low-res particle, 
         or a black hole.
+    lowres : list, optional
+        If you are running ``CAESAR`` on a Gadget/GIZMO zoom
+        simulation in HDF5 format, you may want to check each halo for 
+        low-resolution contamination.  By passing in a list of 
+        particle types (ex. [2,3,5]) we will check ALL objects for 
+        contamination and add the ``contamination`` attribute to all 
+        objects.  Search distance defaults to 2.5x radii['total'].
 
     Examples
     --------
