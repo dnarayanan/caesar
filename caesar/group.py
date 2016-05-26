@@ -504,7 +504,56 @@ class Group(object):
         from pprint import pprint
         pprint(pdict)
         pdict = None
+
+    def contamination_check(self, lowres=[2,3,5], search_factor=2.5):
+        """Check for low resolution particle contamination.
+
+        This method checks for low-resolution particles within 
+        ``search_factor`` of the maximum halo radius.  When this
+        method is called on a galaxy, it refers to the parent halo.
+
+        Parameters
+        ----------
+        lowres : list, optional
+            Particle types to be considered low-res.  Defaults to
+            [2,3,5]; if your simulation contains blackholes you will
+            want to pass in [2,3].
+        search_factor : float, optional
+            Factor to expand the maximum halo radius search distance
+            by.  Default is 2.5
+
+        Notes
+        -----
+        This method currently ONLY works on GADGET/GIZMO HDF5 files.
+
+        """
+        from yt.funcs import mylog
+        from caesar.zoom_funcs import construct_lowres_tree
+
+        construct_lowres_tree(self, lowres)
+
+        if self.obj_type == 'halo':
+            halo = self
+            ID   = 'Halo %d' % self.GroupID
+        elif self.obj_type == 'galaxy':
+            if self.halo == None:
+                raise Exception('Galaxy %d has no halo!' % self.GroupID)                
+            halo = self.halo
+            ID   = "Galaxy %d's halo (ID %d)" % (self.GroupID, halo.GroupID)
         
+        r = halo.radii['total'].d * search_factor
+
+        result  = self.obj._lowres['TREE'].query_ball_point(halo.pos.d, r)
+        ncontam = len(result)
+        lrmass  = np.sum(self.obj._lowres['MASS'][result])
+
+        if ncontam > 0:
+            mylog.warning('%s has %0.2f%% mass contamination ' \
+                          '(%d LR particles with %0.2e % s)' %
+                          (ID, lrmass / halo.masses['total'] * 100.0,
+                           ncontam, lrmass, halo.masses['total'].units))
+        else:
+            mylog.info('%s has NO contamination!' % ID)
             
 class Galaxy(Group):
     """Galaxy class which has the central boolean."""

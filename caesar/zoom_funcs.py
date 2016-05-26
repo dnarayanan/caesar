@@ -6,6 +6,8 @@ def write_IC_mask(group, ic_ds, filename, search_factor, print_extents=True):
 
     Parameters
     ----------
+    group : :class:`group.Group`
+        Group we are querying.
     ic_ds : yt dataset
         The initial condition dataset via ``yt.load()``.
     filename : str
@@ -79,6 +81,8 @@ def get_IC_pos(group, ic_ds, search_factor=2.5, return_mask=False):
     
     Parameters
     ----------
+    group : :class:`group.Group`
+        Group we are querying.
     ic_ds : yt dataset
         The initial condition dataset via ``yt.load()``
     search_factor : float, optional
@@ -157,3 +161,54 @@ def get_IC_pos(group, ic_ds, search_factor=2.5, return_mask=False):
         matched_pos /= box
 
     return matched_pos
+
+
+def construct_lowres_tree(group, lowres):
+    """Construct a periodic KDTree for low-resolution particles.
+
+    Parameters
+    ----------
+    group : :class:`group.Group`
+        Group we are querying.
+    lowres : list
+        Particle types to be considered low-resolution.  Typically
+        [2,3,5]
+
+    Notes
+    -----
+    Assigns the dict ``_lowres`` to the :class:`main.CAESAR` object.
+
+    """
+    obj = group.obj
+    if hasattr(obj, '_lowres') and obj._lowres['ptypes'] == lowres:
+        return
+    if not hasattr(obj, '_ds_type'):
+        raise Exception('No yt_dataset assigned!')
+
+    mylog.info('Gathering low-res particles and constructing tree')
+    from caesar.property_getter import get_property
+    
+    lr_pos  = np.empty((0,3))
+    lr_mass = np.empty(0)
+
+    pos_unit  = group.pos.units
+    mass_unit = group.masses['total'].units
+    
+    for p in lowres:
+        ptype = 'PartType%d' % p
+        if ptype in obj.yt_dataset.particle_fields_by_type:
+            cur_pos  = obj._ds_type.dd[ptype, 'particle_position'].to(pos_unit)
+            cur_mass = obj._ds_type.dd[ptype, 'particle_mass'].to(mass_unit)
+
+            lr_pos  = np.append(lr_pos,  cur_pos.d, axis=0)
+            lr_mass = np.append(lr_mass, cur_mass.d, axis=0)
+    
+    from caesar.periodic_kdtree import PeriodicCKDTree
+    box    = obj.simulation.boxsize.to(pos_unit)
+    bounds = np.array([box,box,box])
+
+    obj._lowres = dict(
+        TREE   = PeriodicCKDTree(bounds, lr_pos),
+        MASS   = lr_mass,
+        ptypes = lowres
+    )
