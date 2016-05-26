@@ -10,8 +10,9 @@ def run():
     parser.add_argument('-b_galaxy', type=float, help='Galaxy linking length')
     parser.add_argument('-bh', '--blackholes', help='Black holes present?',
                         dest='OPTIONS', action='append_const', const='blackholes')
+    parser.add_argument('-lr', '--lowres', type=int, help='Lowres particle types (Gadget/GIZMO HDF5 ONLY)', nargs='+')
     args = parser.parse_args()
-    
+
     var_dict = vars(args)
     if args.OPTIONS is not None:
         for opt in args.OPTIONS:

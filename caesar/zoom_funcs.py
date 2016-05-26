@@ -212,3 +212,26 @@ def construct_lowres_tree(group, lowres):
         MASS   = lr_mass,
         ptypes = lowres
     )
+
+
+def all_object_contam_check(obj):
+    if obj._ds_type.ds_type != 'GizmoDataset' and obj._ds_type.ds_type != 'GadgetHDF5Dataset':
+        return
+    if not 'lowres' in obj._kwargs or obj._kwargs['lowres'] is None:
+        return        
+
+    lowres = obj._kwargs['lowres']
+    if not isinstance(lowres, list):
+        raise Exception('lowres must be a list!')    
+    
+    mylog.info('Checking all objects for contamination.  Lowres Types: %s' % lowres)
+    if hasattr(obj, 'halos'):
+        for h in obj.halos:
+            h.contamination_check(lowres, printer=False)
+    if hasattr(obj, 'galaxies'):
+        for g in obj.galaxies:
+            if g.halo is None:
+                g.contamination = None
+            else:
+                g.contamination = g.halo.contamination
+        

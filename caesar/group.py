@@ -505,7 +505,8 @@ class Group(object):
         pprint(pdict)
         pdict = None
 
-    def contamination_check(self, lowres=[2,3,5], search_factor=2.5):
+    def contamination_check(self, lowres=[2,3,5], search_factor=2.5,
+                            printer=True):
         """Check for low resolution particle contamination.
 
         This method checks for low-resolution particles within 
@@ -521,6 +522,8 @@ class Group(object):
         search_factor : float, optional
             Factor to expand the maximum halo radius search distance
             by.  Default is 2.5
+        printer : boolean, optional
+            Print results?
 
         Notes
         -----
@@ -547,11 +550,16 @@ class Group(object):
         ncontam = len(result)
         lrmass  = np.sum(self.obj._lowres['MASS'][result])
 
+        self.contamination = lrmass / halo.masses['total'].d
+        
+        if not printer:
+            return
+        
         if ncontam > 0:
             mylog.warning('%s has %0.2f%% mass contamination ' \
                           '(%d LR particles with %0.2e % s)' %
-                          (ID, lrmass / halo.masses['total'] * 100.0,
-                           ncontam, lrmass, halo.masses['total'].units))
+                          (ID, self.contamination * 100.0, ncontam,
+                           lrmass, halo.masses['total'].units))
         else:
             mylog.info('%s has NO contamination!' % ID)
             
