@@ -438,7 +438,42 @@ class Group(object):
             half_r = get_half_mass_radius(mass, r, ptype, half_masses[k], binary)
             self.radii['%s_half_mass' % k] = self.obj.yt_dataset.quan(half_r, self.obj.units['length'])
 
+    def write_IC_mask(self, ic_ds, filename, search_factor = 2.5):
+        """Write MUSIC initial condition mask to disk.  If called on
+        a galaxy it will look for the parent halo in the IC.
 
+        Parameters
+        ----------
+        ic_ds : yt dataset
+            The initial condition dataset via ``yt.load()``.
+        filename : str
+            The filename of which to write the mask to.  If a full 
+            path is not supplied then it will be written in the 
+            current directory.
+        search_factor : float, optional
+            How far from the center to select DM particles. Default is
+            2.5
+        print_extents : bool, optional
+            Print MUSIC extents for cuboid after mask creation
+    
+        Examples
+        --------
+        >>> import yt
+        >>> import caesar
+        >>>
+        >>> snap = 'my_snapshot.hdf5'
+        >>> ic   = 'IC.dat'
+        >>>
+        >>> ds    = yt.load(snap)
+        >>> ic_ds = yt.load(ic)
+        >>>
+        >>> obj = caesar.load('caesar_my_snapshot.hdf5', ds)
+        >>> obj.galaxies[0].write_IC_mask(ic_ds, 'mymask.txt')
+        
+        """ 
+        from caesar.zoom_funcs import write_IC_mask
+        write_IC_mask(self, ic_ds, filename, search_factor)
+            
     def vtk_vis(self, rotate=False):
         """Method to render this group's points via VTK.
 
