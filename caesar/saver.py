@@ -9,7 +9,7 @@ blacklist = [
     'G', 'initial_mass',
     'valid', 'vel_conversion',
     'unbound_particles', '_units',
-    'unit_registry_json', 'caesar',
+    'unit_registry_json',
     'unbound_indexes',
     'lists','dicts'
 ]
@@ -178,6 +178,11 @@ def save(obj, filename='test.hdf5'):
     
     """
     from yt.funcs import mylog
+
+    try:
+        from caesar.__hg_version__ import hg_version
+    except:
+        hg_version = None
     
     if os.path.isfile(filename):
         mylog.warning('%s already present, overwriting!' % filename)
@@ -185,7 +190,7 @@ def save(obj, filename='test.hdf5'):
     mylog.info('Writing %s' % filename)
         
     outfile = h5py.File(filename, 'w')
-    outfile.attrs.create('caesar', True)
+    outfile.attrs.create('caesar', hg_version)
     
     unit_registry = obj.yt_dataset.unit_registry.to_json()
     outfile.attrs.create('unit_registry_json', unit_registry.encode('utf8'))

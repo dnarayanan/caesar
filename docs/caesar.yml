@@ -41,4 +41,4 @@ dependencies:
 - zlib=1.2.8=0
 - pip:
   - sphinx-rtd-theme==0.1.9
-
+  - python-hglib==2.1
