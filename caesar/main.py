@@ -292,6 +292,18 @@ class CAESAR(object):
         galaxy_only: boolean
             If True only render particles belonging to galaxies.  Note 
             that this overwrites ``halo_only``.
+        annotate_halos : boolean, list, int, optional
+            Add labels to the render at the location of halos 
+            annotating the group ID and total mass.  If True then all 
+            halos are annotated, if an integer list then halos of 
+            those indexes are annotated, and finally if an integer 
+            than the most massive N halos are annotated.
+        annotate_galaxies : boolean, list, int, optional
+            Add labels to the render at the location of galaxies 
+            annotating the group ID and total mass.  If True then all
+            galaxies are annotated, if an integer list then galaxies 
+            of those indexes are annotated, and finally if an integer 
+            than the most massive N galaxies are annotated.
         
         """    
         self.data_manager.load_particle_data()

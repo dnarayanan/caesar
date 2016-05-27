@@ -42,7 +42,8 @@ def group_vis(group, rotate=True):
 
 
 def sim_vis(obj, ptypes = ['dm','star','gas'],
-            halo_only=True, galaxy_only=False):
+            halo_only=True, galaxy_only=False,
+            annotate_halos=False, annotate_galaxies=False):
     """Function to visualize an entire simulation with VTK.
     
     Parameters
@@ -57,6 +58,18 @@ def sim_vis(obj, ptypes = ['dm','star','gas'],
     galaxy_only: boolean
         If True only render particles belonging to galaxies.  Note 
         that this overwrites ``halo_only``.
+    annotate_halos : boolean, list, int, optional
+        Add labels to the render at the location of halos annotating
+        the group ID and total mass.  If True then all halos are
+        annotated, if an integer list then halos of those indexes
+        are annotated, and finally if an integer than the most massive
+        N halos are annotated.
+    annotate_galaxies : boolean, list, int, optional
+        Add labels to the render at the location of galaxies 
+        annotating the group ID and total mass.  If True then all
+        galaxies are annotated, if an integer list then galaxies of 
+        those indexes are annotated, and finally if an integer than 
+        the most massive N galaxies are annotated.
 
     """    
     import numpy as np
@@ -91,5 +104,26 @@ def sim_vis(obj, ptypes = ['dm','star','gas'],
         if halo_only:
             pos = pos[np.where(gpl.halo_dmlist > -1)[0]]
         v.point_render(pos, color=[1,0,0])
-    
+
+    def annotate_group(group_list, annotation, txtcolor):
+        if isinstance(annotation, bool):
+            indexes = [i for i in range(0,len(group_list))]
+        elif isinstance(annotation, list):
+            indexes = annotation
+        elif isinstance(annotation, int):
+            indexes = [i for i in range(0, annotate_halos)]
+
+        for i in indexes:
+            if i >= len(group_list): continue
+            group = group_list[i]
+            v.place_label(group.pos, '%d :: %0.2e Msun' %
+                          (group.GroupID, group.masses['total']),
+                          text_color=txtcolor)
+
+        
+    if annotate_halos and 'dm' in ptypes:
+        annotate_group(obj.halos, annotate_halos, [0.75,0.75,0])
+    if annotate_galaxies:
+        annotate_group(obj.galaxies, annotate_galaxies, [0, 0.75, 0.75])
+        
     v.render()
