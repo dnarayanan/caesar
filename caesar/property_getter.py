@@ -195,7 +195,8 @@ class DatasetType(object):
         if self.ds_type == 'EnzoDataset' and requested_ptype != 'gas':
             self._set_indexes_for_enzo(ptype, requested_ptype)
             
-        if self.grid and (requested_prop == 'pos' or requested_prop == 'vel'):
+        if (self.grid and requested_ptype == 'gas' and
+            (requested_prop == 'pos' or requested_prop == 'vel')):
             data = self._get_gas_grid_posvel(requested_prop)
         else:
             data = self.dd[ptype, prop]
