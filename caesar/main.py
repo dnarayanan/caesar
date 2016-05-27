@@ -102,7 +102,9 @@ class CAESAR(object):
             from caesar.data_manager import DataManager
             self._dm = DataManager(self)
         if isinstance(self.yt_dataset, int):
-            raise Exception('No yt_dataset assigned!')            
+            raise Exception('No yt_dataset assigned!\nPlease assign '\
+                            'one via `obj.yt_dataset=<YT DATASET>` ' \
+                            'to load particle/field data from disk.')
         return self._dm
         
     def _assign_simulation_attributes(self):
