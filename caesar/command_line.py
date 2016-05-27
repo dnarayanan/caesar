@@ -29,7 +29,7 @@ def run():
     caesar_file = False
     try:
         hd = h5py.File(args.input, 'r')
-        if 'caesar' in hd.attrs.keys() and hd.attrs['caesar']:
+        if 'caesar' in hd.attrs.keys():
             caesar_file = True
         hd.close()
     except:

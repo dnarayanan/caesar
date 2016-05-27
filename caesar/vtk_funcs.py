@@ -38,7 +38,7 @@ def group_vis(group, rotate=True):
                           group.rotation_angles['BETA'])        
         v.point_render(pos, color=[1,0,0])
     
-    v.render()
+    v.render(focal_point=group.pos.d)
 
 
 def sim_vis(obj, ptypes = ['dm','star','gas'],

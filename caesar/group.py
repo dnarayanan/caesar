@@ -490,7 +490,7 @@ class Group(object):
         ``conda install vtk``.
         
         """
-        self.obj._load_data(gas_data=False)
+        self.obj.data_manager.load_particle_data()
         from caesar.vtk_funcs import group_vis
         group_vis(self, rotate=rotate)
 

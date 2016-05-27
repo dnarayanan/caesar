@@ -37,6 +37,7 @@ class CAESAR(object):
         self._args   = args
         self._kwargs = kwargs
         self._ds     = 0
+        self._dm     = 0
 
         self.units = dict(
             mass='Msun',
@@ -94,14 +95,15 @@ class CAESAR(object):
         else:
             return False
 
-    def _load_data(self, gas_data=True):
-        """Performs disk IO for particle/field data."""
-        if hasattr(self, 'DataManager'):
-            return
+    @property
+    def data_manager(self):
+        """On demand DataManager class."""
+        if isinstance(self._dm, int):
+            from caesar.data_manager import DataManager
+            self._dm = DataManager(self)
         if isinstance(self.yt_dataset, int):
-            raise Exception("No yt_dataset assigned!")
-        from caesar.data_manager import DataManager
-        self.data_manager = DataManager(self, gas_data)
+            raise Exception('No yt_dataset assigned!')            
+        return self._dm
         
     def _assign_simulation_attributes(self):
         """Populate the `caesar.simulation_attributes.SimulationAttributes`
@@ -252,7 +254,7 @@ class CAESAR(object):
         self._args   = args
         self._kwargs = kwargs
 
-        self._load_data()
+        self.data_manager._member_search_init()
         
         from caesar.fubar import fubar
         fubar(self, 'halo')
@@ -290,7 +292,7 @@ class CAESAR(object):
             that this overwrites ``halo_only``.
         
         """    
-        self._load_data(gas_data=False)
+        self.data_manager.load_particle_data()
         from caesar.vtk_funcs import sim_vis
         sim_vis(self, **kwargs)
 

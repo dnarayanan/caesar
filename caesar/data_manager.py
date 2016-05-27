@@ -10,19 +10,22 @@ class DataManager(object):
     ----------
     obj : :class:`main.CAESAR`
         Main CAESAR object.
-    gas_data : boolean
-        If True load additional gas data (sfr/temp/etc)
 
     """    
-    def __init__(self, obj, gas_data):
+    def __init__(self, obj):
         self.obj = obj
         self.blackholes = False
-        self.determine_ptypes()
-        self.load_data()
-        if gas_data:
-            self.load_gas_data()
-            
-    def determine_ptypes(self):
+        self._pdata_loaded = False
+        self._determine_ptypes()
+
+    def _member_search_init(self):
+        """Method to run all required methods for member_search()"""
+        self._determine_ptypes()
+        self.load_particle_data()
+        self._assign_particle_counts()
+        self._load_gas_data()
+        
+    def _determine_ptypes(self):
         """Determines what particle/field types to collect."""
         self.ptypes = ['gas','star']
         if 'blackholes' in self.obj._kwargs and self.obj._kwargs['blackholes']:
@@ -36,12 +39,14 @@ class DataManager(object):
         #    self.ptypes.remove('gas')
         #print self.ptypes
         
-    def load_data(self):
+    def load_particle_data(self):
         """Loads positions, velocities, masses, particle types, and indexes.
         Assigns a global glist, slist, dmlist, and bhlist used
         throughout the group analysis.  Finally assigns
         ngas/nstar/ndm/nbh values."""
-
+        if self._pdata_loaded:
+            return
+        
         pdata      = get_particles_for_FOF(self.obj, self.ptypes)
         self.pos   = pdata['pos']
         self.vel   = pdata['vel']
@@ -49,20 +54,27 @@ class DataManager(object):
         self.ptype = pdata['ptype']
         self.index = pdata['indexes']
         pdata      = None
-                
+
+        self._assign_local_lists()
+        
+        self._pdata_loaded = True
+
+    def _assign_local_lists(self):
+        """Assigns local lists."""
         self.glist  = np.where(self.ptype == ptype_ints['gas'])[0]
         self.slist  = np.where(self.ptype == ptype_ints['star'])[0]
         self.dmlist = np.where(self.ptype == ptype_ints['dm'])[0]        
         self.bhlist = np.where(self.ptype == ptype_ints['bh'])[0]
 
-        # move these to obj.simulation?
+    def _assign_particle_counts(self):
+        """Assign particle counts."""
         self.obj.simulation.ngas  = len(self.glist)
         self.obj.simulation.nstar = len(self.slist)
         self.obj.simulation.ndm   = len(self.dmlist)
         self.obj.simulation.nbh   = len(self.bhlist)
 
 
-    def load_gas_data(self):
+    def _load_gas_data(self):
         """If gas is present loads gas SFR/Metallicity/Temperatures."""
         if self.obj.simulation.ngas == 0:
             return
