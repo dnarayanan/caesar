@@ -41,12 +41,14 @@ ptype_aliases = dict(
     GadgetHDF5Dataset = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
     GadgetDataset     = {'gas':'Gas','star':'Stars','dm':'Halo'},
     TipsyDataset      = {'gas':'Gas','star':'Stars','dm':'DarkMatter'},
-    EnzoDataset       = {'gas':'gas','star':'io','dm':'io'},
     ARTDataset        = {'gas':'gas','star':'stars','dm':'darkmatter'},
+    EnzoDataset       = {'gas':'gas','star':'io','dm':'io'},
+    RAMSESDataset     = {'gas':'gas','star':'io','dm':'io'},    
 )
 grid_datasets = [
     'EnzoDataset',
     'ARTDataset',
+    'RAMSESDataset',
 ]
 
 class DatasetType(object):
@@ -199,7 +201,9 @@ class DatasetType(object):
 
         if self.ds_type == 'EnzoDataset' and requested_ptype != 'gas':
             self._set_indexes_for_enzo(ptype, requested_ptype)
-            
+        if self.ds_type == 'RAMSESDataset' and requested_ptype != 'gas':
+            self._set_indexes_for_ramses(ptype, requested_ptype)
+
         if (self.grid and requested_ptype == 'gas' and
             (requested_prop == 'pos' or requested_prop == 'vel')):
             data = self._get_gas_grid_posvel(requested_prop)
@@ -228,8 +232,14 @@ class DatasetType(object):
         ptype_vals = dict(gas=0, dm=1, star=2)
         if ptype_vals[requested_ptype] > 0:
             self.indexes = np.where(self.dd[proper_ptype, 'particle_type'] == ptype_vals[requested_ptype])[0]
-            
-
+    def _set_indexes_for_ramses(self, proper_ptype, requested_ptype):
+        if requested_ptype == 'gas': return
+        if self.has_property(requested_ptype, 'particle_age'):            
+            if requested_ptype == 'dm':
+                self.indexes = np.where(self.dd[proper_ptype, 'particle_age'] == 0)[0]
+            elif requested_ptype == 'star':
+                self.indexes = np.where(self.dd[proper_ptype, 'particle_age'] != 0)[0]
+                
 """    
 def filter_enzo_results(obj, data, ptype, requested_ptype):
     ptype_val = -1

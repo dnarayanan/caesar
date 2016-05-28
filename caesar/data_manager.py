@@ -67,6 +67,10 @@ class DataManager(object):
         self.dmlist = np.where(self.ptype == ptype_ints['dm'])[0]        
         self.bhlist = np.where(self.ptype == ptype_ints['bh'])[0]
 
+    def _reset_dm_indexes(self):
+        """Reset the dark matter index list after we detect a zoom."""
+        self.index[self.dmlist] = np.arange(0,len(self.dmlist), dtype=np.int32)
+
     def _check_for_lowres_dm(self):
         """Check and account for low-resolution dark matter in non 
         Gadget/Gizmo simulations."""
@@ -84,6 +88,7 @@ class DataManager(object):
             lowres  = np.where(dmmass > minmass)[0]
             self.ptype[self.dmlist[lowres]] = 2  ## arbitrary
             self._assign_local_lists()
+            self._reset_dm_indexes()
             
     def _assign_particle_counts(self):
         """Assign particle counts."""
