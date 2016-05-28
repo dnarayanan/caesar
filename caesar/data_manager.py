@@ -68,9 +68,9 @@ class DataManager(object):
         self.bhlist = np.where(self.ptype == ptype_ints['bh'])[0]
 
     def _check_for_lowres_dm(self):
-        if obj._ds_type.ds_type == 'GizmoDataset' or \
-           obj._ds_type.ds_type == 'GadgetHDF5Dataset' or \
-           obj._ds_type.ds_type == 'GadgetDataset':
+        if self.obj._ds_type.ds_type == 'GizmoDataset' or \
+           self.obj._ds_type.ds_type == 'GadgetHDF5Dataset' or \
+           self.obj._ds_type.ds_type == 'GadgetDataset':
             return  # lowres particles for gadget are a diff type
         
         dmmass = self.mass[self.dmlist]
