@@ -68,6 +68,8 @@ class DataManager(object):
         self.bhlist = np.where(self.ptype == ptype_ints['bh'])[0]
 
     def _check_for_lowres_dm(self):
+        """Check and account for low-resolution dark matter in non 
+        Gadget/Gizmo simulations."""
         if self.obj._ds_type.ds_type == 'GizmoDataset' or \
            self.obj._ds_type.ds_type == 'GadgetHDF5Dataset' or \
            self.obj._ds_type.ds_type == 'GadgetDataset':
