@@ -4,8 +4,6 @@ import numpy as np
 from caesar.property_getter import ptype_ints
 from caesar.group_funcs import get_periodic_r
 
-UNBIND_HALOS    = False
-UNBIND_GALAXIES = False
 MINIMUM_STARS_PER_GALAXY = 32
 MINIMUM_DM_PER_HALO      = 32
 
@@ -201,17 +199,17 @@ class Group(object):
         self.vel = self.obj.yt_dataset.arr(get_center_of_mass_quantity('vel'), self.obj.units['velocity'])
 
     def _unbind(self):
-        """Iterative procedure to unbind objects."""        
-        if self.obj_type == 'halo' and not UNBIND_HALOS:
+        """Iterative procedure to unbind objects."""
+        if not getattr(self.obj.simulation, 'unbind_%s' %
+                       group_types[self.obj_type]):
             return
-        elif self.obj_type == 'galaxy' and not UNBIND_GALAXIES:
-            return        
 
         if not hasattr(self, 'unbound_indexes'):
             self.unbound_indexes = {
                 ptype_ints['gas']:[],
                 ptype_ints['star']:[],
                 ptype_ints['dm']:[],
+                ptype_ints['bh']:[],
             }
         if not hasattr(self, 'unbind_iterations'):
             self.unbind_iterations = 0        

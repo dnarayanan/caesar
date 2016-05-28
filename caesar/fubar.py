@@ -224,6 +224,13 @@ def fubar(obj, group_type, **kwargs):
             pos[obj.data_manager.slist],
             pos[obj.data_manager.bhlist]
         ))        
+
+    unbind = False        
+    unbind_str = 'unbind_%s' % group_types[group_type]
+    if unbind_str in obj._kwargs and \
+       isinstance(obj._kwargs[unbind_str], bool):
+        unbind = obj._kwargs[unbind_str]
+    setattr(obj.simulation, unbind_str, unbind)
         
     fof_tags = fof(obj, pos, LL, group_type=group_type)
 
@@ -253,7 +260,8 @@ def fubar(obj, group_type, **kwargs):
         if tag < 0: continue
         groupings[tag]._append_global_index(index)
 
-    
+    if unbind: mylog.info('Unbinding %s' % group_types[group_type])
+        
     for v in tqdm(groupings.itervalues(),
                   total=len(groupings),
                   desc='Processing %s' % group_types[group_type]):

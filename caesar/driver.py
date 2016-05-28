@@ -127,6 +127,10 @@ def drive(snapdirs, snapname, snapnums, progen=False, skipran=False,
         perform progen for instance.
     extension : str, optional
         Specify your snapshot file extension.  Defaults to `hdf5`
+    unbind_halos : boolean, optional
+        Unbind halos?  Defaults to False
+    unbind_galaxies : boolean, optional
+        Unbind galaxies?  Defaults to False
     b_halo : float, optional
         Quantity used in the linking length (LL) for halos.
         LL = mean_interparticle_separation * b_halo.  Defaults to 

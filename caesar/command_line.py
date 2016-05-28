@@ -10,6 +10,10 @@ def run():
     parser.add_argument('-b_galaxy', type=float, help='Galaxy linking length')
     parser.add_argument('-bh', '--blackholes', help='Black holes present?',
                         dest='OPTIONS', action='append_const', const='blackholes')
+    parser.add_argument('-uh', '--unbind_halos', help='Unbind halos?',
+                        dest='OPTIONS', action='append_const', const='unbind_halos')
+    parser.add_argument('-ug', '--unbind_galaxies', help='Unbind galaxies?',
+                        dest='OPTIONS', action='append_const', const='unbind_galaxies')
     parser.add_argument('-lr', '--lowres', type=int, help='Lowres particle types (Gadget/GIZMO HDF5 ONLY)', nargs='+')
     args = parser.parse_args()
 
@@ -18,7 +22,7 @@ def run():
         for opt in args.OPTIONS:
             if opt not in var_dict:
                 var_dict[opt] = True
-            
+
     if os.path.isdir(args.input):
         run_multiple_caesar(args.input, var_dict)
         return

@@ -225,7 +225,11 @@ class CAESAR(object):
         together, and finally calculating HI/H2 masses if necessary.
 
         Parameters 
-        ----------         
+        ----------
+        unbind_halos : boolean, optional
+            Unbind halos?  Defaults to False
+        unbind_galaxies : boolean, optional
+            Unbind galaxies?  Defaults to False
         b_halo : float, optional
             Quantity used in the linking length (LL) for halos.
             LL = mean_interparticle_separation * b_halo.  Defaults to 
