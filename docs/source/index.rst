@@ -34,6 +34,8 @@ online in the near future:
 2. `GIZMO <http://www.tapir.caltech.edu/~phopkins/Site/GIZMO.html>`_
 3. `TIPSY <http://www-hpcc.astro.washington.edu/tools/tipsy/tipsy.html>`_
 4. `ENZO <http://enzo-project.org/>`_
+5. `ART <http://adsabs.harvard.edu/abs/1999PhDT........25K>`_
+6. `RAMSES <http://www.ics.uzh.ch/~teyssier/ramses/RAMSES.html>`_
 
 To get started, follow the Getting Started link below!
 
