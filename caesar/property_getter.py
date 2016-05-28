@@ -42,7 +42,12 @@ ptype_aliases = dict(
     GadgetDataset     = {'gas':'Gas','star':'Stars','dm':'Halo'},
     TipsyDataset      = {'gas':'Gas','star':'Stars','dm':'DarkMatter'},
     EnzoDataset       = {'gas':'gas','star':'io','dm':'io'},
+    ARTDataset        = {'gas':'gas','star':'stars','dm':'darkmatter'},
 )
+grid_datasets = [
+    'EnzoDataset',
+    'ARTDataset',
+]
 
 class DatasetType(object):
     """Class to help check for, or load data from different dataset 
@@ -59,7 +64,7 @@ class DatasetType(object):
 
         self.indexes = 'all'
         
-        if self.ds_type == 'EnzoDataset':
+        if self.ds_type in grid_datasets:
             self.grid = True
         else:
             self.grid = False
@@ -187,7 +192,7 @@ class DatasetType(object):
         if not self.has_ptype(requested_ptype):
             raise NotImplementedError('ptype %s not found!' % requested_ptype)
         if not self.has_property(requested_ptype, requested_prop):
-            raise NotImplementedError('prop %s not found!' % requested_prop)
+            raise NotImplementedError('prop %s not found for %s!' % (requested_prop, requested_ptype))
 
         ptype = self.get_ptype_name(requested_ptype)
         prop  = self.get_property_name(requested_ptype, requested_prop)
@@ -205,7 +210,8 @@ class DatasetType(object):
             data = data[self.indexes]
             self.indexes = 'all'
         return data
-        
+
+
     def _get_gas_grid_posvel(self,request):
         if request == 'pos':
             x = self.dd['gas','x']

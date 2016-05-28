@@ -56,6 +56,7 @@ class DataManager(object):
         pdata      = None
 
         self._assign_local_lists()
+        self._check_for_lowres_dm()
         
         self._pdata_loaded = True
 
@@ -66,6 +67,22 @@ class DataManager(object):
         self.dmlist = np.where(self.ptype == ptype_ints['dm'])[0]        
         self.bhlist = np.where(self.ptype == ptype_ints['bh'])[0]
 
+    def _check_for_lowres_dm(self):
+        if obj._ds_type.ds_type == 'GizmoDataset' or \
+           obj._ds_type.ds_type == 'GadgetHDF5Dataset' or \
+           obj._ds_type.ds_type == 'GadgetDataset':
+            return  # lowres particles for gadget are a diff type
+        
+        dmmass = self.mass[self.dmlist]
+        unique = np.unique(dmmass)
+        if len(unique) > 1:
+            from yt.funcs import mylog
+            mylog.info('Found %d DM species, assuming a zoom' % len(unique))
+            minmass = np.min(unique)
+            lowres  = np.where(dmmass > minmass)[0]
+            self.ptype[self.dmlist[lowres]] = 2  ## arbitrary
+            self._assign_local_lists()
+            
     def _assign_particle_counts(self):
         """Assign particle counts."""
         self.obj.simulation.ngas  = len(self.glist)

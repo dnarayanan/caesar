@@ -137,6 +137,20 @@ def get_mean_interparticle_separation(obj):
         bhmass= get_property(obj, 'mass', 'bh').to('code_mass')        
     bmass = np.sum(gmass) + np.sum(smass) + np.sum(bhmass)
 
+
+    """
+    DM = obj.data_manager
+    dmmass = DM.mass[DM.dmlist]
+    gmass  = DM.mass[DM.glist]
+    smass  = DM.mass[DM.slist]
+    bhmass = DM.mass[DM.bhlist]
+
+    ndm = len(dmmass)
+    
+    dmmass = obj.yt_dataset.quan(np.sum(dmmass), obj.units['mass']).to('code_mass')
+    bmass  = obj.yt_dataset.quan(np.sum(gmass) + np.sum(smass) + np.sum(bhmass), obj.units['mass']).to('code_mass')
+    """
+    
     Om = obj.yt_dataset.cosmology.omega_matter
     Ob = (bmass / (bmass + dmmass) * Om).d
     
