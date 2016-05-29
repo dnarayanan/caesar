@@ -37,9 +37,11 @@ ptype_ints = dict(
 )
 
 ptype_aliases = dict(
-    GizmoDataset      = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
-    GadgetHDF5Dataset = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
     GadgetDataset     = {'gas':'Gas','star':'Stars','dm':'Halo'},
+    GadgetHDF5Dataset = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
+    EagleDataset      = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
+    OWLSDataset       = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
+    GizmoDataset      = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
     TipsyDataset      = {'gas':'Gas','star':'Stars','dm':'DarkMatter'},
     ARTDataset        = {'gas':'gas','star':'stars','dm':'darkmatter'},
     EnzoDataset       = {'gas':'gas','star':'io','dm':'io'},
