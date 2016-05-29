@@ -74,9 +74,9 @@ class DataManager(object):
     def _check_for_lowres_dm(self):
         """Check and account for low-resolution dark matter in non 
         Gadget/Gizmo simulations."""
-        if self.obj._ds_type.ds_type == 'GizmoDataset' or \
-           self.obj._ds_type.ds_type == 'GadgetHDF5Dataset' or \
-           self.obj._ds_type.ds_type == 'GadgetDataset':
+        gadget_list = ['GadgetDataset','GadgetHDF5Dataset',
+                       'EagleDataset','OWLSDataset','GizmoDataset']
+        if self.obj._ds_type.ds_type in gadget_list:
             return  # lowres particles for gadget are a diff type
         
         dmmass = self.mass[self.dmlist]
