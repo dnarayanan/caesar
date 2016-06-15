@@ -1,7 +1,6 @@
-# RENAME TO PROPERTY_MANAGER?
-
 import numpy as np
 
+# Field name aliases
 particle_data_aliases = {
     'pos':'particle_position',
     'vel':'particle_velocity',
@@ -20,6 +19,7 @@ particle_data_aliases = {
     'age':'StellarFormationTime'
 }
 
+# Field name aliases for grid cells
 grid_gas_aliases = {
     'mass':'cell_mass',
     'rho':'density',
@@ -29,6 +29,7 @@ grid_gas_aliases = {
     'vel':'velocity_x',
 }
 
+# Integer value for different particles/fields
 ptype_ints = dict(
     gas=0,
     star=4,
@@ -36,6 +37,9 @@ ptype_ints = dict(
     bh=5
 )
 
+# Master dict which dictates supported dataset types. Within each dict
+# the keys 'gas','star','dm','bh' should point to the corresponding
+# yt field name.
 ptype_aliases = dict(
     GadgetDataset     = {'gas':'Gas','star':'Stars','dm':'Halo'},
     GadgetHDF5Dataset = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
@@ -47,6 +51,8 @@ ptype_aliases = dict(
     EnzoDataset       = {'gas':'gas','star':'io','dm':'io'},
     RAMSESDataset     = {'gas':'gas','star':'io','dm':'io'},    
 )
+
+# Specify which of the above datasets are grid based.
 grid_datasets = [
     'EnzoDataset',
     'ARTDataset',
@@ -55,7 +61,14 @@ grid_datasets = [
 
 class DatasetType(object):
     """Class to help check for, or load data from different dataset 
-    types."""
+    types.
+
+    Parameters
+    ----------
+    ds : yt dataset
+        yt dataset loaded via yt.load().
+
+    """
     def __init__(self, ds):
         self.ds      = ds
         self.ds_type = ds.__class__.__name__
@@ -201,6 +214,7 @@ class DatasetType(object):
         ptype = self.get_ptype_name(requested_ptype)
         prop  = self.get_property_name(requested_ptype, requested_prop)
 
+        # Correct for special cases of grid code indexes
         if self.ds_type == 'EnzoDataset' and requested_ptype != 'gas':
             self._set_indexes_for_enzo(ptype, requested_ptype)
         if self.ds_type == 'RAMSESDataset' and requested_ptype != 'gas':
@@ -219,22 +233,23 @@ class DatasetType(object):
 
 
     def _get_gas_grid_posvel(self,request):
+        """Return a typical Nx3 array for gas grid positions."""
         if request == 'pos':
-            x = self.dd['gas','x']
-            y = self.dd['gas','y']
-            z = self.dd['gas','z']
-            return self.ds.arr(np.column_stack((x.d,y.d,z.d)), x.units)
+            rx,ry,rz = 'x','y','z'
         elif request == 'vel':
-            vx = self.dd['gas','velocity_x']
-            vy = self.dd['gas','velocity_y']
-            vz = self.dd['gas','velocity_z']
-            return self.ds.arr(np.column_stack((vx.d,vy.d,vz.d)), vx.units)
+            rx,ry,rz = 'velocity_x','velocity_y','velocity_z'
+        xval = self.dd['gas',rx]
+        yval = self.dd['gas',ry]
+        zval = self.dd['gas',rz]
+        return self.ds.arr(np.column_stack((xval.d,yval.d,zval.d)), xval.units)
             
     def _set_indexes_for_enzo(self, proper_ptype, requested_ptype):
+        """Extract the correct particle type (star/dm) for Enzo."""
         ptype_vals = dict(gas=0, dm=1, star=2)
         if ptype_vals[requested_ptype] > 0:
             self.indexes = np.where(self.dd[proper_ptype, 'particle_type'] == ptype_vals[requested_ptype])[0]
     def _set_indexes_for_ramses(self, proper_ptype, requested_ptype):
+        """Extract the correct particle type (star/dm) for Ramses."""
         if requested_ptype == 'gas': return
         if self.has_property(requested_ptype, 'particle_age'):            
             if requested_ptype == 'dm':
@@ -242,21 +257,6 @@ class DatasetType(object):
             elif requested_ptype == 'star':
                 self.indexes = np.where(self.dd[proper_ptype, 'particle_age'] != 0)[0]
                 
-"""    
-def filter_enzo_results(obj, data, ptype, requested_ptype):
-    ptype_val = -1
-    if requested_ptype == 'gas':
-        ptype_val = 0
-    elif requested_ptype == 'dm':
-        ptype_val = 1
-    elif requested_ptype == 'star':
-        ptype_val = 2
-
-    if ptype_val > 0:
-        indexes = np.where(obj._ds_type.dd[ptype, 'particle_type'] == ptype_val)[0]
-        data = data[indexes]
-    return data
-"""
 
 def has_ptype(obj, requested_ptype):
     """Helper function to check if ptype/field is present.

@@ -139,11 +139,13 @@ def info_printer(obj, group_type, top):
         output += ' ----------------------------------------------------------------------------------------\n'
         #         ' 0000  4.80e+09  4.80e+09  4.80e+09  7.64e-09  0.000  7.64e-09  False
         for o in group_list:
+            phm, phid = -1, -1
+            if o.halo is not None: phm, phid = o.halo.masses['total'], o.halo.GroupID
             output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.3f  %0.2e  %s\t|  %0.2e  %d \n' % \
                       (o.GroupID, o.masses['stellar'], o.masses['gas'],
                        o.sfr, o.radii['total'], o.gas_fraction,
                        o.local_number_density, o.central,
-                       o.halo.masses['total'], o.halo.GroupID)
+                       phm, phid)
             cnt += 1
             if cnt > top: break
                 
