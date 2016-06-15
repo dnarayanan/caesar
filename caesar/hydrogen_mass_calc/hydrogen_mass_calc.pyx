@@ -22,7 +22,7 @@ def check_values(obj):
         Returns True if all fields are present, False otherwise.
 
     """
-    from .property_getter import has_property
+    from caesar.property_manager import has_property
     
     ## check if values needed are present
     required_data = ['temp','sfr','nh','mass','rho','pos']
@@ -117,7 +117,7 @@ def hydrogen_mass_calc(obj,**kwargs):
     cdef np.int32_t[:] galaxy_glist = np.array(obj.global_particle_lists.galaxy_glist,dtype=np.int32)
 
     ## gas properties
-    from .property_getter import get_property, has_property
+    from caesar.property_manager import get_property, has_property
     cdef np.float64_t[:,:] gpos  = obj.data_manager.pos[obj.data_manager.glist]
     cdef np.float64_t[:]   gmass = obj.data_manager.mass[obj.data_manager.glist]
     cdef np.float64_t[:]   grhoH = get_property(obj, 'rho', 'gas').in_cgs().d * XH / proton_mass

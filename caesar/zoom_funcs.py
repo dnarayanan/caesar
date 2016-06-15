@@ -97,7 +97,7 @@ def get_IC_pos(group, ic_ds, search_factor=2.5, return_mask=False):
         DM positions of this object in the initial condition file.
     
     """    
-    from caesar.property_getter import ptype_aliases, get_property, DatasetType
+    from caesar.property_manager import ptype_aliases, get_property, DatasetType
     from caesar.periodic_kdtree import PeriodicCKDTree
 
     ic_ds_type = ic_ds.__class__.__name__
@@ -186,7 +186,7 @@ def construct_lowres_tree(group, lowres):
         raise Exception('No yt_dataset assigned!')
 
     mylog.info('Gathering low-res particles and constructing tree')
-    from caesar.property_getter import get_property
+    from caesar.property_manager import get_property
     
     lr_pos  = np.empty((0,3))
     lr_mass = np.empty(0)

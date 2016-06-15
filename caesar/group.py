@@ -1,7 +1,7 @@
 import six
 import numpy as np
 
-from caesar.property_getter import ptype_ints
+from caesar.property_manager import ptype_ints
 from caesar.group_funcs import get_periodic_r
 
 MINIMUM_STARS_PER_GALAXY = 32

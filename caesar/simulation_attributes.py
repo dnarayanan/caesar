@@ -62,7 +62,7 @@ class SimulationAttributes(object):
             'Msun / kpc**3'
         )
 
-        from caesar.property_getter import has_ptype
+        from caesar.property_manager import has_ptype
         self.baryons_present = False
         if has_ptype(obj, 'gas') or has_ptype(obj, 'star'):
             self.baryons_present = True

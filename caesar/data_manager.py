@@ -1,6 +1,6 @@
 import numpy as np
 
-from caesar.property_getter import ptype_ints, get_particles_for_FOF, get_property, has_property
+from caesar.property_manager import ptype_ints, get_particles_for_FOF, get_property, has_property
 
 class DataManager(object):
     """Class to handle the initial IO and data storage for the duration of

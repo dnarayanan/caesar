@@ -1,7 +1,7 @@
 import numpy as np
 from caesar.group import create_new_group, group_types
-from caesar.property_getter import get_property, get_particles_for_FOF, get_high_density_gas_indexes
-from caesar.property_getter import ptype_ints
+from caesar.property_manager import get_property, get_particles_for_FOF, get_high_density_gas_indexes
+from caesar.property_manager import ptype_ints
 from caesar.utils import calculate_local_densities
 
 from yt.extern import six
@@ -128,7 +128,7 @@ def get_mean_interparticle_separation(obj):
     smass  = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
     bhmass = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
 
-    from .property_getter import has_ptype
+    from caesar.property_manager import has_ptype
     if has_ptype(obj, 'gas'):
         gmass = get_property(obj, 'mass', 'gas').to('code_mass')
     if has_ptype(obj, 'star'):
