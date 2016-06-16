@@ -11,7 +11,24 @@ from yt.units.yt_array import uconcatenate, YTArray
 from yt.data_objects.octree_subset import YTPositionArray
 from yt.utilities.lib.contour_finding import ParticleContourTree
 from yt.geometry.selection_routines import AlwaysSelector
-#from yt.analysis_modules.halo_finding.rockstar.rockstar_groupies import RockstarGroupiesInterface
+
+"""
+## RS TESTING TEMP ##
+class FOFGroup(object):
+    def __init__(self, index):
+        self.index = index
+        self.halos = []
+
+class RSHalo(object):
+    def __init__(self, index, x,y,z, ppos, num_p):
+        self.index = index
+        self.x = x
+        self.y = y
+        self.z = z
+        self.particle_pos = ppos
+        self.num_p = num_p
+#####################
+"""
 
 def fof(obj, positions, LL, group_type=None):
     """Friends of friends.
@@ -35,6 +52,11 @@ def fof(obj, positions, LL, group_type=None):
         *not* grouped.
 
     """
+    ## TEMP RS WORK ##
+    # only use DM for now
+    #positions = positions[obj.data_manager.dmlist]
+    ##################
+    
     if group_type is not None:
         mylog.info('Performing 3D FOF on %d positions for %s identification' %
                    (len(positions), group_type))
@@ -58,25 +80,95 @@ def fof(obj, positions, LL, group_type=None):
         0,0
     )
 
+    return group_tags
+
     """
     ## RS
+    # example script: http://paste.yt-project.org/show/edxCFtSMU4EC1funxpvl/
+
+    velocities = obj.data_manager.vel[obj.data_manager.dmlist]
+    
+    from yt.analysis_modules.halo_finding.rockstar.rockstar_groupies import RockstarGroupiesInterface
     ds  = obj.yt_dataset
     rgi = RockstarGroupiesInterface(ds)
-    rgi.setup_rockstar(ds.mass_unit * ds.parameters['MassTable'][1], force_res = LL / 0.2 / 50.)
+    #force_res =  LL / 0.2 / 50.
+    force_res =  obj.simulation.boxsize / float(obj.simulation.effective_resolution) / 50.
+    rgi.setup_rockstar(ds.mass_unit * ds.parameters['MassTable'][1], force_res=force_res.d, min_halo_size=20)
     ind = np.argsort(group_tags)
     print('running rs')
-    
-    print(pdata.keys())
+
     #pcounts = rgi.make_rockstar_fof(ind, group_tags, pdata['pos'], pdata['vel'], pdata['mass'], pdata['ptype'])
-    pcounts = rgi.make_rockstar_fof(ind, group_tags, pdata['pos'], pdata['vel'])
-    print('pcounts:',pcounts)
-    #rgi.output_halos()
+    pcounts = rgi.make_rockstar_fof(ind, group_tags, positions, velocities)
+    #print('pcounts:',pcounts)
+    
     halos = rgi.return_halos()
-    #import ipdb; ipdb.set_trace()
+
+    parent_halos = []
+    child_halos = []
+    
+    nhalos = len(halos['num_p'])
+    gti = -1
+    fof_groups = []
+    fof_group = FOFGroup(gti)
+    for i in range(0,nhalos):
+        this_halo = halos[i]
+        if this_halo['num_p'] == 0 or this_halo['num_p'] < 32:
+            continue
+        
+        if this_halo['p_start'] == 0:
+            if gti > 0:
+                fof_groups.append(fof_group)
+            gti += 1
+            fof_group = FOFGroup(gti)
+        group_tag = group_tags[gti]
+        indexes = np.where(group_tags == group_tag)[0]
+        pos = positions[indexes]
+        pos = pos[this_halo['p_start']:this_halo['p_start']+this_halo['num_p']]
+
+        h = RSHalo(gti,this_halo['pos_x'],this_halo['pos_y'],this_halo['pos_z'],pos,this_halo['num_p'])
+
+        fof_group.halos.append(h)
+
+    for grp in fof_groups:
+        num_p_halo = [i.num_p for i in grp.halos]
+        maxnp = np.argmax(num_p_halo)
+        for i in range(0,len(grp.halos)):
+            h = grp.halos[i]
+            if i == maxnp:
+                parent_halos.append(h)
+            else:
+                child_halos.append(h)
+                
+    import caesar.vtk_vis as vtk
+    v = vtk.vtk_render()
+    
+    v.point_render(pos, color=[1,0,0],alpha=0.5)
+    
+    xpos = [i.x for i in parent_halos]
+    ypos = [i.y for i in parent_halos]
+    zpos = [i.z for i in parent_halos]
+    hpos = np.column_stack((xpos,ypos,zpos))
+
+    v.point_render(hpos, color=[0,0,1],psize=5)
+
+    xpos = [i.x for i in child_halos]
+    ypos = [i.y for i in child_halos]
+    zpos = [i.z for i in child_halos]
+    hpos = np.column_stack((xpos,ypos,zpos))
+
+    v.point_render(hpos, color=[0,1,1],psize=3)
+    
+    #for i in range(0,len(parents)):
+    #    v.place_label(hpos[parents][i], '%d %d' % (num_p[parents][i], halos['num_child_particles'][i]))
+
+    largest = np.argmax(halos['num_p'])
+    halo_pos = np.column_stack((halos['pos_x'],halos['pos_y'],halos['pos_z']))
+    
+    v.render(focal_point=halo_pos[largest])
+    
+    import ipdb; ipdb.set_trace()    
     return halos
     """
-    
-    return group_tags
 
 
 
