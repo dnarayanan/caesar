@@ -74,7 +74,8 @@ class Snapshot(object):
         obj.member_search(**kwargs)
         obj.save(self.outfile)
 
-        ds = None
+        obj = None
+        ds  = None
 
 def print_art():
     """Print some ascii art."""
