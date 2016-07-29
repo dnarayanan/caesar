@@ -64,6 +64,10 @@ class CAESAR(object):
     @property
     def yt_dataset(self):
         """The yt dataset to perform actions on."""
+        if isinstance(self._ds, int):
+            raise Exception('No yt_dataset assigned!\nPlease assign '\
+                            'one via `obj.yt_dataset=<YT DATASET>` ' \
+                            'to load particle/field data from disk.')
         return self._ds
     @yt_dataset.setter
     def yt_dataset(self,value):
@@ -86,7 +90,12 @@ class CAESAR(object):
 
         self._ds_type = DatasetType(self._ds)
         self._assign_simulation_attributes()
-
+        
+    def _check_for_yt_dataset(self):
+        """Check to see if a yt_dataset has been assigned, if not 
+        raise an exception."""
+        check = self.yt_dataset
+        
     @property
     def _has_galaxies(self):
         """Checks if any galaxies are present."""
@@ -101,10 +110,7 @@ class CAESAR(object):
         if isinstance(self._dm, int):
             from caesar.data_manager import DataManager
             self._dm = DataManager(self)
-        if isinstance(self.yt_dataset, int):
-            raise Exception('No yt_dataset assigned!\nPlease assign '\
-                            'one via `obj.yt_dataset=<YT DATASET>` ' \
-                            'to load particle/field data from disk.')
+        self._check_for_yt_dataset()
         return self._dm
         
     def _assign_simulation_attributes(self):
