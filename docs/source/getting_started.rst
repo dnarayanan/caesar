@@ -18,7 +18,7 @@ Requirements
   * `scipy <https://www.scipy.org/>`_
   * `cython <http://cython.org/>`_
   * `h5py <http://www.h5py.org/>`_
-  * `yt dev <https://bitbucket.org/yt_analysis/yt>`_
+  * `yt >= 3.3 <https://bitbucket.org/yt_analysis/yt>`_
 
     * `sympy <http://www.sympy.org/en/index.html>`_
       
@@ -78,33 +78,33 @@ environment paths.
 
 ----
    
-yt dev
-------
+yt
+--
 
-The current release version of ``yt`` is 3.2.x; ``CAESAR`` relies on
-methods currently residing in the development branch of ``yt`` not
-slated to hit the stable branch until 3.3.  This means that ``yt``
-must be installed from the development branch.  Luckily mercurial
-makes this pretty easy!
+``CAESAR`` relies on yt version 3.3 or above.  If you currently 
+have ``yt`` installed and its version number is less than 3.3 you
+must 
+`update <http://yt-project.org/doc/installing.html#updating-yt-and-its-dependencies>`_
+before ``CAESAR`` will function.  You can check your current ``yt``
+version via: 
 
-First we need to clone the ``yt`` project:
+.. code-block:: bash
+
+    $> yt version
+
+
+To install a fresh copy of ``yt`` we must first clone it:
 
 .. code-block:: bash
 
    $> hg clone https://bitbucket.org/yt_analysis/yt
-
-Now we change into the ``yt`` directory, and update to the ``yt`` branch:
-
-.. code-block:: bash
-
-   $> cd yt
-   $> hg update yt
 
 Finally, we build ``yt`` which may take a little while for everything to
 compile:
 
 .. code-block:: bash
 
+   $> cd yt
    $> python setup.py install
 
 ----
