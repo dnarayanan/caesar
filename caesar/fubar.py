@@ -20,13 +20,13 @@ class FOFGroup(object):
         self.halos = []
 
 class RSHalo(object):
-    def __init__(self, index, x,y,z, ppos, num_p):
+    def __init__(self, index, x,y,z, indexes, mass):
         self.index = index
         self.x = x
         self.y = y
         self.z = z
-        self.particle_pos = ppos
-        self.num_p = num_p
+        self.indexes = indexes
+        self.mass = mass
 #####################
 """
 
@@ -78,31 +78,98 @@ def fof(obj, positions, LL, group_type=None):
         positions,
         np.arange(0,len(positions),dtype=np.int64),
         0,0
-    )
-
+    )    
+    
     return group_tags
 
-    """
+    """  (PAY NO ATTENTION TO THE MAN BEHIND THE CURTAIN)
     ## RS
     # example script: http://paste.yt-project.org/show/edxCFtSMU4EC1funxpvl/
-
-    velocities = obj.data_manager.vel[obj.data_manager.dmlist]
-    
     from yt.analysis_modules.halo_finding.rockstar.rockstar_groupies import RockstarGroupiesInterface
-    ds  = obj.yt_dataset
-    rgi = RockstarGroupiesInterface(ds)
-    #force_res =  LL / 0.2 / 50.
-    force_res =  obj.simulation.boxsize / float(obj.simulation.effective_resolution) / 50.
+
+    # RS setup
+    ind       = np.argsort(group_tags)
+    ds        = obj.yt_dataset
+    rgi       = RockstarGroupiesInterface(ds)
+    force_res = obj.simulation.boxsize / float(obj.simulation.effective_resolution) / 50.
     rgi.setup_rockstar(ds.mass_unit * ds.parameters['MassTable'][1], force_res=force_res.d, min_halo_size=20)
-    ind = np.argsort(group_tags)
     print('running rs')
 
-    #pcounts = rgi.make_rockstar_fof(ind, group_tags, pdata['pos'], pdata['vel'], pdata['mass'], pdata['ptype'])
+    ## REGULAR ROCKSTAR ##
+    velocities = obj.data_manager.vel[obj.data_manager.dmlist]    
     pcounts = rgi.make_rockstar_fof(ind, group_tags, positions, velocities)
     #print('pcounts:',pcounts)
     
-    halos = rgi.return_halos()
+    ## ROCKSTAR GALAXIES ##
+    #velocities = obj.data_manager.vel
+    #masses = obj.data_manager.mass
+    #ptypes = obj.data_manager.ptype
+    #pcounts = rgi.make_rockstar_fof(ind, group_tags, positions, velocities, masses, ptypes)
 
+    rs_halos = rgi.return_halos()
+
+    np.savez('rs_data.npz', halos=rs_halos, group_tags=group_tags)
+    
+    import sys
+    sys.exit()
+    
+    ## common
+    rs_halos   = rgi.return_halos()
+    nhalos     = len(rs_halos['num_p'])
+    fof_groups = []
+    tag_index  = -1
+    grp_index  = -1
+    unique_group_tags = np.unique(group_tags)[1::] # remove -1
+
+    for i in range(0,nhalos):
+        halo = rs_halos[i]
+        #if halo['num_p'] == 0 or halo['num_p'] < 32:
+        #    continue
+
+        # new FOF group
+        if halo['p_start'] == 0:            
+            ## append the previous group to the list before starting a new one
+            if tag_index > -1: fof_groups.append(fof_group)
+            tag_index += 1
+            grp_index += 1
+            g_tag      = unique_group_tags[tag_index]
+            fof_group  = FOFGroup(grp_index)
+        global_indexes = np.where(group_tags == g_tag)[0]
+
+        # bullshit
+        local_indexes  = global_indexes[halo['p_start']:halo['p_start']+halo['num_p']]
+
+        if len(global_indexes) < halo['num_p']:
+            print len(global_indexes), halo['num_p']
+        
+        mymass = np.sum(masses[halo['p_start']:halo['p_start']+halo['num_p']])
+        if mymass == 0 and halo['num_p'] != 0:
+            #print global_indexes
+            print mymass, len(global_indexes), halo['p_start'],halo['num_p']
+
+        #if halo['num_p'] > halo['num_child_particles']:   ## DOES NOT HAPPEN
+        #print len(global_indexes),halo['num_p'],halo['num_child_particles'],halo['p_start']
+        #if halo['num_p'] == halo['num_child_particles']:
+        #    print halo['flags']
+        #    tally += 1
+            
+        
+        new_halo = RSHalo(grp_index, halo['pos_x'], halo['pos_y'], halo['pos_z'], local_indexes, np.sum(masses[local_indexes]))
+        fof_group.halos.append(new_halo)
+
+    parents, children = [],[]
+    for group in fof_groups:
+        group_masses   = [i.mass for i in group.halos]
+        max_mass_index = np.argmax(group_masses)
+        for i in range(0,len(group.halos)):
+            if i == max_mass_index:
+                parents.append(group.halos[i])
+            else:
+                children.append(group.halos[i])
+
+    
+        
+    import ipdb; ipdb.set_trace()
     parent_halos = []
     child_halos = []
     
@@ -121,23 +188,31 @@ def fof(obj, positions, LL, group_type=None):
             gti += 1
             fof_group = FOFGroup(gti)
         group_tag = group_tags[gti]
-        indexes = np.where(group_tags == group_tag)[0]
-        pos = positions[indexes]
-        pos = pos[this_halo['p_start']:this_halo['p_start']+this_halo['num_p']]
+        global_indexes = np.where(group_tags == group_tag)[0]
+        local_indexes  = global_indexes[this_halo['p_start']:this_halo['p_start']+this_halo['num_p']]
 
-        h = RSHalo(gti,this_halo['pos_x'],this_halo['pos_y'],this_halo['pos_z'],pos,this_halo['num_p'])
+        h = RSHalo(group_tag,this_halo['pos_x'],this_halo['pos_y'],this_halo['pos_z'],local_indexes, np.sum(masses[local_indexes]))
+        #h = RSHalo(gti,this_halo['pos_x'],this_halo['pos_y'],this_halo['pos_z'],pos,this_halo['num_p'])
 
         fof_group.halos.append(h)
 
+
     for grp in fof_groups:
-        num_p_halo = [i.num_p for i in grp.halos]
-        maxnp = np.argmax(num_p_halo)
+        grp_masses = [i.mass for i in grp.halos]
+
+        #num_p_halo = [i.num_p for i in grp.halos]        
+        #maxnp = np.argmax(num_p_halo)
+        maxnp = np.argmax(grp_masses)
+        
         for i in range(0,len(grp.halos)):
             h = grp.halos[i]
             if i == maxnp:
                 parent_halos.append(h)
             else:
                 child_halos.append(h)
+
+    parent_group_tags = np.full(len(positions),-1,dtype=np.int64)
+    child_group_tags  = np.full(len(positions),-1,dtype=np.int64)
                 
     import caesar.vtk_vis as vtk
     v = vtk.vtk_render()
