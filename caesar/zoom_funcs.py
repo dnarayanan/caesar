@@ -51,7 +51,7 @@ def write_IC_mask(group, ic_ds, filename, search_factor, print_extents=True):
                 break_point = vals[i-1] + (ddim/2.0)
                 break
         if break_point != -1:
-            l_indexes = np.where(icdmpos[:,dim] < break_point)[0]
+            l_indexes = np.where(ic_dmpos[:,dim] < break_point)[0]
             ic_dmpos[l_indexes, dim] += 1.0
 
         dmin = np.min(ic_dmpos[:,dim])
