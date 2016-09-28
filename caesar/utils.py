@@ -60,6 +60,9 @@ def calculate_local_densities(obj, group_list):
         List of objects to perform this operation on.
 
     """
+    if len(group_list) == 0:
+        return
+    
     try:
         from scipy.spatial import KDTree, cKDTree
         from caesar.periodic_kdtree import PeriodicCKDTree
