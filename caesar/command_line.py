@@ -28,7 +28,7 @@ def run():
         return
 
     if not os.path.isfile(args.input):
-        raise IOException('not a valid file!')
+        raise IOError('%s not a valid file!' % args.input)
     
     caesar_file = False
     try:
