@@ -71,10 +71,11 @@ def sim_vis(obj, ptypes = ['dm','star','gas'],
         galaxies are annotated, if an integer list then galaxies of 
         those indexes are annotated, and finally if an integer than 
         the most massive N galaxies are annotated.
-    draw_spheres : string
+    draw_spheres : string, boolean
         Add spheres around your annotated objects.  The size is
         determined by the string you pass, should be from the .radii
-        dict.
+        dict.  If a boolean of True is passed it will use the total
+        radii.
 
     """    
     import numpy as np
