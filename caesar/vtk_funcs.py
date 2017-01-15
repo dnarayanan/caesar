@@ -43,7 +43,8 @@ def group_vis(group, rotate=True):
 
 def sim_vis(obj, ptypes = ['dm','star','gas'],
             halo_only=True, galaxy_only=False,
-            annotate_halos=False, annotate_galaxies=False):
+            annotate_halos=False, annotate_galaxies=False,
+            draw_spheres=None):
     """Function to visualize an entire simulation with VTK.
     
     Parameters
@@ -70,6 +71,10 @@ def sim_vis(obj, ptypes = ['dm','star','gas'],
         galaxies are annotated, if an integer list then galaxies of 
         those indexes are annotated, and finally if an integer than 
         the most massive N galaxies are annotated.
+    draw_spheres : string
+        Add spheres around your annotated objects.  The size is
+        determined by the string you pass, should be from the .radii
+        dict.
 
     """    
     import numpy as np
@@ -105,7 +110,7 @@ def sim_vis(obj, ptypes = ['dm','star','gas'],
             pos = pos[np.where(gpl.halo_dmlist > -1)[0]]
         v.point_render(pos, color=[1,0,0])
 
-    def annotate_group(group_list, annotation, txtcolor):
+    def annotate_group(group_list, annotation, txtcolor, spheres=None):
         if isinstance(annotation, bool):
             indexes = [i for i in range(0,len(group_list))]
         elif isinstance(annotation, list):
@@ -113,6 +118,9 @@ def sim_vis(obj, ptypes = ['dm','star','gas'],
         elif isinstance(annotation, int):
             indexes = [i for i in range(0, annotate_halos)]
 
+        if isinstance(spheres, bool):
+            spheres = 'total'
+            
         for i in indexes:
             if i >= len(group_list): continue
             group = group_list[i]
@@ -120,10 +128,12 @@ def sim_vis(obj, ptypes = ['dm','star','gas'],
                           (group.GroupID, group.masses['total']),
                           text_color=txtcolor)
 
+            if spheres is not None and spheres in group.radii:
+                v.draw_sphere(group.pos, group.radii[spheres], color=txtcolor, opacity=0.5)                    
         
     if annotate_halos and 'dm' in ptypes:
-        annotate_group(obj.halos, annotate_halos, [0.75,0.75,0])
+        annotate_group(obj.halos, annotate_halos, [0.75,0.75,0], draw_spheres)
     if annotate_galaxies:
-        annotate_group(obj.galaxies, annotate_galaxies, [0, 0.75, 0.75])
+        annotate_group(obj.galaxies, annotate_galaxies, [0, 0.75, 0.75], draw_spheres)
         
     v.render()

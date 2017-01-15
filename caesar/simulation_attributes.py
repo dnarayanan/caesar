@@ -21,7 +21,12 @@ class SimulationAttributes(object):
         self.basename        = ds.basename
         self.hubble_constant = ds.hubble_constant
         self.parameters      = ds.parameters
-        
+
+        if not self.cosmological_simulation:
+            # correct for NON comoving coordinates in non-cosmo sims
+            if obj.units['length'].endswith('cm') and obj.units['length'] != 'cm':
+                obj.units['length'] = obj.units['length'][:-2]
+                
         self.boxsize         = ds.domain_width[0].to(obj.units['length'])
         self.boxsize_units   = str(self.boxsize.units)
 
@@ -48,10 +53,6 @@ class SimulationAttributes(object):
                 self.Om_z = ds.cosmology.omega_matter
             else:
                 self.Om_z = 0.3
-
-            # correct for NON comoving coordinates in non-cosmo sims
-            if obj.units['length'].endswith('cm') and obj.units['length'] != 'cm':
-                obj.units['length'] = obj.units['length'][:-2]
 
                 
         self.H_z = ds.quan(H_z * 3.24077929e-20, '1/s')
