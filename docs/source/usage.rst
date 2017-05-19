@@ -17,8 +17,8 @@ primary lists are the ``halos`` and ``galaxies`` list; within each of
 these you will find every object identified by ``CAESAR``.  Below is a
 quick relationship diagram describing how objects are linked together:
 
-.. image:: https://dl.dropboxusercontent.com/u/6920345/CAESAR/caesar_classes.png
-   :target: https://dl.dropboxusercontent.com/u/6920345/CAESAR/caesar_classes.png
+.. image:: https://www.dropbox.com/s/df50wkx3gzrtbfa/caesar_classes.png?raw=1
+   :target: https://www.dropbox.com/s/df50wkx3gzrtbfa/caesar_classes.png?raw=1
    :alt: CAESAR Data Structure
 
 From this you can see that each ``Halo`` object has a list of
