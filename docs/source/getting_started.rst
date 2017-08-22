@@ -14,7 +14,7 @@ Requirements
 * `python >= 2.7.x <https://www.python.org/>`_
 
   * `mercurial <https://www.mercurial-scm.org/>`_
-  * `numpy <http://www.numpy.org/>`_
+  * `numpy >= 1.13.x <http://www.numpy.org/>`_
   * `scipy <https://www.scipy.org/>`_
   * `cython <http://cython.org/>`_
   * `h5py <http://www.h5py.org/>`_
