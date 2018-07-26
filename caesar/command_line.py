@@ -49,7 +49,7 @@ def run():
         
 def open_caesar_file(infile):
     import IPython
-    from loader import load
+    from .loader import load
     obj = load(infile)
 
     print('')
