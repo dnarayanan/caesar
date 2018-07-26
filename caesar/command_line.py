@@ -1,6 +1,8 @@
 import argparse
 import h5py
 import os
+import pygadgetreader as pygr
+import numpy as np
 
 def run():
     parser = argparse.ArgumentParser()
@@ -72,8 +74,24 @@ def run_caesar(infile, args):
         outfile = 'caesar_%s' % (infile) 
 
     from .main import CAESAR
+    ds = yt.load(infile)
+    if ds.cosmological_simulation == 1:
+        obj = CAESAR(yt.load(infile))
+    else:
+        #find the min/max coordinates and use a bbox
+        pos_dm = pygr.readsnap(infile,'pos','dm')
+        pos_gas = pygr.readsnap(infile,'pos','gas')
+        pos_stars = pygr.readsnap(infile,'pos','stars')
+        
 
-    obj = CAESAR(yt.load(infile))
+        maxpos = np.max(np.concatenate((pos_stars.flatten(),pos_dm.flatten(),pos_gas.flatten()),axis=0))
+        minpos = np.min(np.concatenate((pos_stars.flatten(),pos_dm.flatten(),pos_gas.flatten()),axis=0))
+        boxsize = np.max([np.absolute(maxpos),np.absolute(minpos)])
+        bbox = [[-boxsize,boxsize],
+                [-boxsize,boxsize],
+                [-boxsize,boxsize]]
+        obj = CAESAR(yt.load(infile,bounding_box = bbox))
+        
     obj.member_search(**args)
     obj.save(outfile)
 

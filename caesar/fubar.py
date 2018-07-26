@@ -12,6 +12,7 @@ from yt.data_objects.octree_subset import YTPositionArray
 from yt.utilities.lib.contour_finding import ParticleContourTree
 from yt.geometry.selection_routines import AlwaysSelector
 
+from astropy.cosmology import Planck15
 """
 ## RS TESTING TEMP ##
 class FOFGroup(object):
@@ -278,11 +279,20 @@ def get_mean_interparticle_separation(obj):
     """    
     if hasattr(obj.simulation, 'mean_interparticle_separation'):
         return obj.simulation.mean_interparticle_separation
-    
-    UT = obj.yt_dataset.time_unit.to('s/h')/obj.yt_dataset.scale_factor
-    UL = obj.yt_dataset.length_unit.to('cmcm/h')
+
+    if obj.yt_dataset.cosmological_simulation == 0:
+        print('non-Cosmological Data Set Detected')
+        UT = obj.yt_dataset.current_time.to('s/h')
+        UL = obj.yt_dataset.length_unit.to('cm/h')
+        GRAV = obj.yt_dataset.quan(6.672e-8, 'cm**3/(g*s**2)')
+    else:
+        print('Cosmological Data Set Detected')
+        UT = obj.yt_dataset.time_unit.to('s/h')/obj.yt_dataset.scale_factor
+        UL = obj.yt_dataset.length_unit.to('cmcm/h')
+        GRAV = obj.yt_dataset.quan(6.672e-8, 'cmcm**3/(g*s**2)')
+
     UM = obj.yt_dataset.mass_unit.to('g/h')
-    GRAV = obj.yt_dataset.quan(6.672e-8, 'cmcm**3/(g*s**2)')
+
     
     G = GRAV / UL**3 * UM * UT**2  ## to system units
     Hubble = obj.yt_dataset.quan(3.2407789e-18, 'h/s') * UT
@@ -317,9 +327,13 @@ def get_mean_interparticle_separation(obj):
     dmmass = obj.yt_dataset.quan(np.sum(dmmass), obj.units['mass']).to('code_mass')
     bmass  = obj.yt_dataset.quan(np.sum(gmass) + np.sum(smass) + np.sum(bhmass), obj.units['mass']).to('code_mass')
     """
-    
-    Om = obj.yt_dataset.cosmology.omega_matter
-    Ob = (bmass / (bmass + dmmass) * Om).d
+    #if its an idealized simulation, then there's no cosmology and we just take z=0 Planck15 values
+    if obj.yt_dataset.cosmological_simulation == 0:
+        Om = Planck15.Om0
+        Ob = Planck15.Ob0
+    else:
+        Om = obj.yt_dataset.cosmology.omega_matter
+        Ob = (bmass / (bmass + dmmass) * Om).d
     
     rhodm = ((Om - Ob) * 3.0 * Hubble**2 / (8.0 * np.pi * G)).d
     rhodm = obj.yt_dataset.quan(rhodm, 'code_mass/code_length**3')
@@ -442,7 +456,7 @@ def fubar(obj, group_type, **kwargs):
         groupings[tag]._append_global_index(index)
 
     if unbind: mylog.info('Unbinding %s' % group_types[group_type])
-        
+
     for v in tqdm(groupings.values(),
                   total=len(groupings),
                   desc='Processing %s' % group_types[group_type]):
