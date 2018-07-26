@@ -81,7 +81,7 @@ setup(
         'console_scripts':['caesar = caesar.command_line:run']
     },
     packages=find_packages(),
-    setup_requires=['numpy','cython>=0.22','python-hglib'],
+    setup_requires=['numpy','cython>=0.22'],
     install_requires=['numpy','h5py','cython',],
     cmdclass={'sdist':sdist, 'build_ext':build_ext, 'build_py':build_py},
     ext_modules=cython_extensions,
