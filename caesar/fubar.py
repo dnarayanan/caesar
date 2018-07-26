@@ -443,7 +443,7 @@ def fubar(obj, group_type, **kwargs):
 
     if unbind: mylog.info('Unbinding %s' % group_types[group_type])
         
-    for v in tqdm(groupings.itervalues(),
+    for v in tqdm(groupings.values(),
                   total=len(groupings),
                   desc='Processing %s' % group_types[group_type]):
         v._process_group()
