@@ -193,7 +193,8 @@ def save(obj, filename='test.hdf5'):
     mylog.info('Writing %s' % filename)
         
     outfile = h5py.File(filename, 'w')
-    #commented out for py3 compatibility outfile.attrs.create('caesar', hg_version)
+    outfile.attrs.create('caesar', 315)
+    
     
     unit_registry = obj.yt_dataset.unit_registry.to_json()
     outfile.attrs.create('unit_registry_json', unit_registry.encode('utf8'))
