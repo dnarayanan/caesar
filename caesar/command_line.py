@@ -3,10 +3,7 @@ import h5py
 import os
 import numpy as np
 
-try:
-    import pygadgetreader as pygr
-except ImportError:
-    raise ImportError('Whoops! It looks like you need to install pygadgetreader: https://bitbucket.org/rthompson/pygadgetreader/src/default/')
+
 
 def run():
     parser = argparse.ArgumentParser()
@@ -82,6 +79,11 @@ def run_caesar(infile, args):
     if ds.cosmological_simulation == 1:
         obj = CAESAR(yt.load(infile))
     else:
+        try:
+            import pygadgetreader as pygr
+        except ImportError:
+            raise ImportError('Whoops! It looks like you need to install pygadgetreader: https://bitbucket.org/rthompson/pygadgetreader/src/default/')
+
         print('Figuring out the box size for a non-cosmological simulation')
         #find the min/max coordinates and use a bbox
         pos_dm = pygr.readsnap(infile,'pos','dm')
