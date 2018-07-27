@@ -1,8 +1,12 @@
 import argparse
 import h5py
 import os
-import pygadgetreader as pygr
 import numpy as np
+
+try:
+    import pygadgetreader as pygr
+except ImportError:
+    raise ImportError('Whoops! It looks like you need to install pygadgetreader: https://bitbucket.org/rthompson/pygadgetreader/src/default/')
 
 def run():
     parser = argparse.ArgumentParser()
