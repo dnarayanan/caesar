@@ -78,6 +78,7 @@ def run_caesar(infile, args):
     if ds.cosmological_simulation == 1:
         obj = CAESAR(yt.load(infile))
     else:
+        print('Figuring out the box size for a non-cosmological simulation')
         #find the min/max coordinates and use a bbox
         pos_dm = pygr.readsnap(infile,'pos','dm')
         pos_gas = pygr.readsnap(infile,'pos','gas')
