@@ -1,3 +1,4 @@
+import numpy as np
 from caesar.property_manager import DatasetType
 from caesar.particle_list import ParticleListContainer
 from caesar.simulation_attributes import SimulationAttributes
@@ -79,6 +80,9 @@ class CAESAR(object):
         infile = '%s/%s' % (value.fullpath, value.basename)
 
         if hasattr(self, 'hash'):
+            if isinstance(self.hash, np.bytes_):
+                self.hash = self.hash.decode('utf8')
+
             hash = get_hash(infile)
             if hash != self.hash:
                 raise IOError('hash mismatch!')
