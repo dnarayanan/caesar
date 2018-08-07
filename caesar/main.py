@@ -79,8 +79,6 @@ class CAESAR(object):
 
         infile = '%s/%s' % (value.fullpath, value.basename)
         
-        '''
-        Commenting out hash comparison because it breaks from py2-->py3 
 
         if hasattr(self, 'hash'):
             if isinstance(self.hash, np.bytes_):
@@ -94,7 +92,7 @@ class CAESAR(object):
         else:
             self._ds  = value
             self.hash = get_hash(infile)
-        '''
+
         self._ds = value
         self._ds_type = DatasetType(self._ds)
         self._assign_simulation_attributes()
