@@ -9,9 +9,10 @@ from yt.funcs import mylog, get_hash
 class CAESAR(object):
     """Master CAESAR class.
 
-    CAESAR objects contain all references to halos and galaxies for
-    a single snapshot.  Its output format is portable and global
-    object statistics can be examined without the raw simulation file.
+    CAESAR objects contain all references to halos, galaxies, and
+    clouds for a single snapshot.  Its output format is portable and
+    global object statistics can be examined without the raw
+    simulation file.
     
     Parameters
     ----------
@@ -59,6 +60,7 @@ class CAESAR(object):
 
         self.nhalos    = 0
         self.ngalaxies = 0
+        self.nclouds = 0
         
         self.reset_default_returns()
         
@@ -111,6 +113,14 @@ class CAESAR(object):
             return False
 
     @property
+    def _has_clouds(self):
+        """Checks if any clouds are present."""
+        if self.nclouds > 0:
+            return True
+        else:
+            return False
+        
+    @property
     def data_manager(self):
         """On demand DataManager class."""
         if isinstance(self._dm, int):
@@ -129,14 +139,14 @@ class CAESAR(object):
         """Reset the default returns for object dictionaries.
     
         This function resets the default return quantities for CAESAR 
-        halo/galaxy objects including ``mass``, ``radius``, ``sigma``, 
+        halo/galaxy/cloud objects including ``mass``, ``radius``, ``sigma``, 
         ``metallicity``, and ``temperature``.
     
         Parameters
         ----------
         obj : :class:`main.CAESAR`
             Main CAESAR object.
-        group_type : {'all', 'halo', 'galaxy'}, optional
+        group_type : {'all', 'halo', 'galaxy', 'cloud'}, optional
             Group to reset return values for.
 
         """
@@ -152,13 +162,17 @@ class CAESAR(object):
             self._default_returns['halo'] = dr
         if group_type == 'galaxy' or group_type == 'all':
             dr['sigma'] = 'stellar'
-            self._default_returns['galaxy'] = dr                
-
+            self._default_returns['galaxy'] = dr
+        if group_type == 'cloud' or group_type == 'all':
+            dr['sigma'] = 'gas'
+            self._default_returns['galaxy'] = dr 
+            
     def _set_default_returns(self, group_type, category, value):
         """Generic default return setter."""
         from caesar.group import category_mapper, group_types
         if group_type == 'halo':     group = self.halos[0]
         elif group_type == 'galaxy': group = self.galaxies[0]
+        elif group_type == 'cloud': group = self.clouds[0]
         
         if category not in category_mapper.keys():
             raise ValueError('%s not a valid category!  Must pick one of %s' %
@@ -200,18 +214,37 @@ class CAESAR(object):
         """
         self._set_default_returns('galaxy', category, value)
 
+
+    def set_default_cloud_returns(self, category, value):
+        """Set the default return quantity for a given cloud
+        attribute.
+        
+        Parameters
+        ----------
+        category : str
+            The attribute to redirect to a different quantity.
+        value : str
+            The internal name of the new quantity which must be 
+            present in the dictinoary
+    
+        """
+        self._set_default_returns('cloud', category, value)
+
         
     def _assign_objects(self):
         """Assign galaxies to halos, and central galaxies."""
         import caesar.assignment as assign
         assign.assign_galaxies_to_halos(self)
         assign.assign_central_galaxies(self)
+        assign.assign_clouds_to_galaxies(self)
         
     def _link_objects(self):
         """Link galaxies to halos and create sublists."""
         import caesar.linking as link
         link.link_galaxies_and_halos(self)
+        link.link_clouds_and_galaxies(self)
         link.create_sublists(self)
+
 
     def save(self, filename):
         """Save CAESAR file.
@@ -233,7 +266,7 @@ class CAESAR(object):
         """Meat and potatoes of CAESAR.
 
         This method is responsible for loading particle/field data
-        from disk, creating halos and galaxies, linking objects
+        from disk, creating halos, galaxies and clouds, linking objects
         together, and finally calculating HI/H2 masses if necessary.
 
         Parameters 
@@ -250,6 +283,12 @@ class CAESAR(object):
             Quantity used in the linking length (LL) for galaxies.
             LL = mean_interparticle_separation * b_galaxy.  Defaults 
             to ``b_galaxy = b_halo * 0.2``.
+        b_cloud : float, optional
+            Quantity used in the linking length (LL) for galaxies.
+            LL = mean_interparticle_separation * b_cloud.  Defaults 
+            to ``b_cloud = b_halo * 0.2``.
+        cloud_LL: float, optional
+            Manual linking length set for clouds
         blackholes : boolean, optional
             Indicate if blackholes are present in your simulation.  
             This must be toggled on manually as there is no clear 
@@ -277,13 +316,17 @@ class CAESAR(object):
         from caesar.fubar import fubar
         fubar(self, 'halo')
         fubar(self, 'galaxy')
-
+        fubar(self,'cloud')
+        
         import caesar.assignment as assign
         import caesar.linking as link
         assign.assign_galaxies_to_halos(self)
         link.link_galaxies_and_halos(self)
+        assign.assign_clouds_to_galaxies(self)
+        link.link_clouds_and_galaxies(self)
         assign.assign_central_galaxies(self)
         link.create_sublists(self)
+     
         
         import caesar.hydrogen_mass_calc as mass_calc
         mass_calc.hydrogen_mass_calc(self)
@@ -363,4 +406,21 @@ class CAESAR(object):
         from caesar.utils import info_printer
         info_printer(self, 'halo', top)
         
+        
+    def cloudinfo(self, top=10):
+        """Method to print general info for the most massive clouds
+        identified via CAESAR.
 
+        Parameters
+        ----------
+        top : int, optional
+            Number of results to print.  Defaults to 10.
+
+        Notes
+        -----
+        This prints to terminal, and is meant for use in an 
+        interactive session.
+
+        """
+        from caesar.utils import info_printer
+        info_printer(self, 'cloud', top)

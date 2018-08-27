@@ -97,7 +97,7 @@ def info_printer(obj, group_type, top):
     ----------
     obj : :class:`main.CAESAR`
         Main CAESAR object.
-    group_type : {'halo','galaxy'}
+    group_type : {'halo','galaxy','cloud'}
         Type of group to print data for.
     top : int
         Number of objects to print.
@@ -108,6 +108,9 @@ def info_printer(obj, group_type, top):
         group_list = obj.halos
     elif group_type == 'galaxy':
         group_list = obj.galaxies
+    elif group_type == 'cloud':
+        group_list = obj.clouds
+        
     nobjs = len(group_list)
     if top > nobjs:
         top = nobjs
@@ -151,5 +154,20 @@ def info_printer(obj, group_type, top):
                        phm, phid)
             cnt += 1
             if cnt > top: break
-                
+    elif group_type == 'cloud':
+        output += ' ID    Mstar     Mgas      SFR       r         fgas   nrho      Central\t|  Mhalo     HID\n'
+        output += ' ----------------------------------------------------------------------------------------\n'
+        #         ' 0000  4.80e+09  4.80e+09  4.80e+09  7.64e-09  0.000  7.64e-09  False
+        for o in group_list:
+            phm, phid = -1, -1
+            output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.3f  %0.2e  %s\t|  %0.2e  %d \n' % \
+                      (o.GroupID, o.masses['stellar'], o.masses['gas'],
+                       o.sfr, o.radii['total'], o.gas_fraction,
+                       o.local_number_density, o.central,
+                       phm, phid)
+            cnt += 1
+            if cnt > top: break
+
+
+            
     print(output)

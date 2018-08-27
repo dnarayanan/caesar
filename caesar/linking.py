@@ -32,8 +32,42 @@ def link_galaxies_and_halos(obj):
             galaxy.halo = obj.halos[galaxy.parent_halo_index]
         else:
             galaxy.halo = None
-            
 
+
+
+def link_clouds_and_galaxies(obj):
+    """Link clouds and galaxies to one another.
+    
+    This function creates the links between cloud-->galaxy and
+    galaxy-->cloud objects.  Is run during creation, and loading in of
+    each CAESAR file.
+    
+    Parameters
+    ----------
+    obj : :class:`main.CAESAR`
+        Object containing halos and galaxies lists.
+    
+    """
+    
+    if not obj._has_galaxies:
+        return
+  
+    mylog.info('Linking clouds and galaxies')
+    
+    # halos
+    for galaxy in obj.galaxies:
+        galaxy.clouds = []
+        for cloud_index in galaxy.cloud_index_list:
+            galaxy.clouds.append(obj.clouds[cloud_index])
+    
+
+    for cloud in obj.clouds:
+        if cloud.parent_galaxy_index > -1:
+            cloud.galaxy = obj.galaxies[cloud.parent_galaxy_index]
+        else:
+            cloud.galaxy = None
+
+  
 def create_sublists(obj):
     """Create sublists of objects.
 

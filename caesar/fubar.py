@@ -359,7 +359,7 @@ def get_b(obj, group_type):
     obj : :class:`main.CAESAR`
         Main caesar object.
     group_type : str
-        Can be either 'halo' or 'galaxy'; determines what objects
+        Can be either 'halo' or 'galaxy' or 'cloud'; determines what objects
         we find with FOF.
 
     Returns
@@ -379,7 +379,13 @@ def get_b(obj, group_type):
             b = float(obj._kwargs['b_galaxy'])
         else:
             b *= 0.2
-        
+
+    if group_type == 'cloud':
+        if 'b_cloud' in obj._kwargs and isinstance(obj._kwargs['b_cloud'], (int, float)):
+            b = float(obj._kwargs['b_cloud'])
+        else:
+            b *= 0.2
+            
     mylog.info('Using b=%g for %s' % (b, group_types[group_type]))
     return b
     
@@ -395,12 +401,14 @@ def fubar(obj, group_type, **kwargs):
     however, we only consider high density gas and stars (and
     blackholes if included).
 
+    For clouds we consider all gas particles.
+    
     Parameters
     ----------
     obj : :class:`main.CAESAR`
         Main caesar object.
     group_type : str
-        Can be either 'halo' or 'galaxy'; determines what objects
+        Can be either 'halo', 'galaxy' or 'cloud'; determines what objects
         we find with FOF.
 
     """
@@ -415,10 +423,19 @@ def fubar(obj, group_type, **kwargs):
         # here we want to perform FOF on high density gas + stars
         high_rho_indexes = get_high_density_gas_indexes(obj)
         pos  = np.concatenate((
-            pos[obj.data_manager.glist][high_rho_indexes],
+            pos[obj.data_manager.glist],
             pos[obj.data_manager.slist],
             pos[obj.data_manager.bhlist]
-        ))        
+        ))
+
+    if group_type == 'cloud':
+        if not obj.simulation.baryons_present:
+            return
+
+        # here we want to perform FOF on all gas
+        pos = pos[obj.data_manager.glist]
+
+
 
     unbind = False        
     unbind_str = 'unbind_%s' % group_types[group_type]
@@ -429,11 +446,12 @@ def fubar(obj, group_type, **kwargs):
         
     fof_tags = fof(obj, pos, LL, group_type=group_type)
 
+    '''
     if group_type == 'galaxy':
         gtags = np.full(obj.simulation.ngas, -1, dtype=np.int64)
         gtags[high_rho_indexes] = fof_tags[0:len(high_rho_indexes)]
         fof_tags = np.concatenate((gtags,fof_tags[len(high_rho_indexes)::]))
-        
+    ''' 
     tag_sort = np.argsort(fof_tags)
 
     unique_groupIDs = np.unique(fof_tags)
@@ -511,3 +529,6 @@ def fubar(obj, group_type, **kwargs):
     elif group_type == 'galaxy':
         obj.galaxies  = group_list
         obj.ngalaxies = len(obj.galaxies)
+    elif group_type == 'cloud':
+        obj.clouds  = group_list
+        obj.nclouds = len(obj.clouds)

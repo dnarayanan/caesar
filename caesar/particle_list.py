@@ -24,6 +24,8 @@ class ParticleListContainer(object):
     galaxy_glist  = ParticleList('galaxy_glist')
     galaxy_slist  = ParticleList('galaxy_slist')
     galaxy_bhlist = ParticleList('galaxy_bhlist')
+
+    cloud_glist = ParticleList('cloud_glist')
     
     def __init__(self, obj):
         self.halo_dmlist   = 0
@@ -33,7 +35,8 @@ class ParticleListContainer(object):
         self.galaxy_glist  = 0
         self.galaxy_slist  = 0
         self.galaxy_bhlist = 0
-
+        self.cloud_glist = 0
+        
         self.obj = obj
 
     def restore_global_list(self, key):        

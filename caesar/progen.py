@@ -161,3 +161,22 @@ def progen_finder(obj_current, obj_progens, snap_current, snap_progens):
         write_progen_data(obj_current, prev_indexes, data_type, caesar_file)
     else:
         mylog.warning('%s progen data already present, skipping!' % data_type)
+
+
+    ## clouds (use gas)
+    data_type = 'cloud'
+    if obj_current.nclouds == 0 or obj_progens.nclouds == 0:
+        mylog.warning('0 %s found! skipping progen' % group_types[data_type])
+    elif not check_if_progen_is_present(data_type, caesar_file):
+        nobjs        = obj_current.nclouds
+        PID_current  = readsnap(snap_current.snap, 'pid', 0)
+        PID_progens  = readsnap(snap_progens.snap, 'pid', 0)
+        list_current = obj_current.global_particle_lists.cloud_glist
+        list_progens = obj_progens.global_particle_lists.cloud_glist
+
+        prev_indexes = find_progens(PID_current, PID_progens,
+                                    list_current, list_progens,
+                                    nobjs)
+        write_progen_data(obj_current, prev_indexes, data_type, caesar_file)
+    else:
+        mylog.warning('%s progen data already present, skipping!' % data_type)

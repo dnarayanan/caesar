@@ -6,19 +6,20 @@ from caesar.group_funcs import get_periodic_r
 
 MINIMUM_STARS_PER_GALAXY = 32
 MINIMUM_DM_PER_HALO      = 32
+MINIMUM_GAS_PER_CLOUD = 16
 
 group_types = dict(
     halo='halos',
     galaxy='galaxies',
+    cloud='clouds'
 )
 
 info_blacklist = [
     '_glist','glist_end','glist_start',
     '_slist','slist_end','slist_start',
     '_dmlist','dmlist_end','dmlist_start',
-    'obj', 'halo', 'galaxies', 'satellites',
-    'galaxy_index_list_end', 'galaxy_index_list_start',
-]
+    'obj', 'halo', 'galaxies','clouds', 'satellites',
+    'galaxy_index_list_end', 'galaxy_index_list_start','cloud_index_list_end','cloud_index_list_start']
 
 category_mapper = dict(
     mass = 'masses',
@@ -55,7 +56,7 @@ class GroupList(object):
 
 
 class Group(object):
-    """Parent class for both halo and galaxy objects."""
+    """Parent class for halo and galaxy and halo objects."""
     glist = GroupList('glist')
     slist = GroupList('slist')    
 
@@ -85,6 +86,8 @@ class Group(object):
             return False
         elif self.obj_type == 'galaxy' and self.nstar < MINIMUM_STARS_PER_GALAXY:
             return False
+        elif self.obj_type == 'cloud' and self.ngas < MINIMUM_GAS_PER_CLOUD:
+            return False
         else:
             return True
 
@@ -99,7 +102,7 @@ class Group(object):
             del d[k]
             
     def _remove_dm_references(self):
-        """Galaxies do not have DM, so remove references."""
+        """Galaxies/clouds do not have DM, so remove references."""
         if self.obj_type != 'galaxy' or not self._valid:
             return
         self._delete_attribute('ndm')        
@@ -576,6 +579,13 @@ class Halo(Group):
         super(Halo, self).__init__(obj)
         self.child = False
 
+class Cloud(Group):
+    """Cloud class which has the central boolean."""
+    obj_type = 'cloud'    
+    def __init__(self,obj):
+        super(Cloud, self).__init__(obj)
+        self.central = False
+
 def create_new_group(obj, group_type):
     """Simple function to create a new instance of a specified 
     :class:`group.Group`.
@@ -584,7 +594,7 @@ def create_new_group(obj, group_type):
     ----------
     obj : :class:`main.CAESAR`
         Main caesar object.
-    group_type : {'halo', 'galaxy'}
+    group_type : {'halo', 'galaxy','cloud'}
         Which type of group?  Options are: `halo` and `galaxy`.
 
     Returns
@@ -597,3 +607,5 @@ def create_new_group(obj, group_type):
         return Halo(obj)
     elif group_type == 'galaxy':
         return Galaxy(obj)
+    elif group_type == 'cloud':
+        return Cloud(obj)

@@ -1,7 +1,7 @@
 import h5py
 import numpy as np
 
-from caesar.group import Halo, Galaxy
+from caesar.group import Halo, Galaxy, Cloud
 from caesar.saver import blacklist
 
 from yt.extern import six
@@ -85,7 +85,7 @@ def restore_global_attributes(obj, hd):
 ######################################################################            
             
 def restore_object_list(obj_list, key, hd):
-    """Function for restoring halo/galaxy sublists.
+    """Function for restoring halo/galaxy/cloud sublists.
 
     Parameters
     ----------
@@ -98,8 +98,11 @@ def restore_object_list(obj_list, key, hd):
 
     """
     if not LOAD_OBJECT_LISTS and key is not 'galaxy_index_list': return
+    #if not LOAD_OBJECT_LISTS and key is not 'cloud_index_list': return
+        
     if ('lists/%s' % key) not in hd: return
-    if key in blacklist: return    
+    if key in blacklist: return
+
     data = np.array(hd['lists/%s' % key])
     for i in obj_list:
         start = getattr(i, '%s_start' % key)
@@ -111,7 +114,7 @@ def restore_object_list(obj_list, key, hd):
 ######################################################################                    
         
 def restore_object_dicts(obj_list, hd, unit_reg):
-    """Function for restoring halo/galaxy dictionary attributes.
+    """Function for restoring halo/galaxy/cloud dictionary attributes.
 
     Parameters
     ----------
@@ -149,7 +152,7 @@ def restore_object_dicts(obj_list, hd, unit_reg):
 ######################################################################
 
 def restore_object_attributes(obj_list, hd, unit_reg):
-    """Function for restoring halo/galaxy attributes.
+    """Function for restoring halo/galaxy/cloud attributes.
 
     Parameters
     ----------
@@ -229,7 +232,6 @@ def load(filename, ds = None, obj = None):
         restore_object_attributes(obj.halos, hd, obj.unit_registry)
         restore_object_dicts(obj.halos, hd, obj.unit_registry)
         restore_object_list(obj.halos, 'galaxy_index_list', hd)
-
         # optional
         for vals in ['dmlist', 'glist', 'slist', 'bhlist']:
             restore_object_list(obj.halos, vals, hd)
@@ -243,10 +245,26 @@ def load(filename, ds = None, obj = None):
             obj.galaxies.append(Galaxy(obj))
         restore_object_attributes(obj.galaxies, hd, obj.unit_registry)
         restore_object_dicts(obj.galaxies, hd, obj.unit_registry)
+        restore_object_list(obj.galaxies, 'cloud_index_list', hd)
 
         # optional
         for vals in ['glist', 'slist', 'bhlist']:
             restore_object_list(obj.galaxies, vals, hd)
+
+
+
+    if 'cloud_data' in infile:
+        mylog.info('Restoring cloud attributes')
+        hd = infile['cloud_data']
+        obj.clouds = []
+        for i in range(0,obj.nclouds):
+            obj.clouds.append(Cloud(obj))
+        restore_object_attributes(obj.clouds, hd, obj.unit_registry)
+        restore_object_dicts(obj.clouds, hd, obj.unit_registry)
+
+        # optional
+        for vals in ['glist', 'slist', 'bhlist']:
+            restore_object_list(obj.clouds, vals, hd)
 
     infile.close()
             

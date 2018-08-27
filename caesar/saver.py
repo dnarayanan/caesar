@@ -71,7 +71,7 @@ def _get_serialized_list(obj_list, key):
 ######################################################################
 
 def serialize_attributes(obj_list, hd, hd_dicts):
-    """Function that goes through a list full of halos/galaxies and
+    """Function that goes through a list full of halos/galaxies/clouds and
     serializes their attributes.
 
     Parameters
@@ -216,14 +216,14 @@ def save(obj, filename='test.hdf5'):
         for vals in index_lists:
             serialize_list(obj.halos, vals, hdd)
         serialize_attributes(obj.halos, hd, hddd)
-        
+  
     if hasattr(obj, 'galaxies') and obj.ngalaxies > 0:
         hd   = outfile.create_group('galaxy_data')
         hdd  = hd.create_group('lists')
         hddd = hd.create_group('dicts')
 
         # gather
-        index_lists = ['glist', 'slist']
+        index_lists = ['glist', 'slist','cloud_index_list']
         if obj.data_manager.blackholes:
             index_lists.append('bhlist')
 
@@ -232,13 +232,28 @@ def save(obj, filename='test.hdf5'):
             serialize_list(obj.galaxies, vals, hdd)
         serialize_attributes(obj.galaxies, hd, hddd)
 
-            
+
+    if hasattr(obj, 'clouds') and obj.nclouds > 0:
+        hd   = outfile.create_group('cloud_data')
+        hdd  = hd.create_group('lists')
+        hddd = hd.create_group('dicts')
+
+        # gather
+        index_lists = ['glist']
+ 
+        # write
+        for vals in index_lists:
+            serialize_list(obj.clouds, vals, hdd)
+        serialize_attributes(obj.clouds, hd, hddd)
+
+
+        
     if hasattr(obj, 'global_particle_lists'):
         hd = outfile.create_group('global_lists')
 
         # gather
         global_index_lists = ['halo_dmlist','halo_glist','halo_slist',
-                              'galaxy_glist','galaxy_slist']
+                              'galaxy_glist','galaxy_slist','cloud_glist']
         if obj.data_manager.blackholes:
             global_index_lists.extend(['halo_bhlist','galaxy_bhlist'])
 
