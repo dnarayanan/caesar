@@ -283,12 +283,9 @@ class CAESAR(object):
             Quantity used in the linking length (LL) for galaxies.
             LL = mean_interparticle_separation * b_galaxy.  Defaults 
             to ``b_galaxy = b_halo * 0.2``.
-        b_cloud : float, optional
-            Quantity used in the linking length (LL) for galaxies.
-            LL = mean_interparticle_separation * b_cloud.  Defaults 
-            to ``b_cloud = b_halo * 0.2``.
-        cloud_LL: float, optional
-            Manual linking length set for clouds
+        ll_cloud : float, optional
+            Quantity used in the linking length (LL) for clouds in 
+            comoving kpc (kpccm).
         blackholes : boolean, optional
             Indicate if blackholes are present in your simulation.  
             This must be toggled on manually as there is no clear 
@@ -317,6 +314,7 @@ class CAESAR(object):
         fubar(self, 'halo')
         fubar(self, 'galaxy')
         fubar(self,'cloud')
+
         
         import caesar.assignment as assign
         import caesar.linking as link

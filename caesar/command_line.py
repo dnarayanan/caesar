@@ -10,6 +10,7 @@ def run():
     parser.add_argument('input', type=str, help='Input file or input directory')
     parser.add_argument('-o', '--output', type=str, help='Output file name')
     parser.add_argument('-b_halo',   type=float, help='Halo linking length')
+    parser.add_argument('-ll_cloud',   type=float, help='Cloud linking length in kpccm')
     parser.add_argument('-b_galaxy', type=float, help='Galaxy linking length')
     parser.add_argument('-bh', '--blackholes', help='Black holes present?',
                         dest='OPTIONS', action='append_const', const='blackholes')

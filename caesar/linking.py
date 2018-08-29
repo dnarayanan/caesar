@@ -49,18 +49,17 @@ def link_clouds_and_galaxies(obj):
     
     """
     
-    if not obj._has_galaxies:
+    if not obj._has_clouds:
         return
   
     mylog.info('Linking clouds and galaxies')
-    
-    # halos
+
+    #galaxies
     for galaxy in obj.galaxies:
         galaxy.clouds = []
         for cloud_index in galaxy.cloud_index_list:
             galaxy.clouds.append(obj.clouds[cloud_index])
     
-
     for cloud in obj.clouds:
         if cloud.parent_galaxy_index > -1:
             cloud.galaxy = obj.galaxies[cloud.parent_galaxy_index]

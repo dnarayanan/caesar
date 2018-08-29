@@ -87,8 +87,6 @@ def assign_clouds_to_galaxies(obj):
         if cloud.parent_galaxy_index > -1:
             obj.galaxies[cloud.parent_galaxy_index].cloud_index_list.append(i)
 
-
-            
             
 def assign_central_galaxies(obj):
     """Assign central galaxies.

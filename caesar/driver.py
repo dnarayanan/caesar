@@ -140,6 +140,9 @@ def drive(snapdirs, snapname, snapnums, progen=False, skipran=False,
         Quantity used in the linking length (LL) for galaxies.
         LL = mean_interparticle_separation * b_galaxy.  Defaults 
         to ``b_galaxy = b_halo * 0.2``.
+    ll_cloud: float, optional
+        Linking length in comoving kpc (kpccm_ for clouds.  Defaults
+        to same linking length as used for galaxies.
     blackholes : boolean, optional
         Indicate if blackholes are present in your simulation.  
         This must be toggled on manually as there is no clear 
@@ -162,7 +165,7 @@ def drive(snapdirs, snapname, snapnums, progen=False, skipran=False,
     >>>
     >>> import caesar
     >>> caesar.drive(snapdir, snapname, snapnums, skipran=False, progen=True)
-    
+
     """
     
     if isinstance(snapdirs, str):

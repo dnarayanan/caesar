@@ -414,6 +414,10 @@ def fubar(obj, group_type, **kwargs):
     """
     LL = get_mean_interparticle_separation(obj) * get_b(obj, group_type)
     
+    if (group_type == 'cloud') and ('ll_cloud' in obj._kwargs) and isinstance(obj._kwargs['ll_cloud'],(int,float)):
+        LL = obj._ds.quan(float(obj._kwargs['ll_cloud']),'kpccm')
+ 
+        
     pos = obj.data_manager.pos
 
     if group_type == 'galaxy':
@@ -427,6 +431,7 @@ def fubar(obj, group_type, **kwargs):
             pos[obj.data_manager.slist],
             pos[obj.data_manager.bhlist]
         ))
+
 
     if group_type == 'cloud':
         if not obj.simulation.baryons_present:
@@ -488,6 +493,8 @@ def fubar(obj, group_type, **kwargs):
             continue
         group_list.append(v)
 
+        
+   
     mylog.info('Disregarding %d invalid %s (%d left)' % (n_invalid, group_types[group_type], len(group_list)))
         
     # sort by mass
@@ -529,6 +536,6 @@ def fubar(obj, group_type, **kwargs):
     elif group_type == 'galaxy':
         obj.galaxies  = group_list
         obj.ngalaxies = len(obj.galaxies)
-    elif group_type == 'cloud':
+    if group_type == 'cloud':
         obj.clouds  = group_list
         obj.nclouds = len(obj.clouds)
