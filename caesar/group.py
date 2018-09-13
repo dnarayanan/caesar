@@ -439,7 +439,7 @@ class Group(object):
             half_r = get_half_mass_radius(mass, r, ptype, half_masses[k], binary)
             self.radii['%s_half_mass' % k] = self.obj.yt_dataset.quan(half_r, self.obj.units['length'])
 
-    def write_IC_mask(self, ic_ds, filename, search_factor = 2.5):
+    def write_IC_mask(self, ic_ds, filename, search_factor = 2.5,radius_type='total'):
         """Write MUSIC initial condition mask to disk.  If called on
         a galaxy it will look for the parent halo in the IC.
 
@@ -473,7 +473,7 @@ class Group(object):
         
         """ 
         from caesar.zoom_funcs import write_IC_mask
-        write_IC_mask(self, ic_ds, filename, search_factor)
+        write_IC_mask(self, ic_ds, filename, search_factor,radius_type=radius_type)
             
     def vtk_vis(self, rotate=False):
         """Method to render this group's points via VTK.

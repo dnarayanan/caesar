@@ -1,7 +1,8 @@
 import numpy as np
 from yt.funcs import mylog
+import pdb
 
-def write_IC_mask(group, ic_ds, filename, search_factor, print_extents=True):
+def write_IC_mask(group, ic_ds, filename, search_factor, radius_type='total',print_extents=True):
     """Write MUSIC initial condition mask to disk.
 
     Parameters
@@ -34,8 +35,10 @@ def write_IC_mask(group, ic_ds, filename, search_factor, print_extents=True):
     >>> obj.galaxies[0].write_IC_mask(ic_ds, 'mymask.txt')
     
     """    
-    ic_dmpos = get_IC_pos(group, ic_ds, search_factor=search_factor,
+
+    ic_dmpos = get_IC_pos(group, ic_ds,radius_type, search_factor=search_factor,
                           return_mask=True)
+
     mylog.info('Writing IC mask to %s' % filename)
     f = open(filename, 'w')
     for i in range(0, len(ic_dmpos)):
@@ -73,7 +76,7 @@ def write_IC_mask(group, ic_ds, filename, search_factor, print_extents=True):
             mylog.warning('REGION EXTENDS MORE THAN HALF OF YOUR VOLUME')
             
         
-def get_IC_pos(group, ic_ds, search_factor=2.5, return_mask=False):
+def get_IC_pos(group, ic_ds, radius_type,search_factor=2.5, return_mask=False):
     """Get the initial dark matter positions of a ``CAESAR`` halo.
 
     If called on a galaxy, it will return the IC DM positions of the
@@ -125,7 +128,7 @@ def get_IC_pos(group, ic_ds, search_factor=2.5, return_mask=False):
 
     search_params = dict(
         pos = obj.pos.in_units('code_length').d,
-        r   = obj.radii['total'].in_units('code_length').d * search_factor,
+        r   = obj.radii[radius_type].in_units('code_length').d * search_factor,
     )
         
     box    = ic_ds.domain_width[0].d
@@ -157,6 +160,8 @@ def get_IC_pos(group, ic_ds, search_factor=2.5, return_mask=False):
                (float(nmatches)/float(len(ic_dmpids)) * 100.0))
     
     matched_pos = ic_dmpos[matches]
+
+
 
     if return_mask:
         matched_pos /= box
