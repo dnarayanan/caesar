@@ -60,6 +60,8 @@ def assign_clouds_to_galaxies(obj):
         Object containing the galaxies and halos lists.
 
     """
+
+    #NOTES FROM BOBBY: USE HASATTR() INSTEAD OF THIS _HAS_CLOUDS
     if not obj._has_clouds:
         return
 

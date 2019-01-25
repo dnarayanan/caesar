@@ -10,6 +10,7 @@ def run():
     parser.add_argument('input', type=str, help='Input file or input directory')
     parser.add_argument('-o', '--output', type=str, help='Output file name')
     parser.add_argument('-b_halo',   type=float, help='Halo linking length')
+     #NOTES FROM BOBBY: why ont -b_cloud througout?
     parser.add_argument('-ll_cloud',   type=float, help='Cloud linking length in kpccm')
     parser.add_argument('-b_galaxy', type=float, help='Galaxy linking length')
     parser.add_argument('-bh', '--blackholes', help='Black holes present?',
@@ -92,6 +93,7 @@ def run_caesar(infile, args):
         pos_stars = pygr.readsnap(infile,'pos','stars')
         
 
+        #BOBBY NOTES: JUST LOAD THIS IN YT4.0 TO AVOID DEPENDENCIES ON PYGR
         maxpos = np.max(np.concatenate((pos_stars.flatten(),pos_dm.flatten(),pos_gas.flatten()),axis=0))
         minpos = np.min(np.concatenate((pos_stars.flatten(),pos_dm.flatten(),pos_gas.flatten()),axis=0))
         boxsize = np.max([np.absolute(maxpos),np.absolute(minpos)])

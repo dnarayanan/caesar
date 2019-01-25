@@ -12,7 +12,7 @@ from yt.data_objects.octree_subset import YTPositionArray
 from yt.utilities.lib.contour_finding import ParticleContourTree
 from yt.geometry.selection_routines import AlwaysSelector
 
-from astropy.cosmology import Planck15
+
 """
 ## RS TESTING TEMP ##
 class FOFGroup(object):
@@ -304,7 +304,7 @@ def get_mean_interparticle_separation(obj):
     gmass  = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
     smass  = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
     bhmass = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
-
+    
     from caesar.property_manager import has_ptype
     if has_ptype(obj, 'gas'):
         gmass = get_property(obj, 'mass', 'gas').to('code_mass')
@@ -329,6 +329,7 @@ def get_mean_interparticle_separation(obj):
     """
     #if its an idealized simulation, then there's no cosmology and we just take z=0 Planck15 values
     if obj.yt_dataset.cosmological_simulation == 0:
+        from astropy import Planck15
         Om = Planck15.Om0
         Ob = Planck15.Ob0
     else:
@@ -378,13 +379,13 @@ def get_b(obj, group_type):
         if 'b_galaxy' in obj._kwargs and isinstance(obj._kwargs['b_galaxy'], (int, float)):
             b = float(obj._kwargs['b_galaxy'])
         else:
-            b *= 0.2
+            b *= 0.2  
 
     if group_type == 'cloud':
         if 'b_cloud' in obj._kwargs and isinstance(obj._kwargs['b_cloud'], (int, float)):
             b = float(obj._kwargs['b_cloud'])
         else:
-            b *= 0.2
+            b *= 0.2 #BOBBY CONVERSATION: SET UP A CONFIG FILE THAT HAS A DEFAULT SET OF PARAMETERS -- WHETHER WE WANT TO RUN HALOS, GALAXIES ETC.  AND THEN HAVE THE CODE AUTMOATICALLY TURN ON CLOUDS IF WE SET -B_CLOUD linking lengths
             
     mylog.info('Using b=%g for %s' % (b, group_types[group_type]))
     return b
