@@ -178,10 +178,15 @@ class Group(object):
         self.masses['stellar'] = self.obj.yt_dataset.quan(mass_star, self.obj.units['mass'])
         self.masses['baryon']  = self.obj.yt_dataset.quan(mass_baryon, self.obj.units['mass'])
         self.masses['H']       = self.masses['gas'] * self.obj.simulation.XH
-        
+
+
         if self.obj.simulation.nbh > 0:
             mass_bh = np.sum(self.obj.data_manager.mass[self.obj.data_manager.bhlist][self.bhlist])
             self.masses['bh']  = self.obj.yt_dataset.quan(mass_bh, self.obj.units['mass'])
+        
+
+        mass_dust    = np.sum(self.obj.data_manager.dustmass[self.obj.data_manager.glist[self.glist]])
+        self.masses['dust'] = mass_dust
 
         self.gas_fraction = 0.0
         if self.masses['baryon'] > 0:

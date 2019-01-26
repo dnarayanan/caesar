@@ -104,10 +104,13 @@ class DataManager(object):
             return
         
         sfr_unit = '%s/%s' % (self.obj.units['mass'], self.obj.units['time'])
+        dustmass_unit = '%s' % (self.obj.units['mass'])
 
         sfr = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), sfr_unit)
         gZ  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')        
         gT  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), self.obj.units['temperature'])
+        dustmass = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas),'')
+        #dustmass = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')#dustmass_unit)
             
         if has_property(self.obj, 'gas', 'sfr'):
             sfr = get_property(self.obj, 'sfr', 'gas').to(sfr_unit)
@@ -118,6 +121,13 @@ class DataManager(object):
         if has_property(self.obj, 'gas', 'temperature'):
             gT  = get_property(self.obj, 'temperature', 'gas').to(self.obj.units['temperature'])
 
+        
+        if has_property(self.obj, 'gas', 'dustmass'):
+            dustmass = get_property(self.obj,'dustmass','gas')
+            #dustmass = get_property(self.obj,'dustmass','gas'))#.to(dustmass_unit)
+
+
         self.gsfr = sfr
         self.gZ   = gZ
         self.gT   = gT
+        self.dustmass = self.obj.yt_dataset.arr(dustmass,'code_mass').in_units('Msun')

@@ -16,7 +16,8 @@ particle_data_aliases = {
     'pid':'particle_index',
     'fh2':'FractionH2',
     'metallicity':'metallicity',
-    'age':'StellarFormationTime'
+    'age':'StellarFormationTime',
+    'dustmass':'Dust_Masses'
 }
 
 # Field name aliases for grid cells
