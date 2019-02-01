@@ -20,6 +20,7 @@ def run():
     parser.add_argument('-ug', '--unbind_galaxies', help='Unbind galaxies?',
                         dest='OPTIONS', action='append_const', const='unbind_galaxies')
     parser.add_argument('-lr', '--lowres', type=int, help='Lowres particle types (Gadget/GIZMO HDF5 ONLY)', nargs='+')
+    parser.add_argument('-ll', '--load-limit', type=int, help='Limit on the number of objects of each type to load. Be aware that this may result in oddities like clouds without a parent galaxy.')
     args = parser.parse_args()
 
     var_dict = vars(args)
@@ -45,15 +46,15 @@ def run():
         pass
     
     if caesar_file:
-        open_caesar_file(args.input)        
+        open_caesar_file(args.input, load_limit=args.load_limit)
     else:
         run_caesar(args.input, var_dict)
 
         
-def open_caesar_file(infile):
+def open_caesar_file(infile, load_limit=None):
     import IPython
     from .loader import load
-    obj = load(infile)
+    obj = load(infile, load_limit=load_limit)
 
     print('')
     print("CAESAR file loaded into the 'obj' variable")

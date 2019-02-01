@@ -240,11 +240,11 @@ class CAESAR(object):
         assign.assign_central_galaxies(self)
         assign.assign_clouds_to_galaxies(self)
         
-    def _link_objects(self):
+    def _link_objects(self, load_limit=None):
         """Link galaxies to halos and create sublists."""
         import caesar.linking as link
-        link.link_galaxies_and_halos(self)
-        link.link_clouds_and_galaxies(self)
+        link.link_galaxies_and_halos(self, load_limit=load_limit)
+        link.link_clouds_and_galaxies(self, load_limit=load_limit)
         link.create_sublists(self)
 
 

@@ -575,6 +575,7 @@ class Galaxy(Group):
     def __init__(self,obj):
         super(Galaxy, self).__init__(obj)
         self.central = False
+        self.halo = None
         
 class Halo(Group):
     """Halo class which has the dmlist attribute, and child boolean."""
@@ -583,6 +584,8 @@ class Halo(Group):
     def __init__(self,obj):
         super(Halo, self).__init__(obj)
         self.child = False
+        self.galaxies = []
+        self.central_galaxy = None
 
 class Cloud(Group):
     """Cloud class which has the central boolean."""
@@ -590,6 +593,8 @@ class Cloud(Group):
     def __init__(self,obj):
         super(Cloud, self).__init__(obj)
         self.central = False
+        self.galaxy = None
+        self.halo = None
 
 def create_new_group(obj, group_type):
     """Simple function to create a new instance of a specified 
