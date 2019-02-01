@@ -550,7 +550,7 @@ class Group(object):
             halo = self.halo
             ID   = "Galaxy %d's halo (ID %d)" % (self.GroupID, halo.GroupID)
         
-        r = halo.radii['total'].d * search_factor
+        r = halo.radii['virial'].d * search_factor
 
         result  = self.obj._lowres['TREE'].query_ball_point(halo.pos.d, r)
         ncontam = len(result)
