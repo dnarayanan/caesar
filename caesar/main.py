@@ -61,6 +61,8 @@ class CAESAR(object):
         self.nhalos    = 0
         self.ngalaxies = 0
         self.nclouds = 0
+        self.halos = []
+        self.galaxies = []
         
         self.reset_default_returns()
         
