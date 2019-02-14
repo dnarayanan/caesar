@@ -133,7 +133,7 @@ def info_printer(obj, group_type, top):
         output += ' ---------------------------------------------------------------------------------\n'
         for o in group_list:
             cgsm = -1
-            if hasattr(o,'central_galaxy'): cgsm = o.central_galaxy.masses['stellar']
+            if (hasattr(o,'central_galaxy')) & (hasattr(o.central_galaxy,'masses')): cgsm = o.central_galaxy.masses['stellar']
             output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.3f  %0.2e\t|  %0.2e \n' % \
                       (o.GroupID, o.masses['dm'], o.masses['stellar'],
                        o.masses['gas'],o.radii['total'], o.gas_fraction,
