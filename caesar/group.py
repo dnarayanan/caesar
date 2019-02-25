@@ -303,9 +303,14 @@ class Group(object):
             """ returns r_vir in PHYSICAL kpc """
             return (3.0 * mass / (4.0 * np.pi * rho_crit * deltaC))**(1./3.)
 
+        collectRadii = np.zeros(len(sim.Densities), dtype = np.float64) #Densities are in Msun/kpc**3
         # Bryan & Norman 1998
-        self.radii['virial'] = self.obj.yt_dataset.quan(get_r_vir(18.0 * np.pi**2), 'kpc')
+        #self.radii['virial'] = self.obj.yt_dataset.quan(get_r_vir(18.0 * np.pi**2), 'kpc')  # Romeel: is this right? this is only for Om_z=1!
+        # Kitayama & Suto 1996
+        self.radii['virial'] = self.obj.yt_dataset.quan(get_r_vir(18.0 * np.pi**2 *(1. + 0.4093*(1./sim.Om_z - 1.)**0.9052) - 1.)*sim.Om_z, 'kpc')
         self.radii['r200c']  = self.obj.yt_dataset.quan(get_r_vir(200.0), 'kpc')
+        self.radii['r500c']  = self.obj.yt_dataset.quan(get_r_vir(500.0), 'kpc')
+        self.radii['r2500c']  = self.obj.yt_dataset.quan(get_r_vir(2500.0), 'kpc')
 
         # eq 1 of Mo et al 2002
         self.radii['r200'] = (sim.G * mass / (100.0 * sim.Om_z * sim.H_z**2))**(1./3.)
@@ -319,6 +324,8 @@ class Group(object):
         # convert units
         self.radii['virial'] = self.radii['virial'].to(self.obj.units['length'])
         self.radii['r200c']  = self.radii['r200c'].to(self.obj.units['length'])
+        self.radii['r500c']  = self.radii['r500c'].to(self.obj.units['length'])
+        self.radii['r2500c']  = self.radii['r2500c'].to(self.obj.units['length'])
         self.radii['r200']   = self.radii['r200'].to(self.obj.units['length'])        
         vc = vc.to(self.obj.units['velocity'])
         vT = vT.to(self.obj.units['temperature'])
@@ -328,6 +335,8 @@ class Group(object):
         self.virial_quantities = dict(
             radius = self.radii['virial'],
             r200c  = self.radii['r200c'],
+            r500c  = self.radii['r500c'],
+            r2500c  = self.radii['r2500c'],
             r200   = self.radii['r200'],
             circular_velocity = vc,
             temperature = vT

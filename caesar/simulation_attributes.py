@@ -62,6 +62,14 @@ class SimulationAttributes(object):
             (3.0 * self.H_z.d**2) / (8.0 * np.pi * self.G.d),
             'Msun / kpc**3'
         )
+        #Kitayama & Suto 1996 v.469, p.480
+        virial_density = (177.65287921960845*(1. + 0.4093*(1./self.Om_z - 1.)**0.9052) - 1.)*self.Om_z#18*pi*pi
+        self.Densities = np.array([virial_density*self.critical_density.to('Msun/kpc**3').d,
+                                             200.*self.critical_density.to('Msun/kpc**3').d,
+                                             500.*self.critical_density.to('Msun/kpc**3').d,
+                                             2500.*self.critical_density.to('Msun/kpc**3').d])
+        self.Densities = ds.arr(self.Densities, 'Msun/kpc**3')
+
 
         from caesar.property_manager import has_ptype
         self.baryons_present = False
@@ -71,13 +79,13 @@ class SimulationAttributes(object):
         
     def _serialize(self, obj, hd):
         from yt.extern import six
-        from yt.units.yt_array import YTQuantity
+        from yt.units.yt_array import YTArray
 
         hdd  = hd.create_group('simulation_attributes')
         
         units = {}        
         for k,v in six.iteritems(self.__dict__):
-            if isinstance(v, YTQuantity):
+            if isinstance(v, YTArray):
                 hdd.attrs.create(k, v.d)
                 units[k] = v.units
             elif isinstance(v, (int, float, bool, np.number)):
@@ -98,7 +106,7 @@ class SimulationAttributes(object):
         if 'simulation_attributes' not in hd.keys():
             return
         from yt.extern import six
-        from yt.units.yt_array import YTQuantity
+        from yt.units.yt_array import YTArray
         
         hdd = hd['simulation_attributes']
         for k,v in six.iteritems(hdd.attrs):
@@ -106,7 +114,7 @@ class SimulationAttributes(object):
 
         uhdd = hdd['units']
         for k,v in six.iteritems(uhdd.attrs):
-            setattr(self, k, YTQuantity(getattr(self, k), v, registry=obj.unit_registry))
+            setattr(self, k, YTArray(getattr(self, k), v, registry=obj.unit_registry))
 
         phdd = hdd['parameters']
         self.parameters = {}

@@ -182,7 +182,7 @@ def restore_object_attributes(obj_list, hd, unit_reg):
 
 ######################################################################
 
-def load(filename, ds = None, obj = None, load_limit = None):
+def load(filename, ds = None, obj = None, load_limit = None, LoadHalo=1):
     """Function to load a CAESAR object from disk.
 
     Parameters
@@ -193,6 +193,9 @@ def load(filename, ds = None, obj = None, load_limit = None):
         yt dataset to link to.
     obj : :class:`main.CAESAR`, optional
         For loading into an already created CAESAR object.
+    LoadHalo: int
+        Option to load halo information: 0=No; 1=Yes; 2=Yes, but not mass/radius info
+
 
     Examples
     --------
@@ -223,7 +226,7 @@ def load(filename, ds = None, obj = None, load_limit = None):
     obj.simulation._unpack(obj, infile)
     
     # restore halo data
-    if 'halo_data' in infile:
+    if 'halo_data' in infile and LoadHalo:
         mylog.info('Restoring halo attributes')
         hd = infile['halo_data']
         obj.halos = []
@@ -233,10 +236,20 @@ def load(filename, ds = None, obj = None, load_limit = None):
         else:
             for i in range(0, min(load_limit, obj.nhalos)):
                 obj.halos.append(Halo(obj))
-
         restore_object_attributes(obj.halos, hd, obj.unit_registry)
         restore_object_dicts(obj.halos, hd, obj.unit_registry)
         restore_object_list(obj.halos, 'galaxy_index_list', hd)
+
+        if LoadHalo==1:
+            #Compute the virial/200/500/2500 masses
+            if hasattr(obj.simulation, 'Densities'):
+                PiFac = 4./3.*np.pi
+                h = obj.halos[0]
+                for h in obj.halos:
+                    h.masses['virial'] = obj.simulation.Densities[0]*PiFac*(h.radii['virial']*h.radii['virial']*h.radii['virial'])
+                    h.masses['m200c'] = obj.simulation.Densities[1]*PiFac*(h.radii['r200c']*h.radii['r200c']*h.radii['r200c'])
+                    h.masses['m500c'] = obj.simulation.Densities[2]*PiFac*(h.radii['r500c']*h.radii['r500c']*h.radii['r500c'])
+                    h.masses['m2500c'] = obj.simulation.Densities[3]*PiFac*(h.radii['r2500c']*h.radii['r2500c']*h.radii['r2500c'])
 
         # optional
         for vals in ['dmlist', 'glist', 'slist', 'bhlist']:
@@ -283,8 +296,9 @@ def load(filename, ds = None, obj = None, load_limit = None):
             restore_object_list(obj.clouds, vals, hd)
 
     infile.close()
-            
-    obj._link_objects(load_limit=load_limit)
+
+    if LoadHalo:
+        obj._link_objects(load_limit=load_limit)
 
     if ds is not None:
         obj.yt_dataset = ds
