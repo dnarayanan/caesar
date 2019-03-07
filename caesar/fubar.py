@@ -1,4 +1,5 @@
 import numpy as np
+import h5py
 from caesar.group import create_new_group, group_types
 from caesar.property_manager import get_property, get_particles_for_FOF, get_high_density_gas_indexes
 from caesar.property_manager import ptype_ints
@@ -281,12 +282,11 @@ def get_mean_interparticle_separation(obj):
         return obj.simulation.mean_interparticle_separation
 
     if obj.yt_dataset.cosmological_simulation == 0:
-        print('non-Cosmological Data Set Detected')
+        mylog.info('Non-cosmological data set detected -- setting units as specified in fubar.py')
         UT = obj.yt_dataset.current_time.to('s/h')
         UL = obj.yt_dataset.length_unit.to('cm/h')
         GRAV = obj.yt_dataset.quan(6.672e-8, 'cm**3/(g*s**2)')
     else:
-        print('Cosmological Data Set Detected')
         UT = obj.yt_dataset.time_unit.to('s/h')/obj.yt_dataset.scale_factor
         UL = obj.yt_dataset.length_unit.to('cmcm/h')
         GRAV = obj.yt_dataset.quan(6.672e-8, 'cmcm**3/(g*s**2)')
@@ -413,44 +413,69 @@ def fubar(obj, group_type, **kwargs):
         we find with FOF.
 
     """
-    LL = get_mean_interparticle_separation(obj) * get_b(obj, group_type)
-    
-    if (group_type == 'cloud') and ('ll_cloud' in obj._kwargs) and isinstance(obj._kwargs['ll_cloud'],(int,float)):
-        LL = obj._ds.quan(float(obj._kwargs['ll_cloud']),'kpccm')
  
         
     pos = obj.data_manager.pos
+
+    unbind = False        
+    unbind_str = 'unbind_%s' % group_types[group_type]
+    if unbind_str in obj._kwargs and \
+        isinstance(obj._kwargs[unbind_str], bool):
+        unbind = obj._kwargs[unbind_str]
+    setattr(obj.simulation, unbind_str, unbind)
 
     if group_type == 'galaxy':
         if not obj.simulation.baryons_present:
             return
 
-        # here we want to perform FOF on high density gas + stars
-        high_rho_indexes = get_high_density_gas_indexes(obj)
-        pos  = np.concatenate((
-            pos[obj.data_manager.glist],
-            pos[obj.data_manager.slist],
-            pos[obj.data_manager.bhlist]
-        ))
+        if ('fof6d_file' in obj._kwargs and obj._kwargs['fof6d_file'] is not None):
+            # use galaxy info from fof6d hdf5 file
+            fof6d_file = obj._kwargs['fof6d_file']
+            import os
+            if os.path.isfile(fof6d_file):
+                mylog.info('Galaxy membership will be read from fof6d file %s'%fof6d_file)
+            else:
+                mylog.info('%s not found!' % fof6d_file)
+            hf = h5py.File(fof6d_file,'r')
+            npfof6d = hf['nparts']
+            assert (obj.simulation.ngas==npfof6d[0])&(obj.simulation.nstar==npfof6d[1])&(obj.simulation.nbh==npfof6d[2]),'Assertion failed: Wrong number of particles in fof6d file: %s'%npfof6d
+            gas_indexes = hf['gas_index']
+            star_indexes = hf['star_index']
+            bh_indexes = hf['bh_index']
+            mylog.info('Using galaxy IDs from fof6d file %s' % fof6d_file)
+            fof_tags = np.concatenate((gas_indexes,star_indexes,bh_indexes))
 
+        else: 
+            # here we want to perform FOF on high density gas + stars
+            high_rho_indexes = get_high_density_gas_indexes(obj)
+            if not obj.data_manager.blackholes:
+                pos  = np.concatenate(( pos[obj.data_manager.glist][high_rho_indexes], pos[obj.data_manager.slist]))
+            else:
+                pos  = np.concatenate(( pos[obj.data_manager.glist][high_rho_indexes], pos[obj.data_manager.slist], pos[obj.data_manager.bhlist]))
+            LL = get_mean_interparticle_separation(obj) * get_b(obj, group_type)
+            fof_tags = fof(obj, pos, LL, group_type=group_type)
 
-    if group_type == 'cloud':
+    elif group_type == 'cloud':
         if not obj.simulation.baryons_present:
             return
-
         # here we want to perform FOF on all gas
         pos = pos[obj.data_manager.glist]
+        LL = get_mean_interparticle_separation(obj) * get_b(obj, group_type)
+        if ('ll_cloud' in obj._kwargs) and isinstance(obj._kwargs['ll_cloud'],(int,float)):
+            LL = obj._ds.quan(float(obj._kwargs['ll_cloud']),'kpccm')
+        fof_tags = fof(obj, pos, LL, group_type=group_type)
 
+    elif group_type == 'halo':
+        if ('fof_from_snap' in obj._kwargs and obj._kwargs['fof_from_snap']==1):
+            mylog.info('Using Halo fof ID from snapshots')
+            fof_tags = obj.data_manager.haloid - 1
+        else:
+            LL = get_mean_interparticle_separation(obj) * get_b(obj, group_type)
+            fof_tags = fof(obj, pos, LL, group_type=group_type, **kwargs)
+        #print 'fof_tags',len(fof_tags[fof_tags>=0]),max(fof_tags),np.shape(fof_tags),fof_tags[fof_tags>=0]
 
-
-    unbind = False        
-    unbind_str = 'unbind_%s' % group_types[group_type]
-    if unbind_str in obj._kwargs and \
-       isinstance(obj._kwargs[unbind_str], bool):
-        unbind = obj._kwargs[unbind_str]
-    setattr(obj.simulation, unbind_str, unbind)
-        
-    fof_tags = fof(obj, pos, LL, group_type=group_type)
+    else: 
+        mylog.warning('group-type %s not recognized'%group_type)
 
     '''
     if group_type == 'galaxy':

@@ -53,6 +53,8 @@ class DataManager(object):
         self.mass  = pdata['mass']
         self.ptype = pdata['ptype']
         self.index = pdata['indexes']
+        if ('fof_from_snap' in self.obj._kwargs and self.obj._kwargs['fof_from_snap']==1):
+            self.haloid = pdata['haloid']
         pdata      = None
 
         self._assign_local_lists()

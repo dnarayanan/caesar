@@ -17,6 +17,7 @@ particle_data_aliases = {
     'fh2':'FractionH2',
     'metallicity':'metallicity',
     'age':'StellarFormationTime',
+    'haloid':'HaloID',
     'dustmass':'Dust_Masses'
 }
 
@@ -210,6 +211,7 @@ class DatasetType(object):
         if not self.has_ptype(requested_ptype):
             raise NotImplementedError('ptype %s not found!' % requested_ptype)
         if not self.has_property(requested_ptype, requested_prop):
+            if requested_prop == 'haloid': sys.stdout.write('--------> Set fof_from_snap=0\n')
             raise NotImplementedError('prop %s not found for %s!' % (requested_prop, requested_ptype))
 
         ptype = self.get_ptype_name(requested_ptype)
@@ -365,6 +367,8 @@ def get_particles_for_FOF(obj, ptypes, find_type=None):
     pos  = np.empty((0,3))
     vel  = np.empty((0,3))
     mass = np.empty(0)
+    if 'fof_from_snap' in obj._kwargs and obj._kwargs['fof_from_snap']==1:
+        haloid  = np.empty(0, dtype=np.int32)
 
     ptype   = np.empty(0,dtype=np.int32)
     indexes = np.empty(0,dtype=np.int32)
@@ -382,9 +386,15 @@ def get_particles_for_FOF(obj, ptypes, find_type=None):
         data = get_property(obj, 'mass', p).to(obj.units['mass'])
         mass = np.append(mass, data.d, axis=0)
 
+        if 'fof_from_snap' in obj._kwargs and obj._kwargs['fof_from_snap']==1:
+            data = get_property(obj, 'haloid', p)
+            haloid = np.append(haloid, data.d.astype(np.int32))
+
         nparts = len(data)
         
         ptype   = np.append(ptype,   np.full(nparts, ptype_ints[p], dtype=np.int32), axis=0)
         indexes = np.append(indexes, np.arange(0, nparts, dtype=np.int32))
 
-    return dict(pos=pos,vel=vel,mass=mass,ptype=ptype,indexes=indexes)
+    if 'fof_from_snap' in obj._kwargs and obj._kwargs['fof_from_snap']==1:
+        return dict(pos=pos,vel=vel,mass=mass,haloid=haloid,ptype=ptype,indexes=indexes)
+    else: return dict(pos=pos,vel=vel,mass=mass,ptype=ptype,indexes=indexes)
