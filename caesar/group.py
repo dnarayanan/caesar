@@ -18,6 +18,7 @@ info_blacklist = [
     '_glist','glist_end','glist_start',
     '_slist','slist_end','slist_start',
     '_dmlist','dmlist_end','dmlist_start',
+    '_dlist','dlist_end','dlist_start',
     'obj', 'halo', 'galaxies','clouds', 'satellites',
     'galaxy_index_list_end', 'galaxy_index_list_start','cloud_index_list_end','cloud_index_list_start']
 
@@ -143,8 +144,8 @@ class Group(object):
 
         
     def _assign_local_data(self):
-        """Assign glist/slist/dmlist/bhlist for this group.  Also 
-        sets the ngas/nstar/ndm/nbh attributes."""
+        """Assign glist/slist/dmlist/bhlist/dlist for this group.  
+		Also sets the ngas/nstar/ndm/nbh/ndust attributes."""
         ptypes  = self.obj.data_manager.ptype[self.global_indexes]
         indexes = self.obj.data_manager.index[self.global_indexes]
 
@@ -156,11 +157,13 @@ class Group(object):
         self.slist  = indexes[np.where(ptypes == ptype_ints['star'])[0]]
         self.dmlist = indexes[np.where(ptypes == ptype_ints['dm'])[0]]
         self.bhlist = indexes[np.where(ptypes == ptype_ints['bh'])[0]]
+        self.dlist  = indexes[np.where(ptypes == ptype_ints['dust'])[0]]
         
         self.ngas  = len(self.glist)
         self.nstar = len(self.slist)
         self.ndm   = len(self.dmlist)
         self.nbh   = len(self.bhlist)
+        self.ndust = len(self.dlist)
 
     def _calculate_total_mass(self):
         """Calculate the total mass of the object."""
@@ -183,12 +186,17 @@ class Group(object):
         if self.obj.simulation.nbh > 0:
             mass_bh = np.sum(self.obj.data_manager.mass[self.obj.data_manager.bhlist][self.bhlist])
             self.masses['bh']  = self.obj.yt_dataset.quan(mass_bh, self.obj.units['mass'])
+
+        if self.obj.simulation.ndust > 0:
+            mass_dust = np.sum(self.obj.data_manager.mass[self.obj.data_manager.dlist][self.dlist])
+            self.masses['dust']  = self.obj.yt_dataset.quan(mass_dust, self.obj.units['mass'])
         
-        try:
-            mass_dust    = np.sum(self.obj.data_manager.dustmass[self.obj.data_manager.glist[self.glist]])
-            self.masses['dust'] = mass_dust
-        except AttributeError:
-            self.masses['dust'] = 0.0
+        if self.obj.simulation.ndust <= 0:
+            try:
+                mass_dust    = np.sum(self.obj.data_manager.dustmass[self.obj.data_manager.glist[self.glist]])
+                self.masses['dust'] = mass_dust
+            except AttributeError:
+                self.masses['dust'] = 0.0
 
 
         self.gas_fraction = 0.0
@@ -221,6 +229,7 @@ class Group(object):
                 ptype_ints['star']:[],
                 ptype_ints['dm']:[],
                 ptype_ints['bh']:[],
+                ptype_ints['dust']:[],
             }
         if not hasattr(self, 'unbind_iterations'):
             self.unbind_iterations = 0        
@@ -424,7 +433,7 @@ class Group(object):
         ptype = self.obj.data_manager.ptype[self.global_indexes][rsort]
 
         radial_categories = dict(
-            total   = [ptype_ints['gas'],ptype_ints['star'],ptype_ints['dm'],ptype_ints['bh']],
+            total   = [ptype_ints['gas'],ptype_ints['star'],ptype_ints['dm'],ptype_ints['bh'],ptype_ints['dust']],
             baryon  = [ptype_ints['gas'],ptype_ints['star']],
             gas     = [ptype_ints['gas']],
             stellar = [ptype_ints['star']],
@@ -527,7 +536,8 @@ class Group(object):
         lowres : list, optional
             Particle types to be considered low-res.  Defaults to
             [2,3,5]; if your simulation contains blackholes you will
-            want to pass in [2,3].
+            want to pass in [2,3]; if your simulation contains active
+			dust particles you will not include 3.
         search_factor : float, optional
             Factor to expand the maximum halo radius search distance
             by.  Default is 2.5

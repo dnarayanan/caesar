@@ -254,6 +254,9 @@ def get_ptypes(obj, group_type):
     
     if 'blackholes' in obj._kwargs and obj._kwargs['blackholes']:
         ptypes.append('bh')
+
+    if 'dust' in obj._kwargs and obj._kwargs['dust']:
+        ptypes.append('dust')
     
     if group_type == 'galaxy':
         ptypes.remove('dm')
@@ -304,6 +307,7 @@ def get_mean_interparticle_separation(obj):
     gmass  = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
     smass  = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
     bhmass = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
+    dustmass = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
     
     from caesar.property_manager import has_ptype
     if has_ptype(obj, 'gas'):
@@ -312,7 +316,9 @@ def get_mean_interparticle_separation(obj):
         smass = get_property(obj, 'mass', 'star').to('code_mass')
     if obj.data_manager.blackholes and has_ptype(obj, 'bh'):
         bhmass= get_property(obj, 'mass', 'bh').to('code_mass')        
-    bmass = np.sum(gmass) + np.sum(smass) + np.sum(bhmass)
+    if obj.data_manager.dust and has_ptype(obj, 'dust'):
+        dustmass= get_property(obj, 'mass', 'dust').to('code_mass')        
+    bmass = np.sum(gmass) + np.sum(smass) + np.sum(bhmass) + np.sum(dustmass)
 
 
     """
@@ -399,7 +405,7 @@ def fubar(obj, group_type, **kwargs):
     operation for each grouping and create the master caesar lists.
 
     For halos we consider dark matter + gas + stars.  For galaxies
-    however, we only consider high density gas and stars (and
+    however, we only consider high density gas and stars (dust and
     blackholes if included).
 
     For clouds we consider all gas particles.
@@ -428,19 +434,16 @@ def fubar(obj, group_type, **kwargs):
         # here we want to perform FOF on high density gas + stars
         high_rho_indexes = get_high_density_gas_indexes(obj)
         pos  = np.concatenate((
-            pos[obj.data_manager.glist],
+            pos[obj.data_manager.glist][high_rho_indexes],
             pos[obj.data_manager.slist],
             pos[obj.data_manager.bhlist]
+            ,pos[obj.data_manager.dlist]
         ))
 
 
     if group_type == 'cloud':
         if not obj.simulation.baryons_present:
             return
-
-        # here we want to perform FOF on all gas
-        pos = pos[obj.data_manager.glist]
-
 
 
     unbind = False        
@@ -452,12 +455,11 @@ def fubar(obj, group_type, **kwargs):
         
     fof_tags = fof(obj, pos, LL, group_type=group_type)
 
-    '''
     if group_type == 'galaxy':
         gtags = np.full(obj.simulation.ngas, -1, dtype=np.int64)
         gtags[high_rho_indexes] = fof_tags[0:len(high_rho_indexes)]
         fof_tags = np.concatenate((gtags,fof_tags[len(high_rho_indexes)::]))
-    ''' 
+
     tag_sort = np.argsort(fof_tags)
 
     unique_groupIDs = np.unique(fof_tags)
@@ -508,13 +510,15 @@ def fubar(obj, group_type, **kwargs):
     glist  = np.full(obj.simulation.ngas,  -1, dtype=np.int32)
     slist  = np.full(obj.simulation.nstar, -1, dtype=np.int32)
     dmlist = np.full(obj.simulation.ndm,   -1, dtype=np.int32)
-    bhlist = np.full(obj.simulation.nbh,   -1, dtype=np.int32)    
+    bhlist = np.full(obj.simulation.nbh,   -1, dtype=np.int32)
+    dlist  = np.full(obj.simulation.ndust,  -1, dtype=np.int32)
     
     for group in group_list:
         glist[group.glist]   = group.GroupID
         slist[group.slist]   = group.GroupID
         dmlist[group.dmlist] = group.GroupID
         bhlist[group.bhlist] = group.GroupID
+        dlist[group.dlist]   = group.GroupID
         
         if not hasattr(group, 'unbound_indexes'):
             continue
@@ -522,12 +526,15 @@ def fubar(obj, group_type, **kwargs):
         glist[group.unbound_indexes[ptype_ints['gas']]]  = -2
         slist[group.unbound_indexes[ptype_ints['star']]] = -2
         dmlist[group.unbound_indexes[ptype_ints['dm']]]  = -2
-        dmlist[group.unbound_indexes[ptype_ints['bh']]]  = -2
+        #dmlist[group.unbound_indexes[ptype_ints['bh']]]  = -2
+        bhlist[group.unbound_indexes[ptype_ints['bh']]]  = -2
+        dlist[group.unbound_indexes[ptype_ints['dust']]]  = -2
             
     setattr(obj.global_particle_lists, '%s_glist'  % group_type, glist)
     setattr(obj.global_particle_lists, '%s_slist'  % group_type, slist)
     setattr(obj.global_particle_lists, '%s_dmlist' % group_type, dmlist)
     setattr(obj.global_particle_lists, '%s_bhlist' % group_type, bhlist)
+    setattr(obj.global_particle_lists, '%s_dlist'  % group_type, dlist)
     
     calculate_local_densities(obj, group_list)
     

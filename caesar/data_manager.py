@@ -15,6 +15,7 @@ class DataManager(object):
     def __init__(self, obj):
         self.obj = obj
         self.blackholes = False
+        self.dust = False
         self._pdata_loaded = False
         self._determine_ptypes()
 
@@ -33,6 +34,11 @@ class DataManager(object):
             mylog.warning('Enabling black holes')
             self.ptypes.append('bh')
             self.blackholes = True
+        if 'dust' in self.obj._kwargs and self.obj._kwargs['dust']:
+            from yt.funcs import mylog
+            mylog.warning('Enabling active dust particles')
+            self.ptypes.append('dust')
+            self.dust = True
         self.ptypes.append('dm')
 
         #if self.obj._ds_type.grid:
@@ -41,7 +47,7 @@ class DataManager(object):
         
     def load_particle_data(self):
         """Loads positions, velocities, masses, particle types, and indexes.
-        Assigns a global glist, slist, dmlist, and bhlist used
+        Assigns a global glist, slist, dlist, dmlist, and bhlist used
         throughout the group analysis.  Finally assigns
         ngas/nstar/ndm/nbh values."""
         if self._pdata_loaded:
@@ -66,6 +72,7 @@ class DataManager(object):
         self.slist  = np.where(self.ptype == ptype_ints['star'])[0]
         self.dmlist = np.where(self.ptype == ptype_ints['dm'])[0]        
         self.bhlist = np.where(self.ptype == ptype_ints['bh'])[0]
+        self.dlist = np.where(self.ptype == ptype_ints['dust'])[0]
 
     def _reset_dm_indexes(self):
         """Reset the dark matter index list after we detect a zoom."""
@@ -96,6 +103,7 @@ class DataManager(object):
         self.obj.simulation.nstar = len(self.slist)
         self.obj.simulation.ndm   = len(self.dmlist)
         self.obj.simulation.nbh   = len(self.bhlist)
+        self.obj.simulation.ndust   = len(self.dlist)
 
 
     def _load_gas_data(self):

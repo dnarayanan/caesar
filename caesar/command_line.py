@@ -15,6 +15,8 @@ def run():
     parser.add_argument('-b_galaxy', type=float, help='Galaxy linking length')
     parser.add_argument('-bh', '--blackholes', help='Black holes present?',
                         dest='OPTIONS', action='append_const', const='blackholes')
+    parser.add_argument('-d', '--dust', help='Active dust present?',
+                        dest='OPTIONS', action='append_const', const='dust')
     parser.add_argument('-uh', '--unbind_halos', help='Unbind halos?',
                         dest='OPTIONS', action='append_const', const='unbind_halos')
     parser.add_argument('-ug', '--unbind_galaxies', help='Unbind galaxies?',

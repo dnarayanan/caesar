@@ -239,7 +239,7 @@ def load(filename, ds = None, obj = None, load_limit = None):
         restore_object_list(obj.halos, 'galaxy_index_list', hd)
 
         # optional
-        for vals in ['dmlist', 'glist', 'slist', 'bhlist']:
+        for vals in ['dmlist', 'glist', 'slist', 'bhlist','dlist']:
             restore_object_list(obj.halos, vals, hd)
    
     # restore galaxy data
@@ -259,7 +259,7 @@ def load(filename, ds = None, obj = None, load_limit = None):
         restore_object_list(obj.galaxies, 'cloud_index_list', hd)
 
         # optional
-        for vals in ['glist', 'slist', 'bhlist']:
+        for vals in ['glist', 'slist', 'bhlist','dlist']:
             restore_object_list(obj.galaxies, vals, hd)
 
 
@@ -279,7 +279,7 @@ def load(filename, ds = None, obj = None, load_limit = None):
         restore_object_dicts(obj.clouds, hd, obj.unit_registry)
 
         # optional
-        for vals in ['glist', 'slist', 'bhlist']:
+        for vals in ['glist', 'slist', 'bhlist','dlist']:
             restore_object_list(obj.clouds, vals, hd)
 
     infile.close()

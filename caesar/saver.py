@@ -211,6 +211,8 @@ def save(obj, filename='test.hdf5'):
         index_lists = ['galaxy_index_list', 'dmlist', 'glist', 'slist']
         if obj.data_manager.blackholes:
             index_lists.append('bhlist')
+        if obj.data_manager.dust:
+            index_lists.append('dlist')
 
         #write        
         for vals in index_lists:
@@ -226,6 +228,8 @@ def save(obj, filename='test.hdf5'):
         index_lists = ['glist', 'slist','cloud_index_list']
         if obj.data_manager.blackholes:
             index_lists.append('bhlist')
+        if obj.data_manager.dust:
+            index_lists.append('dlist')
 
         # write
         for vals in index_lists:
@@ -256,6 +260,8 @@ def save(obj, filename='test.hdf5'):
                               'galaxy_glist','galaxy_slist','cloud_glist']
         if obj.data_manager.blackholes:
             global_index_lists.extend(['halo_bhlist','galaxy_bhlist'])
+        if obj.data_manager.dust:
+            global_index_lists.extend(['halo_dlist','galaxy_dlist'])
 
         # write
         for vals in global_index_lists:
