@@ -454,11 +454,12 @@ def fubar(obj, group_type, **kwargs):
         else: 
             # here we want to perform FOF on high density gas + stars
             high_rho_indexes = get_high_density_gas_indexes(obj)
-            pos  = np.concatenate(( pos[obj.data_manager.glist][high_rho_indexes], pos[obj.data_manager.slist]))
+            pos0 = pos
+            pos  = np.concatenate(( pos0[obj.data_manager.glist][high_rho_indexes], pos0[obj.data_manager.slist]))
             if obj.data_manager.blackholes:
-                pos  = np.concatenate(( pos, pos[obj.data_manager.bhlist]))
+                pos  = np.concatenate(( pos, pos0[obj.data_manager.bhlist]))
             if obj.data_manager.dust:
-                pos  = np.concatenate(( pos, pos[obj.data_manager.dlist]))
+                pos  = np.concatenate(( pos, pos0[obj.data_manager.dlist]))
             LL = get_mean_interparticle_separation(obj) * get_b(obj, group_type)
             fof_tags = fof(obj, pos, LL, group_type=group_type)
 
