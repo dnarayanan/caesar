@@ -20,10 +20,12 @@ class ParticleListContainer(object):
     halo_glist    = ParticleList('halo_glist')
     halo_slist    = ParticleList('halo_slist')
     halo_bhlist   = ParticleList('halo_bhlist')
+    halo_dlist   = ParticleList('halo_dlist')
     
     galaxy_glist  = ParticleList('galaxy_glist')
     galaxy_slist  = ParticleList('galaxy_slist')
     galaxy_bhlist = ParticleList('galaxy_bhlist')
+    galaxy_dlist = ParticleList('galaxy_dlist')
 
     cloud_glist = ParticleList('cloud_glist')
     
@@ -32,9 +34,11 @@ class ParticleListContainer(object):
         self.halo_glist    = 0
         self.halo_slist    = 0
         self.halo_bhlist   = 0
+        self.halo_dlist   = 0
         self.galaxy_glist  = 0
         self.galaxy_slist  = 0
         self.galaxy_bhlist = 0
+        self.galaxy_dlist = 0
         self.cloud_glist = 0
         
         self.obj = obj

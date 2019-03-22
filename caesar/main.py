@@ -293,6 +293,11 @@ class CAESAR(object):
             This must be toggled on manually as there is no clear 
             cut way to determine if PartType5 is a low-res particle, 
             or a black hole.
+        dust : boolean, optional
+            Indicate if active dust particles are present in your simulation.  
+            This must be toggled on manually as there is no clear 
+            cut way to determine if PartType3 is a low-res particle, 
+            or an active dust particle.
         lowres : list, optional
             If you are running ``CAESAR`` on a Gadget/GIZMO zoom
             simulation in HDF5 format, you may want to check

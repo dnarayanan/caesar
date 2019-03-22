@@ -34,20 +34,22 @@ grid_gas_aliases = {
 # Integer value for different particles/fields
 ptype_ints = dict(
     gas=0,
+    dust=3,
     star=4,
     dm=1,
     bh=5
 )
 
 # Master dict which dictates supported dataset types. Within each dict
-# the keys 'gas','star','dm','bh' should point to the corresponding
+# the keys 'gas','star','dm','bh','dust' should point to the corresponding
 # yt field name.
 ptype_aliases = dict(
     GadgetDataset     = {'gas':'Gas','star':'Stars','dm':'Halo'},
     GadgetHDF5Dataset = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
     EagleDataset      = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
     OWLSDataset       = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
-    GizmoDataset      = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
+    GizmoDataset      = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5','dust':'PartType3'}, 
+	# comment by Qi: maybe add a [Simba's offspring]-Dataset
     TipsyDataset      = {'gas':'Gas','star':'Stars','dm':'DarkMatter'},
     ARTDataset        = {'gas':'gas','star':'stars','dm':'darkmatter'},
     EnzoDataset       = {'gas':'gas','star':'io','dm':'io'},

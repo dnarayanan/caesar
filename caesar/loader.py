@@ -252,7 +252,7 @@ def load(filename, ds = None, obj = None, load_limit = None, LoadHalo=1):
                     h.masses['m2500c'] = obj.simulation.Densities[3]*PiFac*(h.radii['r2500c']*h.radii['r2500c']*h.radii['r2500c'])
 
         # optional
-        for vals in ['dmlist', 'glist', 'slist', 'bhlist']:
+        for vals in ['dmlist', 'glist', 'slist', 'bhlist','dlist']:
             restore_object_list(obj.halos, vals, hd)
    
     # restore galaxy data
@@ -272,7 +272,7 @@ def load(filename, ds = None, obj = None, load_limit = None, LoadHalo=1):
         restore_object_list(obj.galaxies, 'cloud_index_list', hd)
 
         # optional
-        for vals in ['glist', 'slist', 'bhlist']:
+        for vals in ['glist', 'slist', 'bhlist','dlist']:
             restore_object_list(obj.galaxies, vals, hd)
 
 
@@ -292,7 +292,7 @@ def load(filename, ds = None, obj = None, load_limit = None, LoadHalo=1):
         restore_object_dicts(obj.clouds, hd, obj.unit_registry)
 
         # optional
-        for vals in ['glist', 'slist', 'bhlist']:
+        for vals in ['glist', 'slist', 'bhlist','dlist']:
             restore_object_list(obj.clouds, vals, hd)
 
     infile.close()
