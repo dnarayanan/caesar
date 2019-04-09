@@ -289,6 +289,9 @@ class Group(object):
         gas_mass_sum = np.sum(gas_mass)    
         gas_sfr_sum  = np.sum(gas_sfr)
 
+        #moved this here to avoid many galaxies set with sfr = 1 if they really have sfr = 0
+        self.sfr = self.obj.yt_dataset.quan(gas_sfr_sum, '%s/%s' % (self.obj.units['mass'], self.obj.units['time']))
+
         if gas_sfr_sum == 0:
             gas_sfr_sum = 1.0
         
@@ -299,7 +302,6 @@ class Group(object):
         
         self.temperatures['mass_weighted'] = self.obj.yt_dataset.quan(np.sum(gas_T * gas_mass) / gas_mass_sum, self.obj.units['temperature'])
         self.temperatures['sfr_weighted']  = self.obj.yt_dataset.quan(np.sum(gas_T * gas_sfr ) / gas_sfr_sum,  self.obj.units['temperature'])
-        self.sfr = self.obj.yt_dataset.quan(gas_sfr_sum, '%s/%s' % (self.obj.units['mass'], self.obj.units['time']))
         
     def _calculate_virial_quantities(self):
         """Calculates virial quantities such as r200, circular velocity, 
