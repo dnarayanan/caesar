@@ -354,29 +354,27 @@ class Group(object):
         )
 
 
-    def _calculate_velocity_dispersions(self):
-        """Calculate velocity dispersions for the various components."""
-        def get_sigma(filtered_v):
-            if len(filtered_v) == 0:
-                return 0.0            
-            v_mean = np.mean(filtered_v)
-            v_diff = filtered_v - v_mean
-            return np.std(v_diff)
+        def _calculate_velocity_dispersions(self):
+            """Calculate velocity dispersions for the various components."""
+            def get_sigma(filtered_v,filtered_m):
+                if len(filtered_v) == 0: return 0.0
+                mv = np.array([filtered_m[i]*filtered_v[i] for i in range(len(filtered_v))])
+                v_std = np.std(mv,axis=0)/np.mean(filtered_m)
+            return np.sqrt(v_std.dot(v_std))
 
         ptypes = self.obj.data_manager.ptype[self.global_indexes]
-        particle_vel = self.obj.data_manager.vel[self.global_indexes]
-        v = np.sqrt( particle_vel[:,0]**2 +
-                     particle_vel[:,1]**2 +
-                     particle_vel[:,2]**2 )
-            
+        v = self.obj.data_manager.vel[self.global_indexes]
+        m = self.obj.data_manager.mass[self.global_indexes]
+        
         self.velocity_dispersions = dict() 
-
-        self.velocity_dispersions['all']     = get_sigma(v)
-        self.velocity_dispersions['dm']      = get_sigma(v[ ptypes == ptype_ints['dm']])
-        self.velocity_dispersions['baryon']  = get_sigma(v[(ptypes == ptype_ints['gas']) | (ptypes == ptype_ints['star'])])
-        self.velocity_dispersions['gas']     = get_sigma(v[ ptypes == ptype_ints['gas']])
-        self.velocity_dispersions['stellar'] = get_sigma(v[ ptypes == ptype_ints['star']])
-
+        
+        self.velocity_dispersions['all']     = get_sigma(v,m)
+        self.velocity_dispersions['dm']      = get_sigma(v[ ptypes == ptype_ints['dm']],m[ ptypes == ptype_ints['dm']])
+        self.velocity_dispersions['baryon']  = get_sigma(v[(ptypes == ptype_ints['gas']) | (ptypes == ptype_ints['star'])],m[(ptypes == ptype_ints['gas']) | (ptypes == ptype_ints['star'])])
+        self.velocity_dispersions['gas']     = get_sigma(v[ ptypes == ptype_ints['gas']],m[ ptypes == ptype_ints['gas']])
+        self.velocity_dispersions['stellar'] = get_sigma(v[ ptypes == ptype_ints['star']],m[ ptypes == ptype_ints['star']])
+        #if np.log10(self.masses['total'])>12: print 'sigma',np.log10(self.masses['total']),self.velocity_dispersions['all'],self.velocity_dispersions['dm'],self.velocity_dispersions['gas'],self.velocity_dispersions['stellar']
+        
         for k,v in six.iteritems(self.velocity_dispersions):
             self.velocity_dispersions[k] = self.obj.yt_dataset.quan(v, self.obj.units['velocity'])
             
