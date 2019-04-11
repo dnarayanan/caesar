@@ -6,7 +6,7 @@ from yt.funcs import mylog
 from caesar.group import group_types
 
 DEBUG = False
-attribute_name = 'progen_index'
+progen_index_name = 'progen_index'
 
 def find_progens(pids_current, pids_progens,
                  list_current, list_progens,
@@ -76,11 +76,19 @@ def find_progens(pids_current, pids_progens,
 
     return prev_obj_indexes
 
-def write_progen_data(obj,data,data_type, outfile):
+def write_progen_data(obj,data,data_type, outfile,attribute_name=progen_index_name):
     """Write progen indexes to disk."""
     f = h5py.File(outfile)
     f.create_dataset('%s_data/%s' % (data_type, attribute_name), data=data)
     f.close()
+
+def rewrite_progen_data(obj,data,data_type, outfile,attribute_name=progen_index_name):
+   """Write progen indexes to disk."""
+   f = h5py.File(outfile)
+   fd = f['%s_data/%s' % (data_type, attribute_name)]
+   fd[...] = data
+   f.close()
+
 
 def check_if_progen_is_present(data_type, outfile):
     """Check CAESAR file for progen indexes."""
