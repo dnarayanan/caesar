@@ -24,9 +24,6 @@ from glob2 import glob
 nproc = 1
 #GDIR = 'Groups'
 mode = 'daisychain'  # 'daisychain' to link each snapshot to its previous or 'refsnap' to link a single given snapshot to all previous
-#BASEDIR = '/ufrc/narayanan/desika.narayanan/gizmo_runs/simba/caesar_testing/m12n128/output_full_1/sc/'
-first_snap = 118
-last_snap = 121  # final snapshot to begin progening from
 min_in_common = 0.1  # require at least this fraction of stars in common between galaxy and its progenitor to be called a true progenitor
 
 #===============================================
@@ -213,6 +210,9 @@ def run_progen_rad(obj_current,obj_progens,snap_current,snap_progens):
     # append progenitor info to caesar file
     caesar_file = obj1.data_file  # file to write progen info to
     data_type = 'galaxy'
+
+
+
     try:
         caesar.progen.write_progen_data(obj1, prog_index, data_type, caesar_file, 'progen_index')
     except:

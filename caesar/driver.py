@@ -201,7 +201,7 @@ def drive(snapdirs, snapname, snapnums, progen=False, progen_rad = False, skipra
         print('You can only set progen or progen_rad as True; exiting')
         sys.exit()
 
-    if progen:
+    if progen or progen_rad:
         if using_mpi:
             comm.Barrier()
 
@@ -238,9 +238,12 @@ def drive(snapdirs, snapname, snapnums, progen=False, progen_rad = False, skipra
 
             obj_current = caesar.load(snap_current.outfile)
             obj_progens = caesar.load(snap_progens.outfile)
-        
-            #progen_finder(obj_current, obj_progens,
-            #              snap_current, snap_progens)
-            run_progen_rad(obj_current,obj_progens,snap_current,snap_progens)
+
+            if progen:
+                progen_finder(obj_current, obj_progens,
+                              snap_current, snap_progens)
+                
+            if progen_rad == True:
+                run_progen_rad(obj_current,obj_progens,snap_current,snap_progens)
 if __name__ == '__main__':
     print_art()
