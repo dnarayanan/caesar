@@ -354,12 +354,12 @@ class Group(object):
         )
 
 
-        def _calculate_velocity_dispersions(self):
-            """Calculate velocity dispersions for the various components."""
-            def get_sigma(filtered_v,filtered_m):
-                if len(filtered_v) == 0: return 0.0
-                mv = np.array([filtered_m[i]*filtered_v[i] for i in range(len(filtered_v))])
-                v_std = np.std(mv,axis=0)/np.mean(filtered_m)
+    def _calculate_velocity_dispersions(self):
+        """Calculate velocity dispersions for the various components."""
+        def get_sigma(filtered_v,filtered_m):
+            if len(filtered_v) == 0: return 0.0
+            mv = np.array([filtered_m[i]*filtered_v[i] for i in range(len(filtered_v))])
+            v_std = np.std(mv,axis=0)/np.mean(filtered_m)
             return np.sqrt(v_std.dot(v_std))
 
         ptypes = self.obj.data_manager.ptype[self.global_indexes]

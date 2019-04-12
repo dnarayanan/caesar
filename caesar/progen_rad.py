@@ -22,9 +22,9 @@ from glob2 import glob
 #MODIFIABLE HEADER
 #===============================================
 nproc = 1
-GDIR = 'Groups'
+#GDIR = 'Groups'
 mode = 'daisychain'  # 'daisychain' to link each snapshot to its previous or 'refsnap' to link a single given snapshot to all previous
-BASEDIR = '/ufrc/narayanan/desika.narayanan/gizmo_runs/simba/caesar_testing/m12n128/output_full_1/sc/'
+#BASEDIR = '/ufrc/narayanan/desika.narayanan/gizmo_runs/simba/caesar_testing/m12n128/output_full_1/sc/'
 first_snap = 118
 last_snap = 121  # final snapshot to begin progening from
 min_in_common = 0.1  # require at least this fraction of stars in common between galaxy and its progenitor to be called a true progenitor
@@ -138,12 +138,21 @@ def find_progens(snap1,snap2,obj1,obj2,nproc,t0,objtype='galaxies'):
 # MAIN DRIVER ROUTINE
 #=========================================================
 
-if __name__ == '__main__':
+def run_progen_rad(obj_current,obj_progens,snap_current,snap_progens):
+
+    import pdb
+    BASEDIR = snap_current.snapdir
+    snapshot = obj_current.simulation.basename.decode()
+    GDIR = 'Groups/'
 
     # Set up pairs;
-    snapshot = BASEDIR+'snapshot_%03d.hdf5'%last_snap
-    if not os.path.isfile('%s/snapshot_%03d.hdf5' % (BASEDIR,last_snap)):
-        sys.exit('Reference_snap %d does not exist'%last_snap)
+
+ 
+    if not os.path.isfile('%s/%s' % (BASEDIR,snapshot)):
+        sys.exit('Reference_snap %s/%s does not exist'%(BASEDIR,snapshot))
+
+
+    '''
     allsnaps = np.arange(last_snap,first_snap-1,-1)
     # find snapshots with caesar files that exist in the directory, in reverse order
     snapnums = []
@@ -160,8 +169,8 @@ if __name__ == '__main__':
         if mode=='daisychain':  prevsnap = snapnums[i] # daisy-chain progenitors in each snapshot to the previous snapshot
         pairs.append([prevsnap,snapnums[i+1]])
     
-    print('progen : Doing snapshot pairs: %s'%pairs)
-
+    print('[progen_rad/run_progen_rad] : Doing snapshot pairs: %s'%pairs)
+    '''
 # Set up multiprocessing; note: this doesn't help much, because this only parallelizes over galaxy ID searches, not the sorting.
     if nproc == 0:   # use all available cores
         num_cores = multiprocessing.cpu_count()
@@ -174,39 +183,47 @@ if __name__ == '__main__':
         if nproc > 1: print('progen : Using %d of %d cores'%(nproc,num_cores))
         else: print('progen : Using single core')
 
+    '''
 # loop over pairs to find progenitors
     t0 = time.time()
     prev_pair = [-1,-1]
     for pair in pairs:
-    
+
         print('progen : Doing pair %s [t=%g s]'%(pair,np.round(time.time()-t0,3)))
         if pair[0] == prev_pair[1]:  # don't have to reload if we already have this object from the previous iteration
             snapfile1 = snapfile2
             caesarfile1 = caesarfile2
             obj1 = obj2
         else:
-            snapfile1 = '%s/snapshot_%03d.hdf5' % (BASEDIR,pair[0])   # current snapshot
-            caesarfile1 = glob('%s/%s/*%04d*.hdf5' % (BASEDIR,GDIR,pair[0]))[0] #taking 0th element since glob returns a list
-            obj1 = caesar.load(caesarfile1,LoadHalo=0)
-        snapfile2 = '%s/snapshot_%03d.hdf5' % (BASEDIR,pair[1])   # progenitor snapshot
-        caesarfile2 = glob('%s/%s/*%04d*.hdf5' % (BASEDIR,GDIR,pair[1]))[0] #taking 0th element since glob returns a list
-        obj2 = caesar.load(caesarfile2,LoadHalo=0)
-        prog_index,prog_index2 = find_progens(snapfile1,snapfile2,obj1,obj2,nproc,t0)  # find galaxies with most stars in common in progenitor snapshot
-    
-        # append progenitor info to caesar file
-        caesar_file = obj1.data_file  # file to write progen info to
-        data_type = 'galaxy'
-        try:
-            caesar.progen.write_progen_data(obj1, prog_index, data_type, caesar_file, 'progen_index')
-        except:
-            caesar.progen.rewrite_progen_data(obj1, prog_index, data_type, caesar_file, 'progen_index')
-        try:
-            caesar.progen.write_progen_data(obj1, prog_index2, data_type, caesar_file, 'progen_index2')
-        except:
-            caesar.progen.rewrite_progen_data(obj1, prog_index2, data_type, caesar_file, 'progen_index2')
-    
-        print('progen : Wrote info to caesar file %s [t=%g s]'%(caesar_file,time.time()-t0))
+    '''
+    t0 = time.time()
 
-        prev_pair = pair
+    snapfile1 = obj_current.simulation.fullpath.decode()+'/'+obj_current.simulation.basename.decode()
+    snapfile2 = obj_progens.simulation.fullpath.decode()+'/'+obj_progens.simulation.basename.decode()
+
+    
+#    snapfile1 = '%s/snapshot_%03d.hdf5' % (BASEDIR,pair[0])   # current snapshot
+#    caesarfile1 = glob('%s/%s/*%04d*.hdf5' % (BASEDIR,GDIR,pair[0]))[0] #taking 0th element since glob returns a list
+    obj1 = obj_current#caesar.load(caesarfile1,LoadHalo=0)
+#    snapfile2 = '%s/snapshot_%03d.hdf5' % (BASEDIR,pair[1])   # progenitor snapshot
+#    caesarfile2 = glob('%s/%s/*%04d*.hdf5' % (BASEDIR,GDIR,pair[1]))[0] #taking 0th element since glob returns a list
+    obj2 = obj_progens#caesar.load(caesarfile2,LoadHalo=0)
+    prog_index,prog_index2 = find_progens(snapfile1,snapfile2,obj1,obj2,nproc,t0)  # find galaxies with most stars in common in progenitor snapshot
+    
+    # append progenitor info to caesar file
+    caesar_file = obj1.data_file  # file to write progen info to
+    data_type = 'galaxy'
+    try:
+        caesar.progen.write_progen_data(obj1, prog_index, data_type, caesar_file, 'progen_index')
+    except:
+        caesar.progen.rewrite_progen_data(obj1, prog_index, data_type, caesar_file, 'progen_index')
+    try:
+        caesar.progen.write_progen_data(obj1, prog_index2, data_type, caesar_file, 'progen_index2')
+    except:
+        caesar.progen.rewrite_progen_data(obj1, prog_index2, data_type, caesar_file, 'progen_index2')
+    
+    print('progen : Wrote info to caesar file %s [t=%g s]'%(caesar_file,time.time()-t0))
+
+    #prev_pair = pair
 
 

@@ -5,7 +5,7 @@ from yt.funcs import mylog
 
 import caesar
 from caesar.progen import progen_finder
-
+from caesar.progen_rad import *
 class Snapshot(object):
     """Class for tracking paths and data for simulation snapshots.
 
@@ -95,7 +95,7 @@ def print_art():
     print('\n%s\n%s\n%s\n' % (art, copywrite, version))
 
         
-def drive(snapdirs, snapname, snapnums, progen=False, skipran=False,
+def drive(snapdirs, snapname, snapnums, progen=False, progen_rad = False, skipran=False,
           member_search=True, extension='hdf5', **kwargs):
     """Driver function for running ``CAESAR`` on multiple snapshots.
 
@@ -197,6 +197,10 @@ def drive(snapdirs, snapname, snapnums, progen=False, skipran=False,
         for snap in rank_snaps:
             snap.member_search(skipran, **kwargs)
 
+    if (progen == True) and (progen_rad == True):
+        print('You can only set progen or progen_rad as True; exiting')
+        sys.exit()
+
     if progen:
         if using_mpi:
             comm.Barrier()
@@ -235,8 +239,8 @@ def drive(snapdirs, snapname, snapnums, progen=False, skipran=False,
             obj_current = caesar.load(snap_current.outfile)
             obj_progens = caesar.load(snap_progens.outfile)
         
-            progen_finder(obj_current, obj_progens,
-                          snap_current, snap_progens)
-
+            #progen_finder(obj_current, obj_progens,
+            #              snap_current, snap_progens)
+            run_progen_rad(obj_current,obj_progens,snap_current,snap_progens)
 if __name__ == '__main__':
     print_art()
