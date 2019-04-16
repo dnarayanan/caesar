@@ -4,6 +4,7 @@ from caesar.group import create_new_group, group_types
 from caesar.property_manager import get_property, get_particles_for_FOF, get_high_density_gas_indexes
 from caesar.property_manager import ptype_ints
 from caesar.utils import calculate_local_densities
+from caesar.fof6d import *
 
 from yt.extern import six
 from yt.funcs import mylog
@@ -420,7 +421,7 @@ def fubar(obj, group_type, **kwargs):
 
     """
  
-        
+
     pos = obj.data_manager.pos
 
     unbind = False        
@@ -434,7 +435,17 @@ def fubar(obj, group_type, **kwargs):
         if not obj.simulation.baryons_present:
             return
 
-        if ('fof6d_file' in obj._kwargs and obj._kwargs['fof6d_file'] is not None):
+
+        if ('fof6d' in obj._kwargs and obj._kwargs['fof6d'] == True):
+            snapname = ('%s/%s'%(obj.simulation.fullpath,obj.simulation.basename))
+            nparts,gas_index,star_index,bh_index = run_fof_6d(snapname)
+            fof_tags = np.concatenate((gas_index,star_index,bh_index))
+            high_rho_indexes = get_high_density_gas_indexes(obj)
+            #assert(obj.simulation.ngas == len(gas_index)) & (obj.simulation.nstar == len(star_index)) & (obj.simulation.nbh == len(bh_index)),'[fubar/fubar]: Assertion failed: Wrong number of particles in fof6d calculation'
+            
+            '''
+            
+            if ('fof6d_file' in obj._kwargs and obj._kwargs['fof6d_file'] is not None):
             # use galaxy info from fof6d hdf5 file
             fof6d_file = obj._kwargs['fof6d_file']
             import os
@@ -450,9 +461,9 @@ def fubar(obj, group_type, **kwargs):
             bh_indexes = hf['bh_index']
             mylog.info('Using galaxy IDs from fof6d file %s' % fof6d_file)
             fof_tags = np.concatenate((gas_indexes,star_indexes,bh_indexes))
-
+            '''
         else: 
-            # here we want to perform FOF on high density gas + stars
+        # here we want to perform FOF on high density gas + stars
             high_rho_indexes = get_high_density_gas_indexes(obj)
             pos0 = pos
             pos  = np.concatenate(( pos0[obj.data_manager.glist][high_rho_indexes], pos0[obj.data_manager.slist]))

@@ -288,6 +288,9 @@ class CAESAR(object):
         ll_cloud : float, optional
             Quantity used in the linking length (LL) for clouds in 
             comoving kpc (kpccm).
+        fof6d: boolean, optoinal
+            Indicates if we're running galaxy finding with 6D FOF vs 
+            the default of 3D FOF
         blackholes : boolean, optional
             Indicate if blackholes are present in your simulation.  
             This must be toggled on manually as there is no clear 

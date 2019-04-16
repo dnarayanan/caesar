@@ -143,6 +143,9 @@ def drive(snapdirs, snapname, snapnums, progen=False, progen_rad = False, skipra
     ll_cloud: float, optional
         Linking length in comoving kpc (kpccm_ for clouds.  Defaults
         to same linking length as used for galaxies.
+    fof6d: boolean, optional 
+        Sets whether or not we do 6D FOF for galaxies.  if not set, the default is to do 
+        normal 3D FOF for galaxies.
     blackholes : boolean, optional
         Indicate if blackholes are present in your simulation.  
         This must be toggled on manually as there is no clear 

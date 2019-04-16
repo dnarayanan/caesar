@@ -13,6 +13,8 @@ def run():
      #NOTES FROM BOBBY: why ont -b_cloud througout?
     parser.add_argument('-ll_cloud',   type=float, help='Cloud linking length in kpccm')
     parser.add_argument('-b_galaxy', type=float, help='Galaxy linking length')
+    parser.add_argument('-fof6d',help='Set 6D FOF for galaxies',
+                        dest = 'OPTIONS', action='append_const',const='fof6d')
     parser.add_argument('-bh', '--blackholes', help='Black holes present?',
                         dest='OPTIONS', action='append_const', const='blackholes')
     parser.add_argument('-d', '--dust', help='Active dust present?',

@@ -22,8 +22,8 @@ import os
 
 import pdb
 
-BASEDIR = sys.argv[1]
-snapnum = sys.argv[2]
+#BASEDIR = sys.argv[1]
+#snapnum = sys.argv[2]
 
 '''
 MODEL = sys.argv[1]
@@ -462,10 +462,9 @@ def fofrad(snap,nproc):
 # MAIN DRIVER ROUTINE
 #=========================================================
 
-if __name__ == '__main__':
+def run_fof_6d(snapfile):
 
-    #snapfile = '%s/snap_%s_%03d.hdf5' % (BASEDIR,MODEL,SNAP)
-    snapfile = '%s/snapshot_%03d.hdf5'%(BASEDIR,int(snapnum))
+    #snapfile = '%s/snapshot_%03d.hdf5'%(BASEDIR,int(snapnum))
     if not os.path.isfile(snapfile):
         sys.exit('Snapfile %s does not exist'%snapfile)
     else: print('fof6d : Doing snapfile: %s'%snapfile)
@@ -486,7 +485,13 @@ if __name__ == '__main__':
 
     # find friends of friends groups 
     gas_index,star_index,bh_index,t0 = fofrad(snapfile,nproc)   # returns galaxy indices for *all* gas, stars, bh
+    
 
+    #return statements
+    nparts = np.array([len(gas_index),len(star_index),len(bh_index)])
+    return nparts,gas_index,star_index,bh_index
+    
+    '''
     import pdb
     pdb.set_trace()
     # output csv file to be read into Caesar
@@ -499,3 +504,4 @@ if __name__ == '__main__':
         hf.create_dataset('bh_index',data=bh_index)
     print('fof6d : Outputted galaxy IDs for gas, stars, and BHs to %s -- FOF6D DONE [t=%.2f s]'%(outfile,time.time()-t0))
 
+   '''
