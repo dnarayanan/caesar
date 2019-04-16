@@ -366,7 +366,7 @@ def fof_sorting(groups,pos,vel,haloID,pindex,fof_LL,Lbox,idir):
         if iend-istart >= mingrp: groups.append(oldgroups[igrp])
     return groups
 
-def fofrad(snap,nproc):
+def fofrad(snap,nproc,mingrp,LL_factor,vel_LL):
     t0 = time.time()
     Lbox = readheader(snap,'boxsize')
     h = readheader(snap,'h')
@@ -462,8 +462,9 @@ def fofrad(snap,nproc):
 # MAIN DRIVER ROUTINE
 #=========================================================
 
-def run_fof_6d(snapfile):
+def run_fof_6d(snapfile,mingrp,LL_factor,vel_LL,nproc):
 
+    pdb.set_trace()
     #snapfile = '%s/snapshot_%03d.hdf5'%(BASEDIR,int(snapnum))
     if not os.path.isfile(snapfile):
         sys.exit('Snapfile %s does not exist'%snapfile)
@@ -484,7 +485,7 @@ def run_fof_6d(snapfile):
         if nproc>8: print('fof6d : FYI you are using nproc=%d. nproc>8 tends to give minimal or negative benefit.'%nproc)
 
     # find friends of friends groups 
-    gas_index,star_index,bh_index,t0 = fofrad(snapfile,nproc)   # returns galaxy indices for *all* gas, stars, bh
+    gas_index,star_index,bh_index,t0 = fofrad(snapfile,nproc,mingrp,LL_factor,vel_LL)   # returns galaxy indices for *all* gas, stars, bh
     
 
     #return statements

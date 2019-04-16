@@ -421,6 +421,7 @@ def fubar(obj, group_type, **kwargs):
 
     """
  
+    pdb.set_trace()
 
     pos = obj.data_manager.pos
 
@@ -437,8 +438,23 @@ def fubar(obj, group_type, **kwargs):
 
 
         if ('fof6d' in obj._kwargs and obj._kwargs['fof6d'] == True):
+
+            #set default parameters
+            mingrp = 16
+            LL_factor = 0.02
+            vel_LL=1.0
+            nproc = 1
+            if ('fof6d_mingrp' in obj._kwargs and obj._kwargs['fof6d_mingrp'] is not None):
+                mingrp = obj._kwargs['fof6d_mingrp']
+            if ('fof6d_LL_factor' in obj._kwargs and obj._kwargs['fof6d_LL_factor'] is not None):
+                LL_factor = obj._kwargs['fof6d_LL_factor']
+            if ('fof6d_vel_LL' in obj._kwargs and obj._kwargs['fof6d_vel_LL'] is not None):
+                vel_LL = obj._kwargs['fof6d_vel_LL']
+            if ('nproc' in obj._kwargs and obj._kwargs['nproc'] is not None):
+                nproc = obj._kwargs['nproc']
+
             snapname = ('%s/%s'%(obj.simulation.fullpath,obj.simulation.basename))
-            nparts,gas_index,star_index,bh_index = run_fof_6d(snapname)
+            nparts,gas_index,star_index,bh_index = run_fof_6d(snapname,mingrp,LL_factor,vel_LL,nproc)
             fof_tags = np.concatenate((gas_index,star_index,bh_index))
             high_rho_indexes = get_high_density_gas_indexes(obj)
             #assert(obj.simulation.ngas == len(gas_index)) & (obj.simulation.nstar == len(star_index)) & (obj.simulation.nbh == len(bh_index)),'[fubar/fubar]: Assertion failed: Wrong number of particles in fof6d calculation'

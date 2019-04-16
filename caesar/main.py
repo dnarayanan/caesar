@@ -291,6 +291,14 @@ class CAESAR(object):
         fof6d: boolean, optoinal
             Indicates if we're running galaxy finding with 6D FOF vs 
             the default of 3D FOF
+         fof6d_LL_factor: float, optional        
+            Sets linking length for fof6d
+        fof6d_mingrp: float, optional
+            Sets minimum group size for fof6d
+        fof6d_velLL: float, optional
+            Sets linking length for velocity in fof6d
+        nproc: int, optional
+            Sets number of processors for fof6d and progen_rad
         blackholes : boolean, optional
             Indicate if blackholes are present in your simulation.  
             This must be toggled on manually as there is no clear 
