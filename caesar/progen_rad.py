@@ -14,7 +14,7 @@ from scipy import stats
 import time
 import sys
 import os
-import pdb,ipdb
+import pdb
 from glob2 import glob
 
 

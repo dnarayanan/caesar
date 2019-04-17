@@ -172,7 +172,6 @@ def fof(obj, positions, LL, group_type=None):
 
     
         
-    import ipdb; ipdb.set_trace()
     parent_halos = []
     child_halos = []
     
@@ -244,7 +243,6 @@ def fof(obj, positions, LL, group_type=None):
     
     v.render(focal_point=halo_pos[largest])
     
-    import ipdb; ipdb.set_trace()    
     return halos
     """
 
