@@ -258,6 +258,10 @@ def drive(snapdirs, snapname, snapnums, progen=False, progen_rad = False, skipra
                               snap_current, snap_progens)
                 
             if progen_rad == True:
-                run_progen_rad(obj_current,obj_progens,snap_current,snap_progens)
+                #temporary catch to kill off any sims trying to do progen_Rad with clouds till we fix that
+                if 'fofclouds' in kwargs:
+                    raise Exception('Cannot call fofclouds and progen_rad - exiting now')
+                else:
+                    run_progen_rad(obj_current,obj_progens,snap_current,snap_progens)
 if __name__ == '__main__':
     print_art()
