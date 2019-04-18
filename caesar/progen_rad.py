@@ -75,12 +75,12 @@ def load_IDs(snap1,snap2,t0,parttype='star'):
     return PID_curr,PID_prog
 
 # Routine to find progenitors for all galaxies in snapshot
-def find_progens(snap1,snap2,obj1,obj2,nproc,t0,objtype='galaxies'):
+def find_progens(snap1,snap2,obj1,obj2,nproc,t0,objtype='halo'):
     PID_curr,PID_prog = load_IDs(snap1,snap2,t0) # Gather all the IDs and associated galaxy/halo numbers from the progenitor snapshot
-    if objtype == 'galaxies':
+    if objtype == 'galaxy':
         objects1=obj1.galaxies
         objects2=obj2.galaxies
-    elif objtype == 'halos':
+    elif objtype == 'halo':
         objects1=obj1.halos
         objects2=obj2.halos
     else: sys.exit('progen : ERROR: objtype %s not valid'%objtype)
@@ -137,7 +137,6 @@ def find_progens(snap1,snap2,obj1,obj2,nproc,t0,objtype='galaxies'):
 
 def run_progen_rad(obj_current,obj_progens,snap_current,snap_progens):
 
-    import pdb
     BASEDIR = snap_current.snapdir
     snapshot = obj_current.simulation.basename.decode()
     GDIR = 'Groups/'
@@ -205,24 +204,28 @@ def run_progen_rad(obj_current,obj_progens,snap_current,snap_progens):
 #    snapfile2 = '%s/snapshot_%03d.hdf5' % (BASEDIR,pair[1])   # progenitor snapshot
 #    caesarfile2 = glob('%s/%s/*%04d*.hdf5' % (BASEDIR,GDIR,pair[1]))[0] #taking 0th element since glob returns a list
     obj2 = obj_progens#caesar.load(caesarfile2,LoadHalo=0)
-    prog_index,prog_index2 = find_progens(snapfile1,snapfile2,obj1,obj2,nproc,t0)  # find galaxies with most stars in common in progenitor snapshot
+
+    for data_type in ['halo','galaxy']:
+        prog_index,prog_index2 = find_progens(snapfile1,snapfile2,obj1,obj2,nproc,t0,objtype=data_type)  # find galaxies with most stars in common in progenitor snapshot
+        
+        # append progenitor info to caesar file
+        caesar_file = obj1.data_file  # file to write progen info to
+        
+
+
+
+
+
+        try:
+            caesar.progen.write_progen_data(obj1, prog_index, data_type, caesar_file, 'progen_index')
+        except:
+            caesar.progen.rewrite_progen_data(obj1, prog_index, data_type, caesar_file, 'progen_index')
+        try:
+            caesar.progen.write_progen_data(obj1, prog_index2, data_type, caesar_file, 'progen_index2')
+        except:
+            caesar.progen.rewrite_progen_data(obj1, prog_index2, data_type, caesar_file, 'progen_index2')
     
-    # append progenitor info to caesar file
-    caesar_file = obj1.data_file  # file to write progen info to
-    data_type = 'galaxy'
-
-
-
-    try:
-        caesar.progen.write_progen_data(obj1, prog_index, data_type, caesar_file, 'progen_index')
-    except:
-        caesar.progen.rewrite_progen_data(obj1, prog_index, data_type, caesar_file, 'progen_index')
-    try:
-        caesar.progen.write_progen_data(obj1, prog_index2, data_type, caesar_file, 'progen_index2')
-    except:
-        caesar.progen.rewrite_progen_data(obj1, prog_index2, data_type, caesar_file, 'progen_index2')
-    
-    print('progen : Wrote info to caesar file %s [t=%g s]'%(caesar_file,time.time()-t0))
+        print('progen : Wrote info to caesar file %s [t=%g s]'%(caesar_file,time.time()-t0))
 
     #prev_pair = pair
 
