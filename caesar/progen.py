@@ -90,7 +90,7 @@ def rewrite_progen_data(obj,data,data_type, outfile,attribute_name=progen_index_
    f.close()
 
 
-def check_if_progen_is_present(data_type, outfile):
+def check_if_progen_is_present(data_type, outfile,attribute_name =progen_index_name):
     """Check CAESAR file for progen indexes."""
     f = h5py.File(outfile)
     present = False

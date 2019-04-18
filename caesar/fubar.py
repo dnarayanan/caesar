@@ -491,6 +491,8 @@ def fubar(obj, group_type, **kwargs):
     elif group_type == 'cloud':
         if not obj.simulation.baryons_present:
             return
+
+        
         # here we want to perform FOF on all gas
         pos = pos[obj.data_manager.glist]
         LL = get_mean_interparticle_separation(obj) * get_b(obj, group_type)
