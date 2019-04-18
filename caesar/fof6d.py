@@ -464,7 +464,7 @@ def fofrad(snap,nproc,mingrp,LL_factor,vel_LL):
 
 def run_fof_6d(snapfile,mingrp,LL_factor,vel_LL,nproc):
 
-
+    #pdb.set_trace()
     #snapfile = '%s/snapshot_%03d.hdf5'%(BASEDIR,int(snapnum))
     if not os.path.isfile(snapfile):
         sys.exit('Snapfile %s does not exist'%snapfile)

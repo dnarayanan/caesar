@@ -419,7 +419,7 @@ def fubar(obj, group_type, **kwargs):
 
     """
  
-
+    #pdb.set_trace()
     pos = obj.data_manager.pos
 
     unbind = False        
