@@ -422,7 +422,11 @@ def fofrad(snap,nproc,mingrp,LL_factor,vel_LL):
         print('fof6d : Doing %d groups with npart<%d on single core [t=%.2f s]'%(len(igser),npart_par,time.time()-t0))
         for igrp in igser: results[igrp] = fof6d(igrp,groups,pos.T[groups[igrp][0]:groups[igrp][1]],vel.T[groups[igrp][0]:groups[igrp][1]],kerneltab,t0,Lbox,fof_LL,vel_LL)
         print('\nfof6d : Doing %d groups with npart>%d on %d cores (progressbar approximate) [t=%.2f s]'%(len(igpar),npart_par,nproc,time.time()-t0))
-        results_par = Parallel(n_jobs=nproc)(delayed(fof6d)(igrp,groups,pos.T[groups[igrp][0]:groups[igrp][1]],vel.T[groups[igrp][0]:groups[igrp][1]],kerneltab,t0,Lbox,fof_LL,vel_LL) for igrp in igpar)
+        if len(igpar)>0: 
+            import multiprocessing
+            from joblib import Parallel, delayed
+            results_par = Parallel(n_jobs=nproc)(delayed(fof6d)(igrp,groups,pos.T[groups[igrp][0]:groups[igrp][1]],vel.T[groups[igrp][0]:groups[igrp][1]],kerneltab,t0,Lbox,fof_LL,vel_LL) for igrp in igpar)
+
         for i in range(len(igpar)): results[igpar[i]] = results_par[i]
     else:
         for igrp in range(len(groups)): 
@@ -476,7 +480,6 @@ def run_fof_6d(snapfile,mingrp,LL_factor,vel_LL,nproc):
     if nproc != 1:   # if multi-core, set up Parallel processing
         import multiprocessing
         from joblib import Parallel, delayed
-        from functools import partial
         num_cores = multiprocessing.cpu_count()
         if nproc < 0: print('fof6d : Using %d cores (all but %d)'%(num_cores+nproc+1,-nproc-1) )
         if nproc > 1: 
