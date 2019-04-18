@@ -288,10 +288,13 @@ class CAESAR(object):
         ll_cloud : float, optional
             Quantity used in the linking length (LL) for clouds in 
             comoving kpc (kpccm).
-        fof6d: boolean, optoinal
+        fofclouds: boolean,optional
+            Indicates if we're running 3D fof on clouds. Default is that this
+            is set to false
+        fof6d: boolean, optional
             Indicates if we're running galaxy finding with 6D FOF vs 
             the default of 3D FOF
-         fof6d_LL_factor: float, optional        
+        fof6d_LL_factor: float, optional        
             Sets linking length for fof6d
         fof6d_mingrp: float, optional
             Sets minimum group size for fof6d

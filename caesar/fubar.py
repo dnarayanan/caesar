@@ -489,9 +489,15 @@ def fubar(obj, group_type, **kwargs):
 
 
     elif group_type == 'cloud':
+
+        #don't run if there's no baryons
         if not obj.simulation.baryons_present:
             return
-
+            
+        #also don't run if fofclouds isn't set
+        if ('fofclouds' not in obj._kwargs) or (obj._kwargs['fofclouds'] == False):
+            print('fofclouds either not set, or is set to false: not performing 3D group search for GMCs')
+            return
         
         # here we want to perform FOF on all gas
         pos = pos[obj.data_manager.glist]

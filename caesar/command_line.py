@@ -15,6 +15,8 @@ def run():
     parser.add_argument('-b_galaxy', type=float, help='Galaxy linking length')
     parser.add_argument('-fof6d',help='Set 6D FOF for galaxies',
                         dest = 'OPTIONS', action='append_const',const='fof6d')
+    parser.add_argument('-fofclouds',help='Bool: Turn on 3D FOF for clouds',
+                        dest = 'OPTIONS', action='append_const',const='fofclouds')
     parser.add_argument('-fof6d_mingrp',type=float,help='Set min group size for fof6d')
     parser.add_argument('-fof6d_LL_factor',type=float,help='Set linking length factor for fof6d')
     parser.add_argument('-fof6d_vel_LL',type=float,help='Set velocity linking length for fof6d')
