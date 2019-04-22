@@ -441,6 +441,7 @@ def fubar(obj, group_type, **kwargs):
             LL_factor = 0.02
             vel_LL=1.0
             nproc = 1
+            LL = get_mean_interparticle_separation(obj) * get_b(obj, group_type)  # get MIS and omega_baryon
             if ('fof6d_mingrp' in obj._kwargs and obj._kwargs['fof6d_mingrp'] is not None):
                 mingrp = obj._kwargs['fof6d_mingrp']
             if ('fof6d_LL_factor' in obj._kwargs and obj._kwargs['fof6d_LL_factor'] is not None):

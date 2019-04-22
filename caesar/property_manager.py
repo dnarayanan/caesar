@@ -17,6 +17,8 @@ particle_data_aliases = {
     'fh2':'FractionH2',
     'metallicity':'metallicity',
     'age':'StellarFormationTime',
+    'bhmdot':'BH_Mdot',
+    'bhmass':'BH_Mass',
     'haloid':'HaloID',
     'dustmass':'Dust_Masses'
 }

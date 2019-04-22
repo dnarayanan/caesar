@@ -139,6 +139,9 @@ class Group(object):
                 self._calculate_velocity_dispersions()
                 self._calculate_angular_quantities()
                 self._calculate_gas_quantities()
+                self._calculate_star_quantities()
+                if self.obj.data_manager.blackholes:
+                    self._calculate_bh_quantities()
             
         self._cleanup()
 
@@ -151,6 +154,8 @@ class Group(object):
 
         # lists for the concatinated global list
         self.__glist = np.where(ptypes == ptype_ints['gas'])[0]
+        self.__slist = np.where(ptypes == ptype_ints['star'])[0]
+        self.__dmlist = np.where(ptypes == ptype_ints['dm'])[0]
 
         # individual global lists
         self.glist  = indexes[np.where(ptypes == ptype_ints['gas'])[0]]
@@ -164,6 +169,10 @@ class Group(object):
         self.ndm   = len(self.dmlist)
         self.nbh   = len(self.bhlist)
         self.ndust = len(self.dlist)
+
+        if self.obj.data_manager.blackholes:
+            self.bhlist = indexes[np.where(ptypes == ptype_ints['bh'])[0]]
+            self.nbh    = len(self.bhlist)
 
     def _calculate_total_mass(self):
         """Calculate the total mass of the object."""
@@ -302,7 +311,37 @@ class Group(object):
         
         self.temperatures['mass_weighted'] = self.obj.yt_dataset.quan(np.sum(gas_T * gas_mass) / gas_mass_sum, self.obj.units['temperature'])
         self.temperatures['sfr_weighted']  = self.obj.yt_dataset.quan(np.sum(gas_T * gas_sfr ) / gas_sfr_sum,  self.obj.units['temperature'])
-        
+
+    def _calculate_star_quantities(self):
+        """Calculate star quantities: Metallicity, ..."""
+        if hasattr(self.obj.data_manager, 'sZ'):
+            if len(self.slist)==0:
+                stellar = 0.
+            else:
+                star_Z = self.obj.data_manager.sZ[self.slist].d
+                star_mass = self.obj.data_manager.mass[self.__slist]
+                star_mass_sum = np.sum(star_mass)
+                stellar = np.sum(star_Z*star_mass)/star_mass_sum
+
+            self.metallicities['stellar'] = self.obj.yt_dataset.quan(stellar, '')
+
+
+    def _calculate_bh_quantities(self):
+        if hasattr(self.obj.data_manager, 'bhmdot'):
+            if self.nbh == 0:
+                self.bhmdot = self.obj.yt_dataset.quan(0.0, '%s/%s' % (self.obj.units['mass'], self.obj.units['time']))
+            else:
+                if self.obj.data_manager.use_bhmass:
+                    mass_bh = self.obj.data_manager.bhmass[self.bhlist].d
+                else:
+                    mass_bh = self.obj.data_manager.mass[self.obj.data_manager.bhlist][self.bhlist]
+                bh_mdot     = self.obj.data_manager.bhmdot[self.bhlist].d
+                self.bhmdot = self.obj.yt_dataset.quan(bh_mdot[np.argmax(mass_bh)], '%s/%s' % (self.obj.units['mass'], self.obj.units['time']))
+        else:
+            from yt.funcs import mylog
+            mylog.info('No blackholes quantities to compute for groups')
+
+
     def _calculate_virial_quantities(self):
         """Calculates virial quantities such as r200, circular velocity, 
         and virial temperature."""

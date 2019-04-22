@@ -25,6 +25,9 @@ class DataManager(object):
         self.load_particle_data()
         self._assign_particle_counts()
         self._load_gas_data()
+        self._load_star_data()
+        if self.blackholes:
+            self._load_bh_data()
         
     def _determine_ptypes(self):
         """Determines what particle/field types to collect."""
@@ -141,3 +144,40 @@ class DataManager(object):
         self.gZ   = gZ
         self.gT   = gT
         self.dustmass = self.obj.yt_dataset.arr(dustmass,'code_mass').in_units('Msun')
+
+    def _load_star_data(self):
+        """If star is present load Metallicity if present"""
+        if self.obj.simulation.nstar == 0:
+            return
+
+        if has_property(self.obj, 'star', 'metallicity'):
+            self.sZ  = get_property(self.obj, 'metallicity', 'star')
+
+
+
+    def _load_bh_data(self):
+        """If blackholes are present, loads BH_Mdot"""
+        from yt.funcs import mylog
+        if has_property(self.obj, 'bh', 'bhmass'):
+            self.bhmass     = self.obj.yt_dataset.arr(get_property(self.obj, 'bhmass', 'bh').d*1e10,
+                                                      'Msun/h').to(self.obj.units['mass'])#I don't know how to convert this automatically
+            self.use_bhmass = True
+            mylog.info('BH_Mass available, units=1e10 Msun/h')
+            mylog.info('Using BH_Mass instead of BH particle masses')
+        else:
+            mylog.info('Using BH particle mass')
+
+        if has_property(self.obj, 'bh', 'bhmdot'):
+            #units mutlitplied by ((All.UnitMass_in_g / SOLAR_MASS) / (All.UnitTime_in_s / SEC_PER_YEAR))
+            bhmdot_unit = '10.22465727143273*Msun/h/yr'
+            #bhmdot_unit = '15.036260693283424*Msun/yr'
+            #bhmdot_unit = '%s/%s' %(self.obj.units['mass'], self.obj.units['time'])
+
+            bhmdot      = get_property(self.obj, 'bhmdot', 'bh').d #of course  it is dimentionless
+            bhmdot      = self.obj.yt_dataset.arr(bhmdot, bhmdot_unit).to('%s/%s' %(self.obj.units['mass'], self.obj.units['time']))
+            self.bhmdot = bhmdot
+            mylog.info('BH_Mdot available, units=%s'%bhmdot_unit)
+        else: mylog.warning('BH_Mdot not available')
+
+
+
