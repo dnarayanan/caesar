@@ -4,7 +4,7 @@ import numpy as np
 from caesar.property_manager import ptype_ints
 from caesar.group_funcs import get_periodic_r
 
-MINIMUM_STARS_PER_GALAXY = 32
+MINIMUM_STARS_PER_GALAXY = 24  # set a bit below 32 so we capture all galaxies above a given Mstar, rather than a given Nstar.
 MINIMUM_DM_PER_HALO      = 32
 MINIMUM_GAS_PER_CLOUD = 16
 
@@ -167,7 +167,6 @@ class Group(object):
         self.ngas  = len(self.glist)
         self.nstar = len(self.slist)
         self.ndm   = len(self.dmlist)
-        self.nbh   = len(self.bhlist)
         self.ndust = len(self.dlist)
 
         if self.obj.data_manager.blackholes:

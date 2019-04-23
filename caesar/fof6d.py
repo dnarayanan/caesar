@@ -52,6 +52,7 @@ def loadsnap(snap,t0):
 
     # get gas Halo IDs so we can select only gas particles in halos
     ghalo = np.array(readsnap(snap,'HaloID','gas'),dtype=int)  # Halo ID of gas; 0=not in halo
+    ngastot = len(ghalo)
     gas_select = (ghalo>0)
     ngastot = np.uint64(len(ghalo))
     pindex = np.arange(ngastot,dtype=np.uint64)  # keep an index for the original order of the particles
@@ -88,7 +89,7 @@ def loadsnap(snap,t0):
     vel = np.vstack((gvel,svel,bvel)).T  # same for vel
     haloID = np.concatenate((ghalo,shalo,bhalo))  # compile list of halo IDs
     pindex = np.concatenate((pindex[gas_select],np.arange(ngastot,ngastot+nstartot+nbhtot,dtype=np.uint64))) 
-    print('fof6d : Loaded %d gas + %d stars + %g bh = %d total particles [t=%.2f s]'%(len(gpos),len(spos),len(bpos),len(pindex),time.time()-t0))
+    print('fof6d : Loaded %d (of %d) gas + %d stars + %g bh = %d total particles [t=%.2f s]'%(len(gpos),ngastot,len(spos),len(bpos),len(pindex),time.time()-t0))
     return pos,vel,haloID,pindex,ngastot,nstartot,nbhtot,gas_select
 
 # Returns array galindex to original particles order in snapshot, and splits into separate arrays
@@ -429,6 +430,7 @@ def fofrad(snap,nproc,mingrp,LL_factor,vel_LL):
 
         for i in range(len(igpar)): results[igpar[i]] = results_par[i]
     else:
+        print('fof6d : Doing %d groups on single core [t=%.2f s]'%(len(groups),time.time()-t0))
         for igrp in range(len(groups)): 
             results[igrp] = fof6d(igrp,groups,pos.T[groups[igrp][0]:groups[igrp][1]],vel.T[groups[igrp][0]:groups[igrp][1]],kerneltab,t0,Lbox,fof_LL,vel_LL)
 

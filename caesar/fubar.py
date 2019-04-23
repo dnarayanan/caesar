@@ -486,7 +486,8 @@ def fubar(obj, group_type, **kwargs):
             fof_tags = np.concatenate((gas_indexes,star_indexes,bh_indexes))
             '''
         else: 
-        # here we want to perform FOF on high density gas + stars
+            # here we want to perform 3D FOF on high density gas + stars
+            mylog.info('Groups based on YT 3DFOF')
             high_rho_indexes = get_high_density_gas_indexes(obj)
             pos0 = pos
             pos  = np.concatenate(( pos0[obj.data_manager.glist][high_rho_indexes], pos0[obj.data_manager.slist]))
@@ -496,7 +497,9 @@ def fubar(obj, group_type, **kwargs):
                 pos  = np.concatenate(( pos, pos0[obj.data_manager.dlist]))
             LL = get_mean_interparticle_separation(obj) * get_b(obj, group_type)
             fof_tags = fof(obj, pos, LL, group_type=group_type)
-
+            gtags = np.full(obj.simulation.ngas, -1, dtype=np.int64)
+            gtags[high_rho_indexes] = fof_tags[0:len(high_rho_indexes)]
+            fof_tags = np.concatenate((gtags,fof_tags[len(high_rho_indexes)::]))
 
     elif group_type == 'cloud':
 
@@ -506,7 +509,7 @@ def fubar(obj, group_type, **kwargs):
             
         #also don't run if fofclouds isn't set
         if ('fofclouds' not in obj._kwargs) or (obj._kwargs['fofclouds'] == False):
-            print('fofclouds either not set, or is set to false: not performing 3D group search for GMCs')
+            mylog.warning('No clouds: fofclouds either not set, or is set to false: not performing 3D group search for GMCs')
             return
         
         # here we want to perform FOF on all gas
@@ -528,11 +531,6 @@ def fubar(obj, group_type, **kwargs):
     else: 
         mylog.warning('group-type %s not recognized'%group_type)
 
-
-    if group_type == 'galaxy':
-        gtags = np.full(obj.simulation.ngas, -1, dtype=np.int64)
-        gtags[high_rho_indexes] = fof_tags[0:len(high_rho_indexes)]
-        fof_tags = np.concatenate((gtags,fof_tags[len(high_rho_indexes)::]))
 
     tag_sort = np.argsort(fof_tags)
 
