@@ -103,7 +103,7 @@ def _write_attrib(obj_list, k, v, hd):
         else:
             data = [getattr(i,k).d for i in obj_list]
         unit = True
-    elif isinstance(v, np.ndarray) and np.shape(v)[0] == 3:
+    elif isinstance(v, np.ndarray) and np.shape(v)[0] == 3 and k is not 'bhlist':
         data = np.vstack((getattr(i,k) for i in obj_list))
     elif isinstance(v, (int, float, bool, np.number)):
         data = [getattr(i,k) for i in obj_list]

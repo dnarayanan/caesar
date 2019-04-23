@@ -434,12 +434,13 @@ class Group(object):
         Ly = np.sum( z*px - x*pz )
         Lz = np.sum( x*py - y*px )
         L  = np.sqrt(Lx**2 + Ly**2 + Lz**2)
-        self.angular_momentum        = self.obj.yt_dataset.quan(L, Lx.units)
+        #self.angular_momentum        = self.obj.yt_dataset.quan(L, Lx.units)
         self.angular_momentum_vector = self.obj.yt_dataset.arr([Lx.d,Ly.d,Lz.d], Lx.units)
 
         
         # Bullock spin or lambda prime
-        self.spin = self.angular_momentum / (1.4142135623730951 *
+        #self.spin = self.angular_momentum / (1.4142135623730951 *
+        self.spin_param = self.obj.yt_dataset.quan(L, Lx.units) / (1.4142135623730951 *
                                              self.masses['total'] *
                                              self.virial_quantities['circular_velocity'].to('km/s') *
                                              self.virial_quantities['r200c'].to('km'))
