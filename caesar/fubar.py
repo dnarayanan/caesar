@@ -463,7 +463,7 @@ def fubar(obj, group_type, **kwargs):
                     hf.create_dataset('gas_index',data=gas_index)
                     hf.create_dataset('star_index',data=star_index)
                     hf.create_dataset('bh_index',data=bh_index)
-                hf.close()
+                    hf.close()
             #assert(obj.simulation.ngas == len(gas_index)) & (obj.simulation.nstar == len(star_index)) & (obj.simulation.nbh == len(bh_index)),'[fubar/fubar]: Assertion failed: Wrong number of particles in fof6d calculation'
             
             '''

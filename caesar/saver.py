@@ -103,8 +103,12 @@ def _write_attrib(obj_list, k, v, hd):
         else:
             data = [getattr(i,k).d for i in obj_list]
         unit = True
-    elif isinstance(v, np.ndarray) and np.shape(v)[0] == 3 and k is not 'bhlist':
-        data = np.vstack((getattr(i,k) for i in obj_list))
+    elif isinstance(v, np.ndarray) and np.shape(v)[0] == 3 and k is not 'bhlist' and k is not '_Group__glist':
+        try:
+            data = np.vstack((getattr(i,k) for i in obj_list))
+        except:
+            print 'Warning: saver unable to stack:',k,v,np.shape(v)
+            return
     elif isinstance(v, (int, float, bool, np.number)):
         data = [getattr(i,k) for i in obj_list]
     else:
