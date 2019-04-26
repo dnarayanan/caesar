@@ -107,7 +107,7 @@ def _write_attrib(obj_list, k, v, hd):
         try:
             data = np.vstack((getattr(i,k) for i in obj_list))
         except:
-            print 'Warning: saver unable to stack:',k,v,np.shape(v)
+            print('Warning: saver unable to stack:',k,v,np.shape(v))
             return
     elif isinstance(v, (int, float, bool, np.number)):
         data = [getattr(i,k) for i in obj_list]
