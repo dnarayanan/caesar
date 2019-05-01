@@ -247,9 +247,9 @@ def load(filename, ds = None, obj = None, load_limit = None, LoadHalo=1):
                 h = obj.halos[0]
                 for h in obj.halos:
                     h.masses['virial'] = obj.simulation.Densities[0]*PiFac*(h.radii['virial']*h.radii['virial']*h.radii['virial'])
-                    h.masses['m200c'] = obj.simulation.Densities[1]*PiFac*(h.radii['r200c']*h.radii['r200c']*h.radii['r200c'])
-                    h.masses['m500c'] = obj.simulation.Densities[2]*PiFac*(h.radii['r500c']*h.radii['r500c']*h.radii['r500c'])
-                    h.masses['m2500c'] = obj.simulation.Densities[3]*PiFac*(h.radii['r2500c']*h.radii['r2500c']*h.radii['r2500c'])
+                    h.masses['m200c'] = (obj.simulation.Densities[1]*PiFac*(h.radii['r200c']*h.radii['r200c']*h.radii['r200c'])).to('Msun')
+                    h.masses['m500c'] = (obj.simulation.Densities[2]*PiFac*(h.radii['r500c']*h.radii['r500c']*h.radii['r500c'])).to('Msun')
+                    h.masses['m2500c'] = (obj.simulation.Densities[3]*PiFac*(h.radii['r2500c']*h.radii['r2500c']*h.radii['r2500c'])).to('Msun')
 
         # optional
         for vals in ['dmlist', 'glist', 'slist', 'bhlist','dlist']:
