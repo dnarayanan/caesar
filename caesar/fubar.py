@@ -452,6 +452,7 @@ def fubar(obj, group_type, **kwargs):
                 nproc = obj._kwargs['nproc']
 
             snapname = ('%s/%s'%(obj.simulation.fullpath,obj.simulation.basename))
+            mylog.info("Running FOF6D")
             nparts,gas_index,star_index,bh_index = run_fof_6d(snapname,mingrp,LL_factor,vel_LL,nproc)
             fof_tags = np.concatenate((gas_index,star_index,bh_index))
             high_rho_indexes = get_high_density_gas_indexes(obj)
