@@ -79,7 +79,7 @@ def find_progens(pids_current, pids_progens,
 def write_progen_data(obj,data,data_type, outfile,attribute_name=progen_index_name):
     """Write progen indexes to disk."""
     f = h5py.File(outfile)
-    f.create_dataset('%s_data/%s' % (data_type, attribute_name), data=data)
+    f.create_dataset('%s_data/%s' % (data_type, attribute_name), data=data, compression=1)
     f.close()
 
 def rewrite_progen_data(obj,data,data_type, outfile,attribute_name=progen_index_name):

@@ -460,10 +460,10 @@ def fubar(obj, group_type, **kwargs):
                 fof6d_file = obj._kwargs['fof6d_outfile']
                 mylog.info('Writing fof6d particle group info to %s' % fof6d_file)
                 with h5py.File(fof6d_file,'w') as hf:  # overwrites existing fof6d group file
-                    hf.create_dataset('nparts',data=nparts)
-                    hf.create_dataset('gas_index',data=gas_index)
-                    hf.create_dataset('star_index',data=star_index)
-                    hf.create_dataset('bh_index',data=bh_index)
+                    hf.create_dataset('nparts',data=nparts, compression=1)
+                    hf.create_dataset('gas_index',data=gas_index, compression=1)
+                    hf.create_dataset('star_index',data=star_index, compression=1)
+                    hf.create_dataset('bh_index',data=bh_index, compression=1)
                     hf.close()
             #assert(obj.simulation.ngas == len(gas_index)) & (obj.simulation.nstar == len(star_index)) & (obj.simulation.nbh == len(bh_index)),'[fubar/fubar]: Assertion failed: Wrong number of particles in fof6d calculation'
             
