@@ -1,4 +1,3 @@
-
 # 6-D FOF.
 # Input is a snapshot file containing gas, stars, and BHs.
 # Snapshot must contain a HaloID putting each particle in a halo (0=not in halo).
@@ -14,7 +13,6 @@ from scipy import stats
 from sklearn.neighbors import NearestNeighbors
 from astropy import constants as const
 from astropy import units as u
-#from numba import jit
 import h5py
 import time
 import sys
@@ -22,19 +20,7 @@ import os
 
 import pdb
 
-#BASEDIR = sys.argv[1]
-#snapnum = sys.argv[2]
-
-'''
-MODEL = sys.argv[1]
-WIND = sys.argv[2]
-SNAP = int(sys.argv[3])
-if len(sys.argv)==5: nproc = int(sys.argv[4])
-else: nproc = 1
-'''
 nproc = 1
-
-#BASEDIR = '/cosma/home/dc-dave2/data/%s/%s'%(MODEL,WIND)
 
 # FOF options
 mingrp = 16
@@ -109,20 +95,6 @@ def reset_order(galindex,pindex,ngas,nstar,nbh,snap):
         else:
             bindex[pindex[i]-(ngas+nstar)] = galindex[i]
 
-    if False:  # a check for debugging
-        ghalo = np.array(readsnap(snap,'HaloID','gas'),dtype=int)  # Halo ID of gas; 0=not in halo
-        shalo = np.array(readsnap(snap,'HaloID','star'),dtype=int)  # Halo ID of gas; 0=not in halo
-        bhalo = np.array(readsnap(snap,'HaloID','bndry'),dtype=int)  # Halo ID of gas; 0=not in halo
-        assert len(ghalo)==len(gindex),'Gas lengths not equal! %d != %d'%(len(ghalo),len(gindex))
-        assert len(shalo)==len(sindex),'Star lengths not equal! %d != %d'%(len(shalo),len(sindex))
-        assert len(bhalo)==len(bindex),'BH lengths not equal! %d != %d'%(len(bhalo),len(bindex))
-        for i in range(len(gindex)):
-            if ghalo[i] == 0 and gindex[i] >= 0: sys.exit('Found particle in galaxy but not in halo! i=%d %d %d'%(i,ghalo[i],gindex[i]))
-        for i in range(len(sindex)):
-            if shalo[i] == 0 and sindex[i] >= 0: sys.exit('Found particle in galaxy but not in halo! i=%d %d %d'%(i,shalo[i],sindex[i]))
-        for i in range(len(bindex)):
-            if bhalo[i] == 0 and bindex[i] >= 0: sys.exit('Found particle in galaxy but not in halo! i=%d %d %d'%(i,bhalo[i],bindex[i]))
-
     return gindex,sindex,bindex
 
 def periodic(x1,x2,L):  # periodic distance between scalars x1 and k2
@@ -150,17 +122,6 @@ def progress_bar(progress,barLength=10,t=None):
     sys.stdout.write(text)
     sys.stdout.flush()
 
-#@jit(nopython=True)
-def find_first(vec,order,flag,sign=1):
-    # return the index of the first occurence of element in vec, ordered by order with given sign:  sign=-1 for element<0, sign=+1 for element>=0
-    # only check elements where flag is True
-    for i in xrange(len(vec)):
-        #print 'ff:',i,sign,flag[order][i],order[i],vec[order][i]
-        if not flag[order][i]: continue
-        if sign < 0 and vec[order][i] < 0: return order[i]
-        if sign > 0 and vec[order][i] >= 0: return order[i]
-        if sign == 0 and vec[order][i] == 0: return order[i]
-    return -1
 
 #=========================================================
 # 6DFOF ROUTINES
@@ -244,35 +205,7 @@ def fof6d(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,fof_LL,vel_LL=None,nfof=
         else:  # it has no neighbors in a galaxy, so create a new one
             galind[nlist[1][densest]] = galcount  # put all neighbors in a new galaxy
             linked.append(galcount) # new galaxy is linked to itself
-            #print 'particle %d creating galaxy %d with neighbors %s'%(densest,galcount,nlist[1][densest])
             galcount += 1
-
-    '''
-    # Do final linking
-    nreset = 1
-    while nreset > 0:
-        nreset = 0
-        for ipart in range(len(ncount)):
-            for k in range(len(nlist[1][ipart])):
-                j = nlist[1][ipart][k]
-                if galind[ipart] > galind[j]:
-                    linked[galind[ipart]] = galind[j]
-                    galind[ipart] = galind[j]
-                    #print nlist[0][ipart]
-                    #print nlist[1][ipart]
-                    #print 'resetting part %d group to %d to match %d'%(ipart,galind[ipart],j)
-                    nreset += 1
-                    #print 'Trouble: Part %d (%s) in gal %d has neighbor %d (%d/%d) (%s) in gal %d, r=%g %d %d'%(ipart,poslist[ipart],galind[ipart],j,k,len(nlist[1][ipart]),poslist[j],galind[j],nlist[0][ipart][k],linked[galind[ipart]],linked[galind[j]])
-                    #raw_input("Press Enter to continue ...")
-    '''
-
-    '''
-    for ipart in range(nactive):  # check that objects don't have neighbors that should have been linked but aren't
-        for k in range(len(nlist[1][ipart])):
-            j = nlist[1][ipart][k]
-            if galind[ipart] != galind[j]:
-                print 'Trouble: Part %d in gal %d has neighbor %d (%d/%d) in gal %d, r=%g %d %d'%(ipart,galind[ipart],j,k,len(nlist[1][ipart]),galind[j],nlist[0][ipart][k],linked[galind[ipart]],linked[galind[j]])
-    '''
 
     # handle linked galaxies by resetting indices of their particles to its linked galaxy
     for i in range(galcount-1,-1,-1):
@@ -293,21 +226,6 @@ def fof6d(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,fof_LL,vel_LL=None,nfof=
     for i in range(iend-istart): 
         if galind[i]>=0: galind[i] = galind_inv[galind[i]] # re-assign group indices sequentially
     galcount = max(galind)+1
-    #raw_input('press ENTER to continue')
-
-    '''
-    # check: are there groups that are too large?
-    for i in range(galcount):
-        npgal = len(galind[galind==i])
-        galpos = np.array([poslist[j] for j in range(len(poslist)) if galind[j]==i])
-        galpos = galpos.T
-        #print npgal,galpos
-        galsize = np.array([max(galpos[0])-min(galpos[0]),max(galpos[1])-min(galpos[1]),max(galpos[2])-min(galpos[2])])
-        galsize = np.where(galsize>Lbox/2,Lbox-galsize,galsize)
-        toolarge = 300
-        if nfof < 10 and nfof > 0: print 'in fof6d:',nfof+i,i,npgal,np.mean(galpos[0]),np.mean(galpos[1]),np.mean(galpos[2]),galsize
-        if galsize[0]>toolarge or galsize[1]>toolarge or galsize[2]>toolarge: print 'Too large?',igrp,iend-istart,galsize,galpos.T
-    '''
 
     # Compile result to return: number of new groups found, and a galaxy index for particles from istart:iend
     result = [galcount]
@@ -372,8 +290,6 @@ def fofrad(snap,nproc,mingrp,LL_factor,vel_LL):
     Lbox = readheader(snap,'boxsize')
     h = readheader(snap,'h')
     Lbox = Lbox/h  # to kpc
-    #Omega = readheader(snap,'O0')
-    #Lambda = readheader(snap,'Ol')
     n_side = int(readhead(snap,'dmcount')**(1./3.)+0.5)
     MIS = Lbox/n_side
     fof_LL = LL_factor*MIS
@@ -395,17 +311,12 @@ def fofrad(snap,nproc,mingrp,LL_factor,vel_LL):
         if haloID[i]>haloID[i-1] and haloID[i-1]>0:
             if i-hstart>=mingrp: groups.append([hstart,i])
             hstart = i
-    '''
-    # use all particles, not just ones in halos
-    groups = [[0,npart]]  # initial group has the entire list of particles
-    '''
 
     # within each group (i.e. halo), create sub-groups of particles via directional sorting, ala FOFRAD
     print('fof6d : FOF via sorting beginning with %d halos/groups [t=%.2f s]'%(len(groups),time.time()-t0))
     for idir in range(len(pos)):  # sort in each direction, find groups within sorted list
         groups = fof_sorting(groups,pos,vel,haloID,pindex,fof_LL,Lbox,idir)
         print('fof6d : Axis %d approx FOF via sorting found %d groups [t=%.2f s]'%(idir,len(groups),time.time()-t0))
-        #print groups[-5:]
 
     # for each sub-group, do a proper 6D FOF search to find galaxies
     galindex = np.zeros(npart,dtype=int)-1
@@ -442,11 +353,6 @@ def fofrad(snap,nproc,mingrp,LL_factor,vel_LL):
         iend = groups[igrp][1]
         posgrp = pos.T[groups[igrp][0]:groups[igrp][1]]
         galindex[istart:iend] = np.where(result[1]>=0,result[1]+nfof,-1)  # for particles in groups, increment group ID with counter (nfof)
-        #if nfof<1 and len(result[1][result[1]>=0])>0: 
-        #        print 'inserting IDs',igrp,nfof,result[0],groups[igrp][1]-groups[igrp][0]
-        #        for igal in range(result[0]):
-        #            print 'galaxies found:',igal+nfof,len(result[1][result[1]==igal]),np.mean(posgrp[result[1]==igal].T[0]),np.mean(posgrp[result[1]==igal].T[1]),np.mean(posgrp[result[1]==igal].T[2])
-        #            print len(posgrp[result[1]==igal]),posgrp[result[1]==igal]
         nfof += result[0]
 
     gindex,sindex,bindex = reset_order(galindex,pindex,ngastot,nstartot,nbhtot,snap)
@@ -470,8 +376,6 @@ def fofrad(snap,nproc,mingrp,LL_factor,vel_LL):
 
 def run_fof_6d(snapfile,mingrp,LL_factor,vel_LL,nproc):
 
-    #pdb.set_trace()
-    #snapfile = '%s/snapshot_%03d.hdf5'%(BASEDIR,int(snapnum))
     if not os.path.isfile(snapfile):
         sys.exit('Snapfile %s does not exist'%snapfile)
     else: print('fof6d : Doing snapfile: %s'%snapfile)
@@ -496,16 +400,4 @@ def run_fof_6d(snapfile,mingrp,LL_factor,vel_LL,nproc):
     #return statements
     nparts = np.array([len(gas_index),len(star_index),len(bh_index)])
     return nparts,gas_index,star_index,bh_index
-    
-    '''
-    # output csv file to be read into Caesar
-    outfile = '%s/Groups/fof6d_%03d.hdf5'%(BASEDIR,int(snapnum))
-    with h5py.File(outfile, 'w') as hf:
-        nparts = np.array([len(gas_index),len(star_index),len(bh_index)])
-        hf.create_dataset('nparts',data=nparts)
-        hf.create_dataset('gas_index',data=gas_index)
-        hf.create_dataset('star_index',data=star_index)
-        hf.create_dataset('bh_index',data=bh_index)
-    print('fof6d : Outputted galaxy IDs for gas, stars, and BHs to %s -- FOF6D DONE [t=%.2f s]'%(outfile,time.time()-t0))
 
-   '''
