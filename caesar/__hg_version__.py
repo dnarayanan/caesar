@@ -1,1 +1,0 @@
-hg_version = 'None'
