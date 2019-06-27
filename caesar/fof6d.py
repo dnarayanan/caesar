@@ -9,16 +9,12 @@
 
 from pygadgetreader import *
 import numpy as np
-from scipy import stats
 from sklearn.neighbors import NearestNeighbors
 from astropy import constants as const
 from astropy import units as u
-import h5py
+# time and sys are only used for the progressbar. They should be replaced with the one provided by yt or tqdm
 import time
 import sys
-import os
-
-import pdb
 
 nproc = 1
 
@@ -376,9 +372,7 @@ def fofrad(snap,nproc,mingrp,LL_factor,vel_LL):
 
 def run_fof_6d(snapfile,mingrp,LL_factor,vel_LL,nproc):
 
-    if not os.path.isfile(snapfile):
-        sys.exit('Snapfile %s does not exist'%snapfile)
-    else: print('fof6d : Doing snapfile: %s'%snapfile)
+    print('fof6d : Doing snapfile: %s'%snapfile)
 
 # Set up multiprocessing
     if nproc == 0:   # use all available cores
