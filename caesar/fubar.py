@@ -334,7 +334,7 @@ def get_mean_interparticle_separation(obj):
     """
     #if its an idealized simulation, then there's no cosmology and we just take z=0 Planck15 values
     if obj.yt_dataset.cosmological_simulation == 0:
-        from astropy import Planck15
+        from astropy.cosmology import Planck15
         Om = Planck15.Om0
         Ob = Planck15.Ob0
     else:
