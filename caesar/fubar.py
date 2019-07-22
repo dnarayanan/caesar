@@ -7,7 +7,6 @@ from caesar.utils import calculate_local_densities
 from caesar.fof6d import *
 
 import six
-#not in yt4.x from yt.extern import six
 from yt.funcs import mylog
 from yt.extern.tqdm import tqdm
 from yt.units.yt_array import uconcatenate, YTArray

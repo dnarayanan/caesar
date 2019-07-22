@@ -4,7 +4,6 @@ from caesar.particle_list import ParticleListContainer
 from caesar.simulation_attributes import SimulationAttributes
 
 import six
-#from yt.extern import six
 from yt.funcs import mylog, get_hash
 
 class CAESAR(object):

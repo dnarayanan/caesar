@@ -3,7 +3,6 @@ import h5py
 import numpy as np
 import pdb
 import six
-#from yt.extern import six
 from yt.units.yt_array import YTQuantity, YTArray
 from yt import mylog
 blacklist = [
