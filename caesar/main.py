@@ -3,7 +3,7 @@ from caesar.property_manager import DatasetType
 from caesar.particle_list import ParticleListContainer
 from caesar.simulation_attributes import SimulationAttributes
 
-from yt.extern import six
+import six
 from yt.funcs import mylog, get_hash
 
 class CAESAR(object):

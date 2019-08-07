@@ -3,8 +3,7 @@ import numpy as np
 
 from caesar.group import Halo, Galaxy, Cloud
 from caesar.saver import blacklist
-
-from yt.extern import six
+import six
 from yt.units.yt_array import YTQuantity, YTArray, UnitRegistry
 
 LOAD_OBJECT_LISTS = True

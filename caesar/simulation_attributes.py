@@ -78,7 +78,7 @@ class SimulationAttributes(object):
 
         
     def _serialize(self, obj, hd):
-        from yt.extern import six
+        import  six
         from yt.units.yt_array import YTArray
 
         hdd  = hd.create_group('simulation_attributes')
@@ -103,9 +103,9 @@ class SimulationAttributes(object):
 
             
     def _unpack(self, obj, hd):
+        import six
         if 'simulation_attributes' not in hd.keys():
             return
-        from yt.extern import six
         from yt.units.yt_array import YTArray
         
         hdd = hd['simulation_attributes']

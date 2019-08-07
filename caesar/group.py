@@ -73,7 +73,7 @@ class Group(object):
         self.masses = {}
         self.radii = {} 
         self.temperatures = {}
-        
+        self.spin_param = 0.0
     def _append_global_index(self, i):
         if not hasattr(self, 'global_indexes'):
             self.global_indexes = []
@@ -647,6 +647,8 @@ class Halo(Group):
         self.child = False
         self.galaxies = []
         self.central_galaxy = None
+        self.satellite_galaxies = []
+        self.galaxy_index_list = np.array([])
 
 class Cloud(Group):
     """Cloud class which has the central boolean."""

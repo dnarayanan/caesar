@@ -1,10 +1,10 @@
 import os
 import h5py
 import numpy as np
-
-from yt.extern import six
+import pdb
+import six
 from yt.units.yt_array import YTQuantity, YTArray
-
+from yt import mylog
 blacklist = [
     'G', 'initial_mass',
     'valid', 'vel_conversion',
@@ -93,19 +93,24 @@ def serialize_attributes(obj_list, hd, hd_dicts):
             _write_attrib(obj_list, k, v, hd)
 
 def _write_attrib(obj_list, k, v, hd):
+    #print('obj_list: ',dir(obj_list))
+    #print('k: ',k)
+    #print('v: ', v)
+    
     unit = False
     if isinstance(v, YTQuantity):
         data = [getattr(i,k).d for i in obj_list]
         unit = True
     elif isinstance(v, YTArray):
         if np.shape(v)[0] == 3:
-            data = np.vstack((getattr(i,k).d for i in obj_list))
+            data = np.vstack([getattr(i,k).d for i in obj_list])
         else:
             data = [getattr(i,k).d for i in obj_list]
         unit = True
-    elif isinstance(v, np.ndarray) and np.shape(v)[0] == 3 and k is not 'bhlist' and k is not '_Group__glist':
+    elif isinstance(v, np.ndarray) and np.shape(v)[0] == 3 and 'list' not in k:
         try:
-            data = np.vstack((getattr(i,k) for i in obj_list))
+            print('obj_list: ',obj_list)
+            data = np.vstack([getattr(i,k) for i in obj_list])
         except:
             mylog.warning('Saver unable to stack: %s %s %s',k,v,np.shape(v))
             return

@@ -6,7 +6,7 @@ from caesar.property_manager import ptype_ints
 from caesar.utils import calculate_local_densities
 from caesar.fof6d import *
 
-from yt.extern import six
+import six
 from yt.funcs import mylog
 from yt.extern.tqdm import tqdm
 from yt.units.yt_array import uconcatenate, YTArray
@@ -334,7 +334,7 @@ def get_mean_interparticle_separation(obj):
     """
     #if its an idealized simulation, then there's no cosmology and we just take z=0 Planck15 values
     if obj.yt_dataset.cosmological_simulation == 0:
-        from astropy import Planck15
+        from astropy.cosmology import Planck15
         Om = Planck15.Om0
         Ob = Planck15.Ob0
     else:
