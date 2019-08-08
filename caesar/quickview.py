@@ -130,6 +130,7 @@ class Halo:
 
     def _init_galaxies(self):
         self._galaxies = []
+        self._satellite_galaxies = []
         for galaxy_index in self.galaxy_index_list:
             galaxy = self.obj.galaxies[galaxy_index]
             self._galaxies.append(galaxy)
