@@ -58,12 +58,19 @@ def run():
     
     if caesar_file:
         if args.quick:
-            from .quickview import quickview
-            quickview(args.input)
+            open_caesar_file_quick(args.input)
         else:
             open_caesar_file(args.input, load_limit=args.load_limit)
     else:
         run_caesar(args.input, var_dict)
+
+
+def open_caesar_file_quick(infile):
+    import IPython
+    from .quick_loader import quick_load
+    obj = quick_load(infile)
+
+    IPython.embed(header="CAESAR file loaded into the 'obj' variable")
 
         
 def open_caesar_file(infile, load_limit=None):

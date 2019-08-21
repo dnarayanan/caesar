@@ -6,6 +6,7 @@ from yt.units.yt_array import YTQuantity, YTArray, UnitRegistry
 from yt.funcs import mylog
 from caesar.utils import info_printer
 from caesar.simulation_attributes import SimulationAttributes
+from caesar.group import Group
 import IPython
 
 
@@ -168,6 +169,15 @@ class Halo:
         raise AttributeError("'{}' object as no attribute '{}'".format(
             self.__class__.__name__, attr))
 
+    def info(self):
+        from pprint import pprint
+        from caesar.group import info_blacklist
+        pdict = {}
+        for k in dir(self):
+            if k not in info_blacklist:
+                pdict[k] = getattr(self, k)
+        pprint(pdict)
+
 
 class Galaxy:
     def __init__(self, obj, index):
@@ -177,7 +187,7 @@ class Galaxy:
 
     def __dir__(self):
         return list(self.obj.galaxy_data) + list(
-            self.obj.galaxy_dicts) + ['glist', 'slist', 'dmlist', 'bhlist']
+            self.obj.galaxy_dicts) + ['glist', 'slist', 'bhlist']
 
     @property
     def glist(self):
@@ -206,8 +216,16 @@ class Galaxy:
         raise AttributeError("'{}' object as no attribute '{}'".format(
             self.__class__.__name__, attr))
 
+    def info(self):
+        from pprint import pprint
+        from caesar.group import info_blacklist
+        pdict = {}
+        for k in dir(self):
+            if k not in info_blacklist:
+                pdict[k] = getattr(self, k)
+        pprint(pdict)
 
-def quickview(filename):
-    obj = CAESAR(filename)
-    IPython.embed(header="CAESAR file loaded into the 'obj' variable")
+
+def quick_load(filename):
+    return CAESAR(filename)
 
