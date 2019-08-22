@@ -35,6 +35,11 @@ class CAESAR:
             else:
                 self.halo_bhlist = None
 
+            if 'dlist' in hd['halo_data/lists']:
+                self.halo_dlist = hd['halo_data/lists/dlist'][:]
+            else:
+                self.halo_dlist = None
+
             self.galaxy_slist = hd['galaxy_data/lists/slist'][:]
             self.galaxy_glist = hd['galaxy_data/lists/glist'][:]
 
@@ -42,6 +47,11 @@ class CAESAR:
                 self.galaxy_bhlist = hd['galaxy_data/lists/bhlist'][:]
             else:
                 self.galaxy_bhlist = None
+
+            if 'dlist' in hd['galaxy_data/lists']:
+                self.galaxy_dlist = hd['galaxy_data/lists/dlist'][:]
+            else:
+                self.galaxy_dlist = None
 
             self.galaxy_index_list = hd['halo_data/lists/galaxy_index_list'][:]
 
@@ -136,8 +146,11 @@ class Halo:
     def bhlist(self):
         if self.obj.galaxy_bhlist is not None:
             return self.obj.galaxy_bhlist[self.bhlist_start:self.bhlist_end]
-        else:
-            return None
+
+    @property
+    def dlist(self):
+        if self.obj.galaxy_dlist is not None:
+            return self.obj.galaxy_dlist[self.dlist_start:self.dlist_end]
 
     @property
     def galaxy_index_list(self):
@@ -206,6 +219,8 @@ class Galaxy:
             self.obj.galaxy_dicts) + ['glist', 'slist']
         if self.obj.galaxy_bhlist is not None:
             items.append('bhlist')
+        if self.obj.galaxy_dlist is not None:
+            items.append('dlist')
         return items
 
     @property
@@ -220,8 +235,11 @@ class Galaxy:
     def bhlist(self):
         if self.obj.galaxy_bhlist is not None:
             return self.obj.galaxy_bhlist[self.bhlist_start:self.bhlist_end]
-        else:
-            return None
+
+    @property
+    def dlist(self):
+        if self.obj.galaxy_dlist is not None:
+            return self.obj.galaxy_dlist[self.dlist_start:self.dlist_end]
 
     @functools.lru_cache(maxsize=None)
     def __getattr__(self, attr):
