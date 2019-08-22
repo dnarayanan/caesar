@@ -25,25 +25,30 @@ class CAESAR:
             self.simulation._unpack(self, hd)
 
             # Load the particle index lists; this is the most expensive stage by a lot
+            mylog.info('Loading global lists')
             self.halo_dmlist = hd['halo_data/lists/dmlist'][:]
             self.halo_slist = hd['halo_data/lists/slist'][:]
             self.halo_glist = hd['halo_data/lists/glist'][:]
 
             if 'bhlist' in hd['halo_data/lists']:
                 self.halo_bhlist = hd['halo_data/lists/bhlist'][:]
+            else:
+                self.halo_bhlist = None
 
             self.galaxy_slist = hd['galaxy_data/lists/slist'][:]
             self.galaxy_glist = hd['galaxy_data/lists/glist'][:]
 
             if 'bhlist' in hd['galaxy_data/lists']:
                 self.galaxy_bhlist = hd['galaxy_data/lists/bhlist'][:]
+            else:
+                self.galaxy_bhlist = None
 
             self.galaxy_index_list = hd['halo_data/lists/galaxy_index_list'][:]
 
-            mylog.info('Restoring halo attributes')
+            mylog.info('Loading halos')
             self.halo_data = {}
             for k, v in hd['halo_data'].items():
-                if type(v) == h5py.Dataset:
+                if type(v) is h5py.Dataset:
                     if 'unit' in v.attrs:
                         self.halo_data[k] = YTArray(
                             v[:], v.attrs['unit'], registry=self.unit_registry)
@@ -62,11 +67,12 @@ class CAESAR:
                     self.halo_dicts[dictname][arrname] = v[:]
 
             self.halos = [Halo(self, i) for i in range(hd.attrs['nhalos'])]
+            mylog.info('Loaded {} halos'.format(len(self.halos)))
 
-            mylog.info('Restoring galaxy attributes')
+            mylog.info('Loading galaxies')
             self.galaxy_data = {}
             for k, v in hd['galaxy_data'].items():
-                if type(v) == h5py.Dataset:
+                if type(v) is h5py.Dataset:
                     if 'unit' in v.attrs:
                         self.galaxy_data[k] = YTArray(
                             v[:], v.attrs['unit'], registry=self.unit_registry)
@@ -87,8 +93,8 @@ class CAESAR:
             self.galaxies = [
                 Galaxy(self, i) for i in range(hd.attrs['ngalaxies'])
             ]
+            mylog.info('Loaded {} galaxies'.format(len(self.galaxies)))
 
-            self._has_galaxies = True
 
     def galinfo(self, top=10):
         info_printer(self, 'galaxy', top)
@@ -98,6 +104,8 @@ class CAESAR:
 
 
 class Halo:
+    __slots__ = ['obj', '_index', '_galaxies', '_satellite_galaxies', '_central_galaxy']
+
     def __init__(self, obj, index):
         self.obj = obj
         self._index = index
@@ -106,8 +114,11 @@ class Halo:
         self._central_galaxy = None
 
     def __dir__(self):
-        return list(self.obj.halo_data) + list(
-            self.obj.halo_dicts) + ['glist', 'slist', 'dmlist', 'bhlist']
+        items = list(self.obj.halo_data) + list(
+            self.obj.halo_dicts) + ['glist', 'slist', 'dmlist']
+        if self.obj.halo_bhlist is not None:
+            items.append('bhlist')
+        return items
 
     @property
     def glist(self):
@@ -123,7 +134,10 @@ class Halo:
 
     @property
     def bhlist(self):
-        return self.obj.halo_bhlist[self.bhlist_start:self.bhlist_end]
+        if self.obj.galaxy_bhlist is not None:
+            return self.obj.galaxy_bhlist[self.bhlist_start:self.bhlist_end]
+        else:
+            return None
 
     @property
     def galaxy_index_list(self):
@@ -180,6 +194,8 @@ class Halo:
 
 
 class Galaxy:
+    __slots__ = ['obj', '_index', 'halo']
+
     def __init__(self, obj, index):
         self.obj = obj
         self._index = index
@@ -187,7 +203,10 @@ class Galaxy:
 
     def __dir__(self):
         return list(self.obj.galaxy_data) + list(
-            self.obj.galaxy_dicts) + ['glist', 'slist', 'bhlist']
+            self.obj.galaxy_dicts) + ['glist', 'slist']
+        if self.obj.galaxy_bhlist is not None:
+            items.append('bhlist')
+        return items
 
     @property
     def glist(self):
@@ -198,12 +217,11 @@ class Galaxy:
         return self.obj.galaxy_slist[self.slist_start:self.slist_end]
 
     @property
-    def dmlist(self):
-        return self.obj.galaxy_dmlist[self.dmlist_start:self.dmlist_end]
-
-    @property
     def bhlist(self):
-        return self.obj.galaxy_bhlist[self.bhlist_start:self.bhlist_end]
+        if self.obj.galaxy_bhlist is not None:
+            return self.obj.galaxy_bhlist[self.bhlist_start:self.bhlist_end]
+        else:
+            return None
 
     @functools.lru_cache(maxsize=None)
     def __getattr__(self, attr):
