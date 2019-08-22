@@ -142,6 +142,18 @@ class Group(object):
                 self._calculate_star_quantities()
                 if self.obj.data_manager.blackholes:
                     self._calculate_bh_quantities()
+
+                # TODO: These are masses but virial. Unsure where to put them, for now here is good enough.
+                # Kitayama & Suto 1996 v.469, p.480
+                virial_density = (177.65287921960845*(1. + 0.4093*(1./self.obj.simulation.Om_z - 1.)**0.9052) - 1.)*self.obj.simulation.Om_z
+                PiFac = 4./3. * np.pi
+                critical_density = self.obj.simulation.critical_density
+                self.masses['virial'] = virial_density*critical_density * PiFac*self.radii['virial']**3
+                self.masses['m200c'] = 200.*critical_density * PiFac*self.radii['r200c']**3
+                self.masses['m500c'] = 500.*critical_density * PiFac*self.radii['r500c']**3
+                self.masses['m2500c'] = 2500.*critical_density * PiFac*self.radii['r2500c']**3
+                for k in self.masses:
+                    self.masses[k] = self.masses[k].to(self.obj.units['mass'])
             
         self._cleanup()
 

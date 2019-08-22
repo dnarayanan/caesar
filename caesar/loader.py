@@ -239,17 +239,6 @@ def load(filename, ds = None, obj = None, load_limit = None, LoadHalo=1):
         restore_object_dicts(obj.halos, hd, obj.unit_registry)
         restore_object_list(obj.halos, 'galaxy_index_list', hd)
 
-        if LoadHalo==1:
-            #Compute the virial/200/500/2500 masses
-            if hasattr(obj.simulation, 'Densities'):
-                PiFac = 4./3.*np.pi
-                h = obj.halos[0]
-                for h in obj.halos:
-                    h.masses['virial'] = obj.simulation.Densities[0]*PiFac*(h.radii['virial']*h.radii['virial']*h.radii['virial'])
-                    h.masses['m200c'] = (obj.simulation.Densities[1]*PiFac*(h.radii['r200c']*h.radii['r200c']*h.radii['r200c'])).to('Msun')
-                    h.masses['m500c'] = (obj.simulation.Densities[2]*PiFac*(h.radii['r500c']*h.radii['r500c']*h.radii['r500c'])).to('Msun')
-                    h.masses['m2500c'] = (obj.simulation.Densities[3]*PiFac*(h.radii['r2500c']*h.radii['r2500c']*h.radii['r2500c'])).to('Msun')
-
         # optional
         for vals in ['dmlist', 'glist', 'slist', 'bhlist','dlist']:
             restore_object_list(obj.halos, vals, hd)
