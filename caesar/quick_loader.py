@@ -1,13 +1,14 @@
 import os.path
+import functools
+from pprint import pprint
 
 import h5py
-import numpy as np
-from yt.units.yt_array import YTQuantity, YTArray, UnitRegistry
+from yt.units.yt_array import YTArray, UnitRegistry
 from yt.funcs import mylog
+
 from caesar.utils import info_printer
 from caesar.simulation_attributes import SimulationAttributes
-from caesar.group import Group
-import IPython
+from caesar.group import info_blacklist
 
 
 class CAESAR:
@@ -158,6 +159,7 @@ class Halo:
             self._init_galaxies()
         return self._satellite_galaxies
 
+    @functools.lru_cache(maxsize=None)
     def __getattr__(self, attr):
         if attr in self.obj.halo_data:
             return self.obj.halo_data[attr][self._index]
@@ -170,8 +172,6 @@ class Halo:
             self.__class__.__name__, attr))
 
     def info(self):
-        from pprint import pprint
-        from caesar.group import info_blacklist
         pdict = {}
         for k in dir(self):
             if k not in info_blacklist:
@@ -205,6 +205,7 @@ class Galaxy:
     def bhlist(self):
         return self.obj.galaxy_bhlist[self.bhlist_start:self.bhlist_end]
 
+    @functools.lru_cache(maxsize=None)
     def __getattr__(self, attr):
         if attr in self.obj.galaxy_data:
             return self.obj.galaxy_data[attr][self._index]
@@ -217,8 +218,6 @@ class Galaxy:
             self.__class__.__name__, attr))
 
     def info(self):
-        from pprint import pprint
-        from caesar.group import info_blacklist
         pdict = {}
         for k in dir(self):
             if k not in info_blacklist:
@@ -228,4 +227,3 @@ class Galaxy:
 
 def quick_load(filename):
     return CAESAR(filename)
-
