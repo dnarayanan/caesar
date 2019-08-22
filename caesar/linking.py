@@ -2,7 +2,7 @@ import numpy as np
 
 from yt.funcs import mylog
 
-def link_galaxies_and_halos(obj, load_limit=None):
+def link_galaxies_and_halos(obj):
     """Link galaxies and halos to one another.
 
     This function creates the links between galaxy-->halo and
@@ -24,24 +24,18 @@ def link_galaxies_and_halos(obj, load_limit=None):
     for halo in obj.halos:
         halo.galaxies = []
         for galaxy_index in halo.galaxy_index_list:
-            # If doing a partial load, bounds check agains the load limit
-            if load_limit is not None and galaxy_index >= load_limit:
-                continue
             halo.galaxies.append(obj.galaxies[galaxy_index])
     
     # galaxies
     for galaxy in obj.galaxies:
         if galaxy.parent_halo_index > -1:
-            # If doing a partial load, bounds check agains the load limit
-            if load_limit is not None and galaxy.parent_halo_index >= load_limit:
-                continue
             galaxy.halo = obj.halos[galaxy.parent_halo_index]
         else:
             galaxy.halo = None
 
 
 
-def link_clouds_and_galaxies(obj, load_limit=None):
+def link_clouds_and_galaxies(obj):
     """Link clouds and galaxies to one another.
     
     This function creates the links between cloud-->galaxy and
@@ -64,16 +58,10 @@ def link_clouds_and_galaxies(obj, load_limit=None):
     for galaxy in obj.galaxies:
         galaxy.clouds = []
         for cloud_index in galaxy.cloud_index_list:
-            # If doing a partial load, bounds check agains the load limit
-            if load_limit is not None and cloud_index >= load_limit:
-                continue
             galaxy.clouds.append(obj.clouds[cloud_index])
     
     for cloud in obj.clouds:
         if cloud.parent_galaxy_index > -1:
-            # If doing a partial load, bounds check agains the load limit
-            if load_limit is not None and cloud.parent_galaxy_index >= load_limit:
-                continue
             cloud.galaxy = obj.galaxies[cloud.parent_galaxy_index]
         else:
             cloud.galaxy = None

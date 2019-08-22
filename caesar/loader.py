@@ -181,7 +181,7 @@ def restore_object_attributes(obj_list, hd, unit_reg):
 
 ######################################################################
 
-def load(filename, ds = None, obj = None, load_limit = None, LoadHalo=1):
+def load(filename, ds = None, obj = None, LoadHalo=1):
     """Function to load a CAESAR object from disk.
 
     Parameters
@@ -229,12 +229,8 @@ def load(filename, ds = None, obj = None, load_limit = None, LoadHalo=1):
         mylog.info('Restoring halo attributes')
         hd = infile['halo_data']
         obj.halos = []
-        if load_limit is None:
-            for i in range(0, obj.nhalos):
-                obj.halos.append(Halo(obj))
-        else:
-            for i in range(0, min(load_limit, obj.nhalos)):
-                obj.halos.append(Halo(obj))
+        for i in range(0, obj.nhalos):
+            obj.halos.append(Halo(obj))
         restore_object_attributes(obj.halos, hd, obj.unit_registry)
         restore_object_dicts(obj.halos, hd, obj.unit_registry)
         restore_object_list(obj.halos, 'galaxy_index_list', hd)
@@ -248,12 +244,8 @@ def load(filename, ds = None, obj = None, load_limit = None, LoadHalo=1):
         mylog.info('Restoring galaxy attributes')
         hd = infile['galaxy_data']
         obj.galaxies = []
-        if load_limit is None:
-            for i in range(0, obj.ngalaxies):
-                obj.galaxies.append(Galaxy(obj))
-        else:
-            for i in range(0, min(load_limit, obj.ngalaxies)):
-                obj.galaxies.append(Galaxy(obj))
+        for i in range(0, obj.ngalaxies):
+            obj.galaxies.append(Galaxy(obj))
 
         restore_object_attributes(obj.galaxies, hd, obj.unit_registry)
         restore_object_dicts(obj.galaxies, hd, obj.unit_registry)
@@ -269,12 +261,8 @@ def load(filename, ds = None, obj = None, load_limit = None, LoadHalo=1):
         mylog.info('Restoring cloud attributes')
         hd = infile['cloud_data']
         obj.clouds = []
-        if load_limit is None:
-            for i in range(0, obj.nclouds):
-                obj.clouds.append(Cloud(obj))
-        else:
-            for i in range(0, min(load_limit, obj.nclouds)):
-                obj.clouds.append(Cloud(obj))
+        for i in range(0, obj.nclouds):
+            obj.clouds.append(Cloud(obj))
 
         restore_object_attributes(obj.clouds, hd, obj.unit_registry)
         restore_object_dicts(obj.clouds, hd, obj.unit_registry)
@@ -286,7 +274,7 @@ def load(filename, ds = None, obj = None, load_limit = None, LoadHalo=1):
     infile.close()
 
     if LoadHalo:
-        obj._link_objects(load_limit=load_limit)
+        obj._link_objects()
 
     if ds is not None:
         obj.yt_dataset = ds
