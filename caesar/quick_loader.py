@@ -1,6 +1,7 @@
 import os.path
 import functools
 from pprint import pprint
+from collections import defaultdict
 
 import h5py
 from yt.units.yt_array import YTArray, UnitRegistry
@@ -65,12 +66,10 @@ class CAESAR:
                     else:
                         self.halo_data[k] = v[:]
 
-            self.halo_dicts = {}
+            self.halo_dicts = defaultdict(dict)
             for k, v in hd['halo_data/dicts'].items():
+                dictname, arrname = k.split('.')
                 if 'unit' in v.attrs:
-                    dictname, arrname = k.split('.')
-                    if dictname not in self.halo_dicts:
-                        self.halo_dicts[dictname] = {}
                     self.halo_dicts[dictname][arrname] = YTArray(
                         v[:], v.attrs['unit'], registry=self.unit_registry)
                 else:
@@ -89,12 +88,10 @@ class CAESAR:
                     else:
                         self.galaxy_data[k] = v[:]
 
-            self.galaxy_dicts = {}
+            self.galaxy_dicts = defaultdict(dict)
             for k, v in hd['galaxy_data/dicts'].items():
+                dictname, arrname = k.split('.')
                 if 'unit' in v.attrs:
-                    dictname, arrname = k.split('.')
-                    if dictname not in self.galaxy_dicts:
-                        self.galaxy_dicts[dictname] = {}
                     self.galaxy_dicts[dictname][arrname] = YTArray(
                         v[:], v.attrs['unit'], registry=self.unit_registry)
                 else:
@@ -105,7 +102,6 @@ class CAESAR:
             ]
             mylog.info('Loaded {} galaxies'.format(len(self.galaxies)))
 
-
     def galinfo(self, top=10):
         info_printer(self, 'galaxy', top)
 
@@ -114,7 +110,9 @@ class CAESAR:
 
 
 class Halo:
-    __slots__ = ['obj', '_index', '_galaxies', '_satellite_galaxies', '_central_galaxy']
+    __slots__ = [
+        'obj', '_index', '_galaxies', '_satellite_galaxies', '_central_galaxy'
+    ]
 
     def __init__(self, obj, index):
         self.obj = obj
@@ -144,13 +142,13 @@ class Halo:
 
     @property
     def bhlist(self):
-        if self.obj.galaxy_bhlist is not None:
-            return self.obj.galaxy_bhlist[self.bhlist_start:self.bhlist_end]
+        if self.obj.halo_bhlist is not None:
+            return self.obj.halo_bhlist[self.bhlist_start:self.bhlist_end]
 
     @property
     def dlist(self):
-        if self.obj.galaxy_dlist is not None:
-            return self.obj.galaxy_dlist[self.dlist_start:self.dlist_end]
+        if self.obj.halo_dlist is not None:
+            return self.obj.halo_dlist[self.dlist_start:self.dlist_end]
 
     @property
     def galaxy_index_list(self):
@@ -215,7 +213,7 @@ class Galaxy:
         self.halo = obj.halos[self.parent_halo_index]
 
     def __dir__(self):
-        return list(self.obj.galaxy_data) + list(
+        items = list(self.obj.galaxy_data) + list(
             self.obj.galaxy_dicts) + ['glist', 'slist']
         if self.obj.galaxy_bhlist is not None:
             items.append('bhlist')
