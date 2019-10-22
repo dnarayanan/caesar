@@ -15,7 +15,7 @@ import time
 import sys
 import os
 import pdb
-from glob2 import glob
+from glob import glob
 
 
 #===============================================
