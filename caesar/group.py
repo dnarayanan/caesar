@@ -153,7 +153,10 @@ class Group(object):
                 self.masses['m500c'] = 500.*critical_density * PiFac*self.radii['r500c']**3
                 self.masses['m2500c'] = 2500.*critical_density * PiFac*self.radii['r2500c']**3
                 for k in self.masses:
-                    self.masses[k] = self.masses[k].to(self.obj.units['mass'])
+                    if isinstance(self.masses[k], float):
+                        self.masses[k] = self.obj.yt_dataset.quan(self.masses[k], self.obj.units['mass'])
+                    else:
+                        self.masses[k] = self.masses[k].to(self.obj.units['mass'])
             
         self._cleanup()
 
