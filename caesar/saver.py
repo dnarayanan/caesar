@@ -188,14 +188,6 @@ def save(obj, filename='test.hdf5'):
     """
     from yt.funcs import mylog
 
-    try:
-        from caesar.__hg_version__ import hg_version
-    except:
-        hg_version = None
-
-    if hg_version is None:
-        hg_version = 'Unknown'
-        
     if os.path.isfile(filename):
         mylog.warning('%s already present, overwriting!' % filename)
         os.remove(filename)

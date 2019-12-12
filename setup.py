@@ -9,22 +9,6 @@ import sys
 sys.path.insert(0,'caesar')
 from __version__ import VERSION
 
-def get_mercurial_changeset_id(target_dir):
-    '''
-    Returns changeset and branch using hglib
-    '''
-    try:
-        import hglib
-    except ImportError:
-        return None
-    try:
-        with hglib.open(target_dir) as repo:
-            changeset = repo.identify(
-                id=True, branch=True).strip().decode('utf8')
-    except hglib.error.ServerError:
-        return None
-    return changeset
-
 class build_py(_build_py):
     def run(self):
         _build_py.run(self)        
@@ -40,15 +24,6 @@ class build_ext(_build_ext):
         import numpy
         self.include_dirs.append(numpy.get_include())
 
-        # write out __hg_version__ file
-        if not hasattr(self, 'hgid'):
-            src_dir    = os.getcwd()
-            target_dir = os.path.join(src_dir, 'caesar')
-            changeset  = get_mercurial_changeset_id(src_dir)
-            with open(os.path.join(target_dir, '__hg_version__.py'), 'w') as f:
-                f.write("hg_version = '%s'\n" % changeset)
-            self.hgid = changeset
-            
 class sdist(_sdist):
     # subclass setuptools source distribution builder to ensure cython
     # generated C files are included in source distribution.
@@ -69,12 +44,11 @@ cython_extensions = [
 setup(
     name='caesar',
     version=VERSION,
-    description='Caesar does cool stuff.',
-    url='https://bitbucket.org/rthompson/caesar',
+    description='CAESAR is a python library for analyzing the outputs from cosmological simulations.',
+    url='https://github.com/dnarayanan/caesar',
     author='Robert Thompson',
     author_email='rthompsonj@gmail.com',
     license='not sure',
-
     classifiers=[],
     keywords='',
     entry_points={
