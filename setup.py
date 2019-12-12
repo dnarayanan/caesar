@@ -44,12 +44,11 @@ cython_extensions = [
 setup(
     name='caesar',
     version=VERSION,
-    description='Caesar does cool stuff.',
-    url='https://bitbucket.org/rthompson/caesar',
+    description='CAESAR is a python library for analyzing the outputs from cosmological simulations.',
+    url='https://github.com/dnarayanan/caesar',
     author='Robert Thompson',
     author_email='rthompsonj@gmail.com',
     license='not sure',
-
     classifiers=[],
     keywords='',
     entry_points={

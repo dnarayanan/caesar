@@ -5,7 +5,7 @@
 CAESAR
 ======
 
-CAESAR is a python framework for analyzing the outputs from
+CAESAR is a python library for analyzing the outputs from
 cosmological simulations.  The general idea is to identify halos and
 galaxies within the simulation, then store information about
 them in an intuitive, portable, and easy to access manner.  CAESAR
