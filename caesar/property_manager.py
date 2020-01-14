@@ -215,8 +215,8 @@ class DatasetType(object):
         if not self.has_ptype(requested_ptype):
             raise NotImplementedError('ptype %s not found!' % requested_ptype)
         if not self.has_property(requested_ptype, requested_prop):
-            if requested_prop == 'haloid': sys.stdout.write('--------> Set fof_from_snap=0\n')
-            raise NotImplementedError('prop %s not found for %s!' % (requested_prop, requested_ptype))
+            if requested_prop == 'haloid': raise NotImplementedError('prop %s not found for %s! set fof_from_snap=0' % (requested_prop, requested_ptype))
+            else: raise NotImplementedError('prop %s not found for %s!' % (requested_prop, requested_ptype))
 
         ptype = self.get_ptype_name(requested_ptype)
         prop  = self.get_property_name(requested_ptype, requested_prop)
