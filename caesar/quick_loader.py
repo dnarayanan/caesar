@@ -1,6 +1,4 @@
-# TODO:
 # Implement vtk_vis?
-# Implement write_IC_mask?
 
 import os.path
 import functools
@@ -27,7 +25,7 @@ class LazyProperty:
     '''
     def __init__(self, h5_path, name):
         self.name = name
-        self.inner_name = '_' + self.name
+        self.inner_name = '_' + self.name + '_data'
         self.h5_path = h5_path
 
     def __get__(self, instance, owner):
@@ -65,17 +63,18 @@ class LazyList:
 
 
 class CAESAR:
-    halo_dmlist = LazyProperty('halo_data/lists/dmlist', 'halo_dmlist')
-    halo_slist = LazyProperty('halo_data/lists/slist', 'halo_slist')
-    halo_glist = LazyProperty('halo_data/lists/glist', 'halo_glist')
-    halo_bhlist = LazyProperty('halo_data/lists/bhlist', 'halo_bhlist')
-    halo_dlist = LazyProperty('halo_data/lists/dlist', 'halo_dlist')
+    _halo_dmlist = LazyProperty('halo_data/lists/dmlist', 'halo_dmlist')
+    _halo_slist = LazyProperty('halo_data/lists/slist', 'halo_slist')
+    _halo_glist = LazyProperty('halo_data/lists/glist', 'halo_glist')
+    _halo_bhlist = LazyProperty('halo_data/lists/bhlist', 'halo_bhlist')
+    _halo_dlist = LazyProperty('halo_data/lists/dlist', 'halo_dlist')
 
-    galaxy_dmlist = LazyProperty('galaxy_data/lists/dmlist', 'galaxy_dmlist')
-    galaxy_slist = LazyProperty('galaxy_data/lists/slist', 'galaxy_slist')
-    galaxy_glist = LazyProperty('galaxy_data/lists/glist', 'galaxy_glist')
-    galaxy_bhlist = LazyProperty('galaxy_data/lists/bhlist', 'galaxy_bhlist')
-    galaxy_dlist = LazyProperty('galaxy_data/lists/dlist', 'galaxy_dlist')
+    _galaxy_slist = LazyProperty('galaxy_data/lists/slist', 'galaxy_slist')
+    _galaxy_glist = LazyProperty('galaxy_data/lists/glist', 'galaxy_glist')
+    _galaxy_bhlist = LazyProperty('galaxy_data/lists/bhlist', 'galaxy_bhlist')
+    _galaxy_dlist = LazyProperty('galaxy_data/lists/dlist', 'galaxy_dlist')
+
+    _cloud_glist = LazyProperty('cloud_data/lists/glist', 'cloud_glist')
 
     def __init__(self, filename):
         self._ds = None
@@ -84,6 +83,7 @@ class CAESAR:
             mylog.info('Reading {}'.format(filename))
 
             self.hash = hd.attrs['hash']
+            self.caesar = hd.attrs['caesar']
 
             self.unit_registry = UnitRegistry.from_json(
                 hd.attrs['unit_registry_json'].decode('utf8'))
@@ -92,51 +92,53 @@ class CAESAR:
             self.simulation = SimulationAttributes()
             self.simulation._unpack(self, hd)
 
-            self.galaxy_index_list = hd['halo_data/lists/galaxy_index_list'][:]
+            self._galaxy_index_list = hd[
+                'halo_data/lists/galaxy_index_list'][:]
 
             mylog.info('Loading halos')
-            self.halo_data = {}
+            self._halo_data = {}
             for k, v in hd['halo_data'].items():
                 if type(v) is h5py.Dataset:
                     if 'unit' in v.attrs:
-                        self.halo_data[k] = YTArray(
+                        self._halo_data[k] = YTArray(
                             v[:], v.attrs['unit'], registry=self.unit_registry)
                     else:
-                        self.halo_data[k] = v[:]
+                        self._halo_data[k] = v[:]
 
-            self.halo_dicts = defaultdict(dict)
+            self._halo_dicts = defaultdict(dict)
             for k, v in hd['halo_data/dicts'].items():
                 dictname, arrname = k.split('.')
                 if 'unit' in v.attrs:
-                    self.halo_dicts[dictname][arrname] = YTArray(
+                    self._halo_dicts[dictname][arrname] = YTArray(
                         v[:], v.attrs['unit'], registry=self.unit_registry)
                 else:
-                    self.halo_dicts[dictname][arrname] = v[:]
+                    self._halo_dicts[dictname][arrname] = v[:]
 
-            self.halos = LazyList(hd.attrs['nhalos'], lambda i: Halo(self, i))
+            self.nhalos = hd.attrs['nhalos']
+            self.halos = LazyList(self.nhalos, lambda i: Halo(self, i))
             mylog.info('Loaded {} halos'.format(len(self.halos)))
 
             mylog.info('Loading galaxies')
-            self.galaxy_data = {}
+            self._galaxy_data = {}
             for k, v in hd['galaxy_data'].items():
                 if type(v) is h5py.Dataset:
                     if 'unit' in v.attrs:
-                        self.galaxy_data[k] = YTArray(
+                        self._galaxy_data[k] = YTArray(
                             v[:], v.attrs['unit'], registry=self.unit_registry)
                     else:
-                        self.galaxy_data[k] = v[:]
+                        self._galaxy_data[k] = v[:]
 
-            self.galaxy_dicts = defaultdict(dict)
+            self._galaxy_dicts = defaultdict(dict)
             for k, v in hd['galaxy_data/dicts'].items():
                 dictname, arrname = k.split('.')
                 if 'unit' in v.attrs:
-                    self.galaxy_dicts[dictname][arrname] = YTArray(
+                    self._galaxy_dicts[dictname][arrname] = YTArray(
                         v[:], v.attrs['unit'], registry=self.unit_registry)
                 else:
-                    self.galaxy_dicts[dictname][arrname] = v[:]
+                    self._galaxy_dicts[dictname][arrname] = v[:]
 
-            self.galaxies = LazyList(hd.attrs['ngalaxies'],
-                                     lambda i: Galaxy(self, i))
+            self.ngalaxies = hd.attrs['ngalaxies']
+            self.galaxies = LazyList(self.ngalaxies, lambda i: Galaxy(self, i))
             mylog.info('Loaded {} galaxies'.format(len(self.galaxies)))
 
     @property
@@ -170,14 +172,43 @@ class CAESAR:
         self._ds = value
         self._ds_type = DatasetType(self._ds)
 
+    @property
+    def central_galaxies(self):
+        return [h.central_galaxy for h in self.halos]
+
+    @property
+    def satellite_galaxies(self):
+        galaxies = []
+        for h in self.halos:
+            galaxies.extend(h.satellite_galaxies)
+
     def galinfo(self, top=10):
         info_printer(self, 'galaxy', top)
 
     def haloinfo(self, top=10):
         info_printer(self, 'halo', top)
 
+    def cloudinfo(self, top=10):
+        info_printer(self, 'cloud', top)
+
 
 class Group:
+    @property
+    def metallicity(self):
+        return self.metallicities['mass_weighted']
+
+    @property
+    def mass(self):
+        return self.masses['total']
+
+    @property
+    def radius(self):
+        return self.radii['total']
+
+    @property
+    def temperature(self):
+        return self.temperatures['mass_weighted']
+
     def write_IC_mask(self,
                       ic_ds,
                       filename,
@@ -228,8 +259,8 @@ class Group:
         if ncontam > 0:
             mylog.warning('%s has %0.2f%% mass contamination '
                           '(%d LR particles with %0.2e % s)' %
-                          (ID, self.contamination * 100.0, ncontam,
-                           lrmass, halo.masses['total'].units))
+                          (ID, self.contamination * 100.0, ncontam, lrmass,
+                           halo.masses['total'].units))
         else:
             mylog.info('%s has NO contamination!' % ID)
 
@@ -242,19 +273,18 @@ class Halo(Group):
         self._galaxies = None
         self._satellite_galaxies = None
         self._central_galaxy = None
-        self.metallicity = self.metallicities['mass_weighted']
-        self.mass = self.masses['total']
-        self.radius = self.radii['total']
-        self.temperature = self.temperatures['mass_weighted']
-        self.sigma = self.velocity_dispersions['gas']
+
+    @property
+    def sigma(self):
+        return self.velocity_dispersions['dm']
 
     def __dir__(self):
         items = [
             'obj', 'obj_type', 'metallicity', 'mass', 'radius', 'temperature',
             'sigma', 'galaxies', 'central_galaxy', 'satellite_galaxies'
         ]
-        items += list(self.obj.halo_data) + list(
-            self.obj.halo_dicts) + ['glist', 'slist', 'dmlist']
+        items += list(self.obj._halo_data) + list(
+            self.obj._halo_dicts) + ['glist', 'slist', 'dmlist']
         if self.obj.halo_bhlist is not None:
             items.append('bhlist')
         if self.obj.halo_dlist is not None:
@@ -263,35 +293,35 @@ class Halo(Group):
 
     @property
     def glist(self):
-        return self.obj.halo_glist[self.glist_start:self.glist_end]
+        return self.obj._halo_glist[self.glist_start:self.glist_end]
 
     @property
     def slist(self):
-        return self.obj.halo_slist[self.slist_start:self.slist_end]
+        return self.obj._halo_slist[self.slist_start:self.slist_end]
 
     @property
     def dmlist(self):
-        return self.obj.halo_dmlist[self.dmlist_start:self.dmlist_end]
+        return self.obj._halo_dmlist[self.dmlist_start:self.dmlist_end]
 
     @property
     def bhlist(self):
         if self.obj.halo_bhlist is not None:
-            return self.obj.halo_bhlist[self.bhlist_start:self.bhlist_end]
+            return self.obj._halo_bhlist[self.bhlist_start:self.bhlist_end]
 
     @property
     def dlist(self):
         if self.obj.halo_dlist is not None:
-            return self.obj.halo_dlist[self.dlist_start:self.dlist_end]
+            return self.obj._halo_dlist[self.dlist_start:self.dlist_end]
 
     @property
     def galaxy_index_list(self):
-        return self.obj.galaxy_index_list[self.galaxy_index_list_start:self.
-                                          galaxy_index_list_end]
+        return self.obj._galaxy_index_list[self.galaxy_index_list_start:self.
+                                           galaxy_index_list_end]
 
     def _init_galaxies(self):
         self._galaxies = []
         self._satellite_galaxies = []
-        for galaxy_index in self.galaxy_index_list:
+        for galaxy_index in self._galaxy_index_list:
             galaxy = self.obj.galaxies[galaxy_index]
             self._galaxies.append(galaxy)
             if galaxy.central:
@@ -319,12 +349,12 @@ class Halo(Group):
 
     @functools.lru_cache(maxsize=None)
     def __getattr__(self, attr):
-        if attr in self.obj.halo_data:
-            return self.obj.halo_data[attr][self._index]
-        if attr in self.obj.halo_dicts:
+        if attr in self.obj._halo_data:
+            return self.obj._halo_data[attr][self._index]
+        if attr in self.obj._halo_dicts:
             out = {}
-            for d in self.obj.halo_dicts[attr]:
-                out[d] = self.obj.halo_dicts[attr][d][self._index]
+            for d in self.obj._halo_dicts[attr]:
+                out[d] = self.obj._halo_dicts[attr][d][self._index]
             return out
         raise AttributeError("'{}' object as no attribute '{}'".format(
             self.__class__.__name__, attr))
@@ -343,11 +373,10 @@ class Galaxy(Group):
         self.obj = obj
         self._index = index
         self.halo = obj.halos[self.parent_halo_index]
-        self.metallicity = self.metallicities['mass_weighted']
-        self.mass = self.masses['total']
-        self.radius = self.radii['total']
-        self.temperature = self.temperatures['mass_weighted']
-        self.sigma = self.velocity_dispersions['gas']
+
+    @property
+    def sigma(self):
+        return self.velocity_dispersions['stellar']
 
     def __dir__(self):
         items = [
@@ -361,8 +390,8 @@ class Galaxy(Group):
             'sigma',
             'info',
         ]
-        items += list(self.obj.galaxy_data) + list(
-            self.obj.galaxy_dicts) + ['glist', 'slist']
+        items += list(self.obj._galaxy_data) + list(
+            self.obj._galaxy_dicts) + ['glist', 'slist']
         if hasattr(self.obj, '_galaxy_bhlist'):
             items.append('bhlist')
         if hasattr(self.obj, '_galaxy_dlist'):
@@ -371,21 +400,21 @@ class Galaxy(Group):
 
     @property
     def glist(self):
-        return self.obj.galaxy_glist[self.glist_start:self.glist_end]
+        return self.obj._galaxy_glist[self.glist_start:self.glist_end]
 
     @property
     def slist(self):
-        return self.obj.galaxy_slist[self.slist_start:self.slist_end]
+        return self.obj._galaxy_slist[self.slist_start:self.slist_end]
 
     @property
     def bhlist(self):
-        if self.obj.galaxy_bhlist is not None:
-            return self.obj.galaxy_bhlist[self.bhlist_start:self.bhlist_end]
+        if self.obj._galaxy_bhlist is not None:
+            return self.obj._galaxy_bhlist[self.bhlist_start:self.bhlist_end]
 
     @property
     def dlist(self):
-        if self.obj.galaxy_dlist is not None:
-            return self.obj.galaxy_dlist[self.dlist_start:self.dlist_end]
+        if self.obj._galaxy_dlist is not None:
+            return self.obj._galaxy_dlist[self.dlist_start:self.dlist_end]
 
     @property
     def satellites(self):
@@ -395,12 +424,35 @@ class Galaxy(Group):
 
     @functools.lru_cache(maxsize=None)
     def __getattr__(self, attr):
-        if attr in self.obj.galaxy_data:
-            return self.obj.galaxy_data[attr][self._index]
-        if attr in self.obj.galaxy_dicts:
+        if attr in self.obj._galaxy_data:
+            return self.obj._galaxy_data[attr][self._index]
+        if attr in self.obj._galaxy_dicts:
             out = {}
-            for d in self.obj.galaxy_dicts[attr]:
-                out[d] = self.obj.galaxy_dicts[attr][d][self._index]
+            for d in self.obj._galaxy_dicts[attr]:
+                out[d] = self.obj._galaxy_dicts[attr][d][self._index]
+            return out
+        raise AttributeError("'{}' object as no attribute '{}'".format(
+            self.__class__.__name__, attr))
+
+
+class Cloud(Group):
+    def __init__(self, obj, index):
+        self.obj_type = 'cloud'
+        self.obj = obj
+        self._index = index
+
+    @property
+    def sigma(self):
+        return self.velocity_dispersions['gas']
+
+    @functools.lru_cache(maxsize=None)
+    def __getattr__(self, attr):
+        if attr in self.obj._cloud_data:
+            return self.obj._cloud_data[attr][self._index]
+        if attr in self.obj.cloud_dicts:
+            out = {}
+            for d in self.obj.cloud_dicts[attr]:
+                out[d] = self.obj.cloud_dicts[attr][d][self._index]
             return out
         raise AttributeError("'{}' object as no attribute '{}'".format(
             self.__class__.__name__, attr))
