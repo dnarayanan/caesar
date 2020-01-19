@@ -18,7 +18,6 @@ from yt.funcs import mylog, get_hash
 from caesar.property_manager import DatasetType
 from caesar.utils import info_printer
 from caesar.simulation_attributes import SimulationAttributes
-from caesar.group import info_blacklist
 
 
 class LazyArray:
@@ -32,8 +31,10 @@ class LazyArray:
         if self._data is None:
             with h5py.File(self._obj.data_file, 'r') as hd:
                 dataset = hd[self._dataset_path]
-                if 'units' in dataset.attrs:
-                    self._data = YTArray(dataset[:], dataset.attrs['units'], registry=self.obj.unit_registry)
+                if 'unit' in dataset.attrs:
+                    self._data = YTArray(dataset[:],
+                                         dataset.attrs['unit'],
+                                         registry=self._obj.unit_registry)
                 else:
                     self._data = dataset[:]
         return self._data.__getitem__(index)
@@ -79,7 +80,6 @@ class CAESAR:
         self._cloud_glist = LazyArray(self, 'cloud_data/lists/glist')
         self._cloud_dlist = LazyArray(self, 'cloud_data/lists/dlist')
 
-
         with h5py.File(filename, 'r') as hd:
             mylog.info('Reading {}'.format(filename))
 
@@ -96,17 +96,19 @@ class CAESAR:
             mylog.info('Loading halos')
             self._galaxy_index_list = None
             if 'halo_data/lists/galaxy_index_list' in hd:
-                self._galaxy_index_list = LazyArray(self, 'halo_data/lists/galaxy_index_list')
+                self._galaxy_index_list = LazyArray(
+                    self, 'halo_data/lists/galaxy_index_list')
 
             self._halo_data = {}
             for k, v in hd['halo_data'].items():
                 if type(v) is h5py.Dataset:
-                    self._halo_data[k] = LazyArray(self, 'halo_data/'+k)
+                    self._halo_data[k] = LazyArray(self, 'halo_data/' + k)
 
             self._halo_dicts = defaultdict(dict)
             for k in hd['halo_data/dicts']:
                 dictname, arrname = k.split('.')
-                self._halo_dicts[dictname][arrname] = LazyArray(self, 'halo_data/dicts/'+k)
+                self._halo_dicts[dictname][arrname] = LazyArray(
+                    self, 'halo_data/dicts/' + k)
 
             self.nhalos = hd.attrs['nhalos']
             self.halos = LazyList(self.nhalos, lambda i: Halo(self, i))
@@ -118,16 +120,24 @@ class CAESAR:
             self.galaxies = LazyList(self.ngalaxies, lambda i: Galaxy(self, i))
             if 'galaxy_data' in hd:
                 mylog.info('Loading galaxies')
+                self._cloud_index_list = None
+                if 'galaxy_data/lists/cloud_index_list' in hd:
+                    self._cloud_index_list = LazyArray(
+                        self, 'galaxy_data/lists/cloud_index_list')
+
                 for k, v in hd['galaxy_data'].items():
                     if type(v) is h5py.Dataset:
-                        self._galaxy_data[k] = LazyArray(self, 'galaxy_data/'+k)
+                        self._galaxy_data[k] = LazyArray(
+                            self, 'galaxy_data/' + k)
 
                 for k in hd['galaxy_data/dicts']:
                     dictname, arrname = k.split('.')
-                    self._galaxy_dicts[dictname][arrname] = LazyArray(self, 'galaxy_data/dicts/'+k)
+                    self._galaxy_dicts[dictname][arrname] = LazyArray(
+                        self, 'galaxy_data/dicts/' + k)
 
                 self.ngalaxies = hd.attrs['ngalaxies']
-                self.galaxies = LazyList(self.ngalaxies, lambda i: Galaxy(self, i))
+                self.galaxies = LazyList(self.ngalaxies,
+                                         lambda i: Galaxy(self, i))
                 mylog.info('Loaded {} galaxies'.format(len(self.galaxies)))
 
             self._cloud_data = {}
@@ -138,11 +148,13 @@ class CAESAR:
                 mylog.info('Loading clouds')
                 for k, v in hd['cloud_data'].items():
                     if type(v) is h5py.Dataset:
-                        self._cloud_data[k] = LazyArray(self, 'cloud_data/'+k)
+                        self._cloud_data[k] = LazyArray(
+                            self, 'cloud_data/' + k)
 
                 for k in hd['cloud_data/dicts']:
                     dictname, arrname = k.split('.')
-                    self._cloud_dicts[dictname][arrname] = LazyArray(self, 'cloud_data/dicts/'+k)
+                    self._cloud_dicts[dictname][arrname] = LazyArray(
+                        self, 'cloud_data/dicts/' + k)
 
                 self.nclouds = hd.attrs['nclouds']
                 self.clouds = LazyList(self.nclouds, lambda i: Cloud(self, i))
@@ -293,12 +305,12 @@ class Halo(Group):
 
     @property
     def bhlist(self):
-        if self.obj.halo_bhlist is not None:
+        if self.obj._halo_bhlist is not None:
             return self.obj._halo_bhlist[self.bhlist_start:self.bhlist_end]
 
     @property
     def dlist(self):
-        if self.obj.halo_dlist is not None:
+        if self.obj._halo_dlist is not None:
             return self.obj._halo_dlist[self.dlist_start:self.dlist_end]
 
     @property
@@ -354,6 +366,7 @@ class Galaxy(Group):
         self.obj = obj
         self._index = index
         self.halo = obj.halos[self.parent_halo_index]
+        self._clouds = None
 
     def __dir__(self):
         return dir(type(self)) + list(self.__dict__) + list(
@@ -383,6 +396,23 @@ class Galaxy(Group):
             return self.halo.satellite_galaxies
         return []
 
+    @property
+    def cloud_index_list(self):
+        return self.obj._cloud_index_list[self.cloud_index_list_start:self.
+                                          cloud_index_list_end]
+
+    def _init_clouds(self):
+        self._clouds = []
+        for cloud_index in self.cloud_index_list:
+            cloud = self.obj.clouds[cloud_index]
+            self._clouds.append(cloud)
+
+    @property
+    def clouds(self):
+        if self._clouds is None:
+            self._init_clouds()
+        return self._clouds
+
     @functools.lru_cache(maxsize=None)
     def __getattr__(self, attr):
         if attr in self.obj._galaxy_data:
@@ -401,6 +431,8 @@ class Cloud(Group):
         self.obj_type = 'cloud'
         self.obj = obj
         self._index = index
+        self.galaxy = obj.galaxies[self.parent_galaxy_index]
+        self.halo = self.galaxy.halo
 
     def __dir__(self):
         return dir(type(self)) + list(self.__dict__) + list(
