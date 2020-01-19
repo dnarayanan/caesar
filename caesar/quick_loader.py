@@ -1,4 +1,9 @@
-# Implement vtk_vis?
+"""This module is a lazy replacement for caesar.loader
+
+Instead of eagerly constructing every Halo, Galaxy, and Cloud, this module
+provides a class which lazily constructs Groups and their attributes only
+as they are accessed, and caches them using functools.lru_cache.
+"""
 
 import os.path
 import functools
@@ -16,29 +21,22 @@ from caesar.simulation_attributes import SimulationAttributes
 from caesar.group import info_blacklist
 
 
-class LazyProperty:
-    '''An @property with name `name` which wraps an HDF5 object at h5_path
+class LazyArray:
+    """A lazily-loaded HDF5 dataset"""
+    def __init__(self, obj, dataset_path):
+        self._obj = obj
+        self._dataset_path = dataset_path
+        self._data = None
 
-    On first access this will open the HDF5 file using the path stored in
-    self.data_file and stores its contents in an instance variable.
-    Subsequent accesses will return the instance variable.
-    '''
-    def __init__(self, h5_path, name):
-        self.name = name
-        self.inner_name = '_' + self.name + '_data'
-        self.h5_path = h5_path
-
-    def __get__(self, instance, owner):
-        if not hasattr(instance, self.inner_name):
-            with h5py.File(instance.data_file, 'r') as hd:
-                if self.h5_path in hd:
-                    setattr(instance, self.inner_name, hd[self.h5_path][:])
+    def __getitem__(self, index):
+        if self._data is None:
+            with h5py.File(self._obj.data_file, 'r') as hd:
+                dataset = hd[self._dataset_path]
+                if 'units' in dataset.attrs:
+                    self._data = YTArray(dataset[:], dataset.attrs['units'], registry=self.obj.unit_registry)
                 else:
-                    setattr(instance, self.inner_name, None)
-        return getattr(instance, self.inner_name)
-
-    def __set__(self, instance, value):
-        pass
+                    self._data = dataset[:]
+        return self._data.__getitem__(index)
 
 
 class LazyList:
@@ -63,22 +61,25 @@ class LazyList:
 
 
 class CAESAR:
-    _halo_dmlist = LazyProperty('halo_data/lists/dmlist', 'halo_dmlist')
-    _halo_slist = LazyProperty('halo_data/lists/slist', 'halo_slist')
-    _halo_glist = LazyProperty('halo_data/lists/glist', 'halo_glist')
-    _halo_bhlist = LazyProperty('halo_data/lists/bhlist', 'halo_bhlist')
-    _halo_dlist = LazyProperty('halo_data/lists/dlist', 'halo_dlist')
-
-    _galaxy_slist = LazyProperty('galaxy_data/lists/slist', 'galaxy_slist')
-    _galaxy_glist = LazyProperty('galaxy_data/lists/glist', 'galaxy_glist')
-    _galaxy_bhlist = LazyProperty('galaxy_data/lists/bhlist', 'galaxy_bhlist')
-    _galaxy_dlist = LazyProperty('galaxy_data/lists/dlist', 'galaxy_dlist')
-
-    _cloud_glist = LazyProperty('cloud_data/lists/glist', 'cloud_glist')
-
     def __init__(self, filename):
         self._ds = None
         self.data_file = os.path.abspath(filename)
+
+        self._halo_dmlist = LazyArray(self, 'halo_data/lists/dmlist')
+        self._halo_slist = LazyArray(self, 'halo_data/lists/slist')
+        self._halo_glist = LazyArray(self, 'halo_data/lists/glist')
+        self._halo_bhlist = LazyArray(self, 'halo_data/lists/bhlist')
+        self._halo_dlist = LazyArray(self, 'halo_data/lists/dlist')
+
+        self._galaxy_slist = LazyArray(self, 'galaxy_data/lists/slist')
+        self._galaxy_glist = LazyArray(self, 'galaxy_data/lists/glist')
+        self._galaxy_bhlist = LazyArray(self, 'galaxy_data/lists/bhlist')
+        self._galaxy_dlist = LazyArray(self, 'galaxy_data/lists/dlist')
+
+        self._cloud_glist = LazyArray(self, 'cloud_data/lists/glist')
+        self._cloud_dlist = LazyArray(self, 'cloud_data/lists/dlist')
+
+
         with h5py.File(filename, 'r') as hd:
             mylog.info('Reading {}'.format(filename))
 
@@ -92,54 +93,60 @@ class CAESAR:
             self.simulation = SimulationAttributes()
             self.simulation._unpack(self, hd)
 
-            self._galaxy_index_list = hd[
-                'halo_data/lists/galaxy_index_list'][:]
-
             mylog.info('Loading halos')
+            self._galaxy_index_list = None
+            if 'halo_data/lists/galaxy_index_list' in hd:
+                self._galaxy_index_list = LazyArray(self, 'halo_data/lists/galaxy_index_list')
+
             self._halo_data = {}
             for k, v in hd['halo_data'].items():
                 if type(v) is h5py.Dataset:
-                    if 'unit' in v.attrs:
-                        self._halo_data[k] = YTArray(
-                            v[:], v.attrs['unit'], registry=self.unit_registry)
-                    else:
-                        self._halo_data[k] = v[:]
+                    self._halo_data[k] = LazyArray(self, 'halo_data/'+k)
 
             self._halo_dicts = defaultdict(dict)
-            for k, v in hd['halo_data/dicts'].items():
+            for k in hd['halo_data/dicts']:
                 dictname, arrname = k.split('.')
-                if 'unit' in v.attrs:
-                    self._halo_dicts[dictname][arrname] = YTArray(
-                        v[:], v.attrs['unit'], registry=self.unit_registry)
-                else:
-                    self._halo_dicts[dictname][arrname] = v[:]
+                self._halo_dicts[dictname][arrname] = LazyArray(self, 'halo_data/dicts/'+k)
 
             self.nhalos = hd.attrs['nhalos']
             self.halos = LazyList(self.nhalos, lambda i: Halo(self, i))
             mylog.info('Loaded {} halos'.format(len(self.halos)))
 
-            mylog.info('Loading galaxies')
             self._galaxy_data = {}
-            for k, v in hd['galaxy_data'].items():
-                if type(v) is h5py.Dataset:
-                    if 'unit' in v.attrs:
-                        self._galaxy_data[k] = YTArray(
-                            v[:], v.attrs['unit'], registry=self.unit_registry)
-                    else:
-                        self._galaxy_data[k] = v[:]
-
             self._galaxy_dicts = defaultdict(dict)
-            for k, v in hd['galaxy_data/dicts'].items():
-                dictname, arrname = k.split('.')
-                if 'unit' in v.attrs:
-                    self._galaxy_dicts[dictname][arrname] = YTArray(
-                        v[:], v.attrs['unit'], registry=self.unit_registry)
-                else:
-                    self._galaxy_dicts[dictname][arrname] = v[:]
-
-            self.ngalaxies = hd.attrs['ngalaxies']
+            self.ngalaxies = 0
             self.galaxies = LazyList(self.ngalaxies, lambda i: Galaxy(self, i))
-            mylog.info('Loaded {} galaxies'.format(len(self.galaxies)))
+            if 'galaxy_data' in hd:
+                mylog.info('Loading galaxies')
+                for k, v in hd['galaxy_data'].items():
+                    if type(v) is h5py.Dataset:
+                        self._galaxy_data[k] = LazyArray(self, 'galaxy_data/'+k)
+
+                for k in hd['galaxy_data/dicts']:
+                    dictname, arrname = k.split('.')
+                    self._galaxy_dicts[dictname][arrname] = LazyArray(self, 'galaxy_data/dicts/'+k)
+
+                self.ngalaxies = hd.attrs['ngalaxies']
+                self.galaxies = LazyList(self.ngalaxies, lambda i: Galaxy(self, i))
+                mylog.info('Loaded {} galaxies'.format(len(self.galaxies)))
+
+            self._cloud_data = {}
+            self._cloud_dicts = defaultdict(dict)
+            self.nclouds = 0
+            self.clouds = LazyList(self.nclouds, lambda i: Cloud(self, i))
+            if 'cloud_data' in hd:
+                mylog.info('Loading clouds')
+                for k, v in hd['cloud_data'].items():
+                    if type(v) is h5py.Dataset:
+                        self._cloud_data[k] = LazyArray(self, 'cloud_data/'+k)
+
+                for k in hd['cloud_data/dicts']:
+                    dictname, arrname = k.split('.')
+                    self._cloud_dicts[dictname][arrname] = LazyArray(self, 'cloud_data/dicts/'+k)
+
+                self.nclouds = hd.attrs['nclouds']
+                self.clouds = LazyList(self.nclouds, lambda i: Cloud(self, i))
+                mylog.info('Loaded {} clouds'.format(len(self.clouds)))
 
     @property
     def yt_dataset(self):
@@ -159,9 +166,6 @@ class CAESAR:
             raise IOError('not a yt dataset?')
 
         infile = '%s/%s' % (value.fullpath, value.basename)
-
-        if isinstance(self.hash, bytes):
-            self.hash = self.hash.decode('utf8')
 
         hash = get_hash(infile)
         if hash != self.hash:
@@ -194,16 +198,12 @@ class CAESAR:
 
 class Group:
     @property
-    def metallicity(self):
-        return self.metallicities['mass_weighted']
-
-    @property
     def mass(self):
         return self.masses['total']
 
     @property
-    def radius(self):
-        return self.radii['total']
+    def metallicity(self):
+        return self.metallicities['mass_weighted']
 
     @property
     def temperature(self):
@@ -223,9 +223,10 @@ class Group:
 
     def info(self):
         pdict = {}
-        for k in dir(self):
-            if k not in info_blacklist:
-                pdict[k] = getattr(self, k)
+        for k in getattr(self.obj, '_{}_data'.format(self.obj_type)):
+            pdict[k] = getattr(self, k)
+        for k in getattr(self.obj, '_{}_dicts'.format(self.obj_type)):
+            pdict[k] = getattr(self, k)
         pprint(pdict)
 
     def contamination_check(self,
@@ -274,22 +275,9 @@ class Halo(Group):
         self._satellite_galaxies = None
         self._central_galaxy = None
 
-    @property
-    def sigma(self):
-        return self.velocity_dispersions['dm']
-
     def __dir__(self):
-        items = [
-            'obj', 'obj_type', 'metallicity', 'mass', 'radius', 'temperature',
-            'sigma', 'galaxies', 'central_galaxy', 'satellite_galaxies'
-        ]
-        items += list(self.obj._halo_data) + list(
-            self.obj._halo_dicts) + ['glist', 'slist', 'dmlist']
-        if self.obj.halo_bhlist is not None:
-            items.append('bhlist')
-        if self.obj.halo_dlist is not None:
-            items.append('dlist')
-        return [i for i in items if i not in info_blacklist]
+        return dir(type(self)) + list(self.__dict__) + list(
+            self.obj._halo_data) + list(self.obj._halo_dicts)
 
     @property
     def glist(self):
@@ -321,7 +309,7 @@ class Halo(Group):
     def _init_galaxies(self):
         self._galaxies = []
         self._satellite_galaxies = []
-        for galaxy_index in self._galaxy_index_list:
+        for galaxy_index in self.galaxy_index_list:
             galaxy = self.obj.galaxies[galaxy_index]
             self._galaxies.append(galaxy)
             if galaxy.central:
@@ -359,13 +347,6 @@ class Halo(Group):
         raise AttributeError("'{}' object as no attribute '{}'".format(
             self.__class__.__name__, attr))
 
-    def info(self):
-        pdict = {}
-        for k in dir(self):
-            if k not in info_blacklist:
-                pdict[k] = getattr(self, k)
-        pprint(pdict)
-
 
 class Galaxy(Group):
     def __init__(self, obj, index):
@@ -374,29 +355,9 @@ class Galaxy(Group):
         self._index = index
         self.halo = obj.halos[self.parent_halo_index]
 
-    @property
-    def sigma(self):
-        return self.velocity_dispersions['stellar']
-
     def __dir__(self):
-        items = [
-            'obj',
-            'obj_type',
-            'halo',
-            'metallicity',
-            'mass',
-            'radius',
-            'temperature',
-            'sigma',
-            'info',
-        ]
-        items += list(self.obj._galaxy_data) + list(
-            self.obj._galaxy_dicts) + ['glist', 'slist']
-        if hasattr(self.obj, '_galaxy_bhlist'):
-            items.append('bhlist')
-        if hasattr(self.obj, '_galaxy_dlist'):
-            items.append('dlist')
-        return [i for i in items if i not in info_blacklist]
+        return dir(type(self)) + list(self.__dict__) + list(
+            self.obj._galaxy_data) + list(self.obj._galaxy_dicts)
 
     @property
     def glist(self):
@@ -441,18 +402,27 @@ class Cloud(Group):
         self.obj = obj
         self._index = index
 
+    def __dir__(self):
+        return dir(type(self)) + list(self.__dict__) + list(
+            self.obj._cloud_data) + list(self.obj._cloud_dicts)
+
     @property
-    def sigma(self):
-        return self.velocity_dispersions['gas']
+    def glist(self):
+        return self.obj._cloud_glist[self.glist_start:self.glist_end]
+
+    @property
+    def dlist(self):
+        if self.obj._cloud_dlist is not None:
+            return self.obj._cloud_dlist[self.dlist_start:self.dlist_end]
 
     @functools.lru_cache(maxsize=None)
     def __getattr__(self, attr):
         if attr in self.obj._cloud_data:
             return self.obj._cloud_data[attr][self._index]
-        if attr in self.obj.cloud_dicts:
+        if attr in self.obj._cloud_dicts:
             out = {}
-            for d in self.obj.cloud_dicts[attr]:
-                out[d] = self.obj.cloud_dicts[attr][d][self._index]
+            for d in self.obj._cloud_dicts[attr]:
+                out[d] = self.obj._cloud_dicts[attr][d][self._index]
             return out
         raise AttributeError("'{}' object as no attribute '{}'".format(
             self.__class__.__name__, attr))
