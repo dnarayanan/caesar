@@ -59,6 +59,7 @@ class DataManager(object):
         pdata      = get_particles_for_FOF(self.obj, self.ptypes)
         self.pos   = pdata['pos']
         self.vel   = pdata['vel']
+        self.pot   = pdata['pot']
         self.mass  = pdata['mass']
         self.ptype = pdata['ptype']
         self.index = pdata['indexes']

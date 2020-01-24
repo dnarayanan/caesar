@@ -2,8 +2,67 @@ import numpy as np
 cimport numpy as np
 cimport cython
 
+from libc.stdio cimport printf
 cdef extern from "math.h":
-    double sqrt(double x)    
+    double sqrt(double x)
+    double M_PI
+
+@cython.cdivision(True)
+@cython.wraparound(False)
+@cython.boundscheck(False)
+def append_bh(
+        double boxsize,
+        double gal_R,
+        np.ndarray[np.float64_t, ndim=1] gal_mass,
+        np.ndarray[np.float64_t, ndim=2] gal_pos,
+        np.ndarray[np.float64_t, ndim=2] p_pos,
+        np.ndarray[np.int32_t, ndim=1] p_group_id
+):
+    """Append the particles to the galaxies
+    Parameters
+    ----------
+    boxsize : double
+    gal_mass: np.ndarray([1,2,3,...], dtype=np.float64)
+        containing the masses of galaxies
+    gal_r   : np.ndarray([1,2,3,...], dtype=np.float64)
+        containing the size (radius) of the galaxies
+    gal_pos : np.ndarray((N,3), dtype=np.float64)
+        Position of the galaxies
+    p_pos  : np.ndarray((Np,3), dtype=np.float64)
+        Position of the particles
+    p_group_id: np.ndarray(Np, dtype=np.int32)
+        initialised with -1
+    """
+
+    cdef int i,j
+    cdef int ngal = np.shape(gal_pos)[0]
+    cdef int npart= len(p_group_id)
+    cdef double dx = 0.0
+    cdef double dy = 0.0
+    cdef double dz = 0.0
+    cdef double halfbox = boxsize / 2.0
+    cdef double r2, rold
+    cdef double gal_R2 = gal_R*gal_R
+
+    for i in range(ngal):
+        for j in range(npart):
+            dx    = periodic(gal_pos[i,0] - p_pos[j,0], halfbox, boxsize)
+            dy    = periodic(gal_pos[i,1] - p_pos[j,1], halfbox, boxsize)
+            dz    = periodic(gal_pos[i,2] - p_pos[j,2], halfbox, boxsize)        
+            r2    = dx*dx + dy*dy + dz*dz
+            #if (r2 > gal_R[i]*gal_R[i]): continue
+            if (r2 > gal_R2): continue
+
+            if p_group_id[j]==-1:
+                p_group_id[j] = i
+            else:
+                dx    = periodic(gal_pos[p_group_id[j],0] - p_pos[j,0], halfbox, boxsize)
+                dy    = periodic(gal_pos[p_group_id[j],1] - p_pos[j,1], halfbox, boxsize)
+                dz    = periodic(gal_pos[p_group_id[j],2] - p_pos[j,2], halfbox, boxsize)        
+                r2old = dx*dx + dy*dy + dz*dz
+                if (gal_mass[i]/r2) > (gal_mass[p_group_id[j]]/r2old):
+                    p_group_id[j] = i
+              
 
 @cython.cdivision(True)
 @cython.wraparound(False)
@@ -48,6 +107,50 @@ cdef double periodic(double x, double halfbox, double boxsize):
     if x > halfbox:
         x -= boxsize
     return x
+
+@cython.cdivision(True)
+@cython.wraparound(False)
+@cython.boundscheck(False)
+def get_virial_mr(
+        np.ndarray[np.float64_t, ndim=1] Densities,
+        np.ndarray[np.float64_t, ndim=1] mass,
+        np.ndarray[np.float64_t, ndim=1] r,
+        np.ndarray[np.float64_t, ndim=1] collectRadii,
+        np.ndarray[np.float64_t, ndim=1] collectMasses
+        
+):
+    """Get virial mass and radius.
+
+    Parameters
+    ----------
+    Density: array
+        Different densities you are interested in: e.g rho200, rhovirial, ...
+        They have to be in ascending order.
+    r : array
+        Particle radii inward
+    mass: array
+        Cumulative Particle masses inward
+    collectRadii: array
+        Empty array to contain the radii
+        Should be the same size as the Densities
+    """
+    cdef int i
+    cdef int j = len(Densities)
+    cdef int k = 0
+    cdef int n = len(r)
+    cdef double volume, density
+    cdef double PiFac = 4./3.*M_PI
+
+    for i in range(0,n):
+        volume = PiFac*r[i]*r[i]*r[i]
+        density = mass[i]/volume
+        while density > Densities[k]:
+            collectRadii[k] = r[i]
+            collectMasses[k] = mass[i]
+            k += 1
+            if k == j: return
+    return
+
 
 @cython.cdivision(True)
 @cython.wraparound(False)

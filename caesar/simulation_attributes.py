@@ -63,7 +63,8 @@ class SimulationAttributes(object):
             'Msun / kpc**3'
         )
         #Kitayama & Suto 1996 v.469, p.480
-        virial_density = (177.65287921960845*(1. + 0.4093*(1./self.Om_z - 1.)**0.9052) - 1.)*self.Om_z#18*pi*pi
+        fomega = self.Om_z*(1.+self.redshift)**3 / ( self.Om_z*(1.+self.redshift)**3 + (1.-self.Om_z-Ol_0)*(1.+self.redshift)**2 + Ol_0)
+        virial_density = (177.65287921960845*(1. + 0.4093*(1./fomega - 1.)**0.9052) - 1.)*self.Om_z#18*pi*pi
         self.Densities = np.array([virial_density*self.critical_density.to('Msun/kpc**3').d,
                                              200.*self.critical_density.to('Msun/kpc**3').d,
                                              500.*self.critical_density.to('Msun/kpc**3').d,

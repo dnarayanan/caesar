@@ -4,6 +4,7 @@ import numpy as np
 particle_data_aliases = {
     'pos':'particle_position',
     'vel':'particle_velocity',
+    'pot':'Potential',
     'rho':'density',
     'hsml':'smoothing_length',
     'sfr':'StarFormationRate',
@@ -371,6 +372,7 @@ def get_particles_for_FOF(obj, ptypes, find_type=None):
     pos  = np.empty((0,3))
     vel  = np.empty((0,3))
     mass = np.empty(0)
+    pot = np.empty(0)
     if 'fof_from_snap' in obj._kwargs and obj._kwargs['fof_from_snap']==1:
         haloid  = np.empty(0, dtype=np.int32)
 
@@ -390,6 +392,9 @@ def get_particles_for_FOF(obj, ptypes, find_type=None):
         data = get_property(obj, 'mass', p).to(obj.units['mass'])
         mass = np.append(mass, data.d, axis=0)
 
+        data = get_property(obj, 'pot', p)
+        pot = np.append(pot, data.d, axis=0)
+
         if 'fof_from_snap' in obj._kwargs and obj._kwargs['fof_from_snap']==1:
             data = get_property(obj, 'haloid', p)
             haloid = np.append(haloid, data.d.astype(np.int32))
@@ -400,5 +405,5 @@ def get_particles_for_FOF(obj, ptypes, find_type=None):
         indexes = np.append(indexes, np.arange(0, nparts, dtype=np.int32))
 
     if 'fof_from_snap' in obj._kwargs and obj._kwargs['fof_from_snap']==1:
-        return dict(pos=pos,vel=vel,mass=mass,haloid=haloid,ptype=ptype,indexes=indexes)
-    else: return dict(pos=pos,vel=vel,mass=mass,ptype=ptype,indexes=indexes)
+        return dict(pos=pos,vel=vel,pot=pot,mass=mass,haloid=haloid,ptype=ptype,indexes=indexes)
+    else: return dict(pos=pos,vel=vel,pot=pot,mass=mass,ptype=ptype,indexes=indexes)

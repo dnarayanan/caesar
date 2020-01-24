@@ -2,10 +2,10 @@ import six
 import numpy as np
 
 from caesar.property_manager import ptype_ints
-from caesar.group_funcs import get_periodic_r
+from caesar.group_funcs import get_periodic_r,get_virial_mr
 
 MINIMUM_STARS_PER_GALAXY = 24  # set a bit below 32 so we capture all galaxies above a given Mstar, rather than a given Nstar.
-MINIMUM_DM_PER_HALO      = 32
+MINIMUM_DM_PER_HALO      = 64
 MINIMUM_GAS_PER_CLOUD = 16
 
 group_types = dict(
@@ -117,6 +117,10 @@ class Group(object):
         self._delete_attribute('global_indexes')
         self._delete_attribute('__glist')
         self._remove_dm_references()
+        """ cleanup function to delete attributes no longer needed """
+        self._delete_attribute('periodic_r')
+        self._delete_attribute('__slist')
+        self._delete_attribute('__dmlist')
 
 
     def _process_group(self):
@@ -143,21 +147,6 @@ class Group(object):
                 if self.obj.data_manager.blackholes:
                     self._calculate_bh_quantities()
 
-                # TODO: These are masses but virial. Unsure where to put them, for now here is good enough.
-                # Kitayama & Suto 1996 v.469, p.480
-                virial_density = (177.65287921960845*(1. + 0.4093*(1./self.obj.simulation.Om_z - 1.)**0.9052) - 1.)*self.obj.simulation.Om_z
-                PiFac = 4./3. * np.pi
-                critical_density = self.obj.simulation.critical_density
-                self.masses['virial'] = virial_density*critical_density * PiFac*self.radii['virial']**3
-                self.masses['m200c'] = 200.*critical_density * PiFac*self.radii['r200c']**3
-                self.masses['m500c'] = 500.*critical_density * PiFac*self.radii['r500c']**3
-                self.masses['m2500c'] = 2500.*critical_density * PiFac*self.radii['r2500c']**3
-                for k in self.masses:
-                    if isinstance(self.masses[k], float):
-                        self.masses[k] = self.obj.yt_dataset.quan(self.masses[k], self.obj.units['mass'])
-                    else:
-                        self.masses[k] = self.masses[k].to(self.obj.units['mass'])
-            
         self._cleanup()
 
         
@@ -227,9 +216,45 @@ class Group(object):
             self.gas_fraction = self.masses['gas'].d / self.masses['baryon'].d
 
         self._calculate_total_mass()
-            
+
     def _calculate_center_of_mass_quantities(self):
-        """Calculate center-of-mass position and velocity."""
+        """Calculate center-of-mass position and velocity.  From caesar_mika """
+        def get_center_of_mass_quantity(quantity):  ## REFACTOR ME TO BE MORE GENERIC WITH SHAPE
+            val  = np.zeros(3)
+            for i in range(0,3):
+                quantity_arr = getattr(self.obj.data_manager, quantity)[self.global_indexes, i]
+                weights      = self.obj.data_manager.mass[self.global_indexes]
+                if (quantity=='pos'):# We need to be consistent with periodic boundaries
+                    if (quantity_arr.max() - quantity_arr.min())>0.5*self.obj.simulation.boxsize.d:
+                        theta_i          = 6.283185307179586*quantity_arr/self.obj.simulation.boxsize.d #(2pi)
+                        Zeta_i           = np.cos(theta_i)
+                        Xhi_i            = np.sin(theta_i)
+                        Theta            = np.arctan2(-np.average(Xhi_i, weights=weights), -np.average(Zeta_i, weights=weights))+3.141592653589793
+                        val[i]           = self.obj.simulation.boxsize.d*Theta/6.283185307179586
+                    else: val[i]  = np.average(quantity_arr, weights=weights)
+                else: val[i]  = np.average(quantity_arr, weights=weights)
+            return val
+
+        self.pos = self.obj.yt_dataset.arr(get_center_of_mass_quantity('pos'), self.obj.units['length'])
+        self.vel = self.obj.yt_dataset.arr(get_center_of_mass_quantity('vel'), self.obj.units['velocity'])
+        cmpos = (self.pos.to('kpc')).d
+        ppos  = self.obj.yt_dataset.arr(self.obj.data_manager.pos[self.global_indexes], self.obj.units['length'])
+        ppos  = (ppos.to('kpc')).d
+
+        #Minimum potential position
+        pot = self.obj.data_manager.pot[self.global_indexes]
+        pos = self.obj.data_manager.pos[self.global_indexes]
+        self.minpotpos = self.obj.yt_dataset.arr(pos[np.argmin(pot)], self.obj.units['length'])
+
+        #Compute distances from the center of mass or minimum potential?
+        self.periodic_r = np.empty(len(ppos), dtype=np.float64)
+        #get_periodic_r(self.obj.simulation.boxsize.to('kpc').d, cmpos, ppos, self.periodic_r) # COM
+        get_periodic_r(self.obj.simulation.boxsize.to('kpc').d, self.minpotpos.to('kpc').d, ppos, self.periodic_r) # minimum potential
+        #Put the periodic_r for further use and not to compute it everytime
+        self.periodic_r = self.obj.yt_dataset.arr(self.periodic_r, 'kpc')
+
+    """Calculate center-of-mass position and velocity.  Desika's version
+    def _calculate_center_of_mass_quantities(self):
         def get_center_of_mass_quantity(quantity):  ## REFACTOR ME TO BE MORE GENERIC WITH SHAPE
             val  = np.zeros(3)
             for i in range(0,3):
@@ -239,6 +264,7 @@ class Group(object):
 
         self.pos = self.obj.yt_dataset.arr(get_center_of_mass_quantity('pos'), self.obj.units['length'])
         self.vel = self.obj.yt_dataset.arr(get_center_of_mass_quantity('vel'), self.obj.units['velocity'])
+    """
 
     def _unbind(self):
         """Iterative procedure to unbind objects."""
@@ -360,22 +386,40 @@ class Group(object):
         """Calculates virial quantities such as r200, circular velocity, 
         and virial temperature."""
         sim      = self.obj.simulation        
-        rho_crit = sim.critical_density   # in Msun/kpc^3 PHYSICAL
+        critical_density = sim.critical_density   # in Msun/kpc^3 PHYSICAL
         mass     = self.masses['total'].to('Msun')
+      
+        # Mika Rafieferantsoa's virial quantity computation
+        pmass = self.obj.yt_dataset.arr(self.obj.data_manager.mass[self.global_indexes], self.obj.units['mass'])
+        pmass = pmass.to('Msun')
+
+        r_sort = np.argsort(self.periodic_r.d)
+        pmass = np.cumsum(pmass[r_sort])  # cumulative mass from the center of the halo
+        periodic_r = self.periodic_r.to('kpc').d[r_sort]  # sorted radii in ascending order
+
+        #def get_r_vir(deltaC):
+        #    """ returns r_vir in PHYSICAL kpc; deltaC is in units of critical density """
+        #    return (3.0 * mass / (4.0 * np.pi * critical_density * deltaC))**(1./3.)
+
+        collectRadii = np.zeros(len(sim.Densities), dtype = np.float64) # empty array of desired densities in Msun/kpc**3
+        collectMasses = np.zeros(len(sim.Densities), dtype = np.float64) # empty array of masses at desired radii
+        get_virial_mr(sim.Densities.d, pmass[::-1], periodic_r[::-1], collectRadii, collectMasses)
+        self.radii['virial'] = self.obj.yt_dataset.quan(collectRadii[0], 'kpc')
+        self.radii['r200c'] = self.obj.yt_dataset.quan(collectRadii[1], 'kpc')
+        self.radii['r500c'] = self.obj.yt_dataset.quan(collectRadii[2], 'kpc')
+        self.radii['r2500c'] = self.obj.yt_dataset.quan(collectRadii[3], 'kpc')
         
-        def get_r_vir(deltaC):
-            """ returns r_vir in PHYSICAL kpc """
-            return (3.0 * mass / (4.0 * np.pi * rho_crit * deltaC))**(1./3.)
+        PiFac = 4./3. * np.pi
+        self.masses['virial'] = self.obj.yt_dataset.quan(collectMasses[0], 'Msun')
+        self.masses['m200c'] = self.obj.yt_dataset.quan(collectMasses[1], 'Msun')
+        self.masses['m500c'] = self.obj.yt_dataset.quan(collectMasses[2], 'Msun')
+        self.masses['m2500c'] = self.obj.yt_dataset.quan(collectMasses[3], 'Msun')
+        #self.masses['virial'] = 100.*critical_density * PiFac*self.radii['virial']**3
+        #self.masses['m200c'] = 200.*critical_density * PiFac*self.radii['r200c']**3
+        #self.masses['m500c'] = 500.*critical_density * PiFac*self.radii['r500c']**3
+        #self.masses['m2500c'] = 2500.*critical_density * PiFac*self.radii['r2500c']**3
 
-        collectRadii = np.zeros(len(sim.Densities), dtype = np.float64) #Densities are in Msun/kpc**3
-        # Bryan & Norman 1998
-        #self.radii['virial'] = self.obj.yt_dataset.quan(get_r_vir(18.0 * np.pi**2), 'kpc')  # Romeel: is this right? this is only for Om_z=1!
-        # Kitayama & Suto 1996
-        self.radii['virial'] = self.obj.yt_dataset.quan(get_r_vir(18.0 * np.pi**2 *(1. + 0.4093*(1./sim.Om_z - 1.)**0.9052) - 1.)*sim.Om_z, 'kpc')
-        self.radii['r200c']  = self.obj.yt_dataset.quan(get_r_vir(200.0), 'kpc')
-        self.radii['r500c']  = self.obj.yt_dataset.quan(get_r_vir(500.0), 'kpc')
-        self.radii['r2500c']  = self.obj.yt_dataset.quan(get_r_vir(2500.0), 'kpc')
-
+        #print('radii:',collectMasses,collectRadii,self.radii['r200c'],self.radii['r500c'],self.masses['m200c'],self.masses['m500c'],collectMasses[1]/self.masses['m200c'],collectMasses[2]/self.masses['m500c'])
         # eq 1 of Mo et al 2002
         self.radii['r200'] = (sim.G * mass / (100.0 * sim.Om_z * sim.H_z**2))**(1./3.)
         
@@ -395,7 +439,14 @@ class Group(object):
         vT = vT.to(self.obj.units['temperature'])
 
         self.temperatures['virial'] = vT
+
+        for k in self.masses:
+            if isinstance(self.masses[k], float):
+                self.masses[k] = self.obj.yt_dataset.quan(self.masses[k], self.obj.units['mass'])
+            else:
+                self.masses[k] = self.masses[k].to(self.obj.units['mass'])
         
+
         self.virial_quantities = dict(
             radius = self.radii['virial'],
             r200c  = self.radii['r200c'],
