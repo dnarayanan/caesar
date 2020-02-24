@@ -68,7 +68,7 @@ def hydrogen_mass_calc(obj,**kwargs):
 
     tmp_str = 'Calculating HI/H2 masses for'
     cdef bint all_gas = 0
-    if 'calculate_H_for_all_gas' in kwargs and kwargs['calculate_H_for_all_gas']:
+    if 'calculate_H_for_all_gas' in obj._kwargs and obj._kwargs['calculate_H_for_all_gas']:
         all_gas = 1
         tmp_str = '%s all gas' % tmp_str
     else:
@@ -155,11 +155,12 @@ def hydrogen_mass_calc(obj,**kwargs):
         if not all_gas and grhoH[i] < low_rho_thresh:
             continue
 
+
         fHI = gnh[i]
         fH2 = 0.0
 
         ## low density non-self shielded gas
-        if grhoH[i] < rho_thresh:
+        if grhoH[i] < rho_thresh and 'compute_selfshielding' in obj._kwargs and obj._kwargs['compute_selfshielding']:
             ### Popping+09 equations 3, 7, 4
             #xi       = fHI
             beta     = a / (sqrt(gtemp[i]/T0) *

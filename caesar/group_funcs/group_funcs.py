@@ -3,6 +3,29 @@
 ## caesar/group_funcs/group_funcs.pyx               ##
 
 
+def get_virial_mr(
+        Density,
+        r,
+        mass,
+        collectRadii
+):
+    """Get virial mass and radius.
+
+    Parameters
+    ----------
+    Density: array
+        Different densities you are interested in: e.g rho200, rhovirial, ...
+        They have to be in ascending order.
+    r : array
+        Particle radii inward
+    mass: array
+        Cumulative Particle masses inward
+    collectRadii: array
+        Empty array to contain the radii
+        Should be the same size as the Densities
+    """
+    pass
+
 def get_periodic_r(
         boxsize,
         center,
