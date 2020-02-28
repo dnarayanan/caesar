@@ -84,6 +84,9 @@ class CAESAR:
             mylog.info('Reading {}'.format(filename))
 
             self.hash = hd.attrs['hash']
+            if isinstance(self.hash, np.bytes_):
+                self.hash = self.hash.decode('utf8')
+
             self.caesar = hd.attrs['caesar']
 
             self.unit_registry = UnitRegistry.from_json(
