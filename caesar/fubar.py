@@ -467,25 +467,23 @@ def fubar(obj, group_type, **kwargs):
                     hf.close()
             #assert(obj.simulation.ngas == len(gas_index)) & (obj.simulation.nstar == len(star_index)) & (obj.simulation.nbh == len(bh_index)),'[fubar/fubar]: Assertion failed: Wrong number of particles in fof6d calculation'
             
-            '''
-            
-            if ('fof6d_file' in obj._kwargs and obj._kwargs['fof6d_file'] is not None):
+        elif ('fof6d_file' in obj._kwargs and obj._kwargs['fof6d_file'] is not None):
             # use galaxy info from fof6d hdf5 file
             fof6d_file = obj._kwargs['fof6d_file']
+            LL = get_mean_interparticle_separation(obj) * get_b(obj, group_type)  # get MIS and omega_baryon
             import os
             if os.path.isfile(fof6d_file):
-                mylog.info('Galaxy membership will be read from fof6d file %s'%fof6d_file)
+                mylog.info('Galaxy IDs from fof6d file %s'%fof6d_file)
             else:
-                mylog.info('%s not found!' % fof6d_file)
+                mylog.info('fof6d file %s not found!' % fof6d_file)
             hf = h5py.File(fof6d_file,'r')
             npfof6d = hf['nparts']
             assert (obj.simulation.ngas==npfof6d[0])&(obj.simulation.nstar==npfof6d[1])&(obj.simulation.nbh==npfof6d[2]),'Assertion failed: Wrong number of particles in fof6d file: %s'%npfof6d
             gas_indexes = hf['gas_index']
             star_indexes = hf['star_index']
             bh_indexes = hf['bh_index']
-            mylog.info('Using galaxy IDs from fof6d file %s' % fof6d_file)
             fof_tags = np.concatenate((gas_indexes,star_indexes,bh_indexes))
-            '''
+
         else: 
             # here we want to perform 3D FOF on high density gas + stars
             mylog.info('Groups based on YT 3DFOF')
