@@ -255,17 +255,10 @@ def hydrogen_mass_calc(obj,**kwargs):
         fHI = gnh[i]
         fH2 = 0.0
 
-<<<<<<< HEAD
-        ## low density non-self shielded gas, if self-shielding needs computing
-        if grhoH[i] < rho_thresh and selfshield_flag:
-        ### Popping+09 equations 3, 7, 4
-        #xi       = fHI
-=======
         ## low density non-self shielded gas
         if grhoH[i] < rho_thresh and 'compute_selfshielding' in obj._kwargs and obj._kwargs['compute_selfshielding']:
             ### Popping+09 equations 3, 7, 4
             #xi       = fHI
->>>>>>> 95e1328cd1c930cd1785d92df0bad2344cf28fc8
             beta     = a / (sqrt(gtemp[i]/T0) *
                             (1.0 + sqrt(gtemp[i]/T0))**(1.0-b) *
                             (1.0 + sqrt(gtemp[i]/T1))**(1.0+b))   # cm^3/s
