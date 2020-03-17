@@ -235,7 +235,7 @@ def all_object_contam_check(obj):
     if hasattr(obj, 'galaxies'):
         for g in obj.galaxies:
             if g.halo is None:
-                g.contamination = None
+                g.contamination = -1
             else:
                 g.contamination = g.halo.contamination
         
