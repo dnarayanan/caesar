@@ -357,7 +357,7 @@ def fof_sorting(groups,pos,vel,haloID,pindex,fof_LL,Lbox,idir):
                 posrange = [min(pos[idir][groups[grpcount][0]:i]),max(pos[idir][groups[grpcount][0]:i])]
                 grpcount += 1
             oldpos = pos[idir][i]
-    assert grpcount>1,'fof6d : Unable to separate groups via sorting; exiting.'
+    assert grpcount>0,'fof6d : Unable to separate groups via sorting; exiting.'
     # Remove groups that have less than mingrp particles (gas+star)
     oldgroups = groups[:]
     groups = []
