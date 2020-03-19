@@ -33,10 +33,14 @@ class DataManager(object):
         """Determines what particle/field types to collect."""
         self.ptypes = ['gas','star']
         if 'blackholes' in self.obj._kwargs and self.obj._kwargs['blackholes']:
-            from yt.funcs import mylog
-            #mylog.warning('Enabling black holes')
-            self.ptypes.append('bh')
-            self.blackholes = True
+            if 'PartType5' in self.obj._ds_type.ds.particle_fields_by_type:
+                if 'BH_Mdot' in self.obj._ds_type.ds.particle_fields_by_type['PartType5'] or 'StellarFormationTime' in self.obj._ds_type.ds.particle_fields_by_type['PartType5']:
+                    from yt.funcs import mylog
+                    mylog.warning('Enabling black holes')
+                    self.ptypes.append('bh')
+                    self.blackholes = True
+            else:
+                mylog.warning('You have enabled black holes, but no BH particle type is in the simulation snapshot')
         if 'dust' in self.obj._kwargs and self.obj._kwargs['dust']:
             from yt.funcs import mylog
             mylog.warning('Enabling active dust particles')
