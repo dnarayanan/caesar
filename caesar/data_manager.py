@@ -53,7 +53,7 @@ class DataManager(object):
             self.ptypes.append('dust')
             self.dust = True
         self.ptypes.append('dm')
-        #self.ptypes.append('dm2')
+        self.ptypes.append('dm2')
 
         #if self.obj._ds_type.grid:
         #    self.ptypes.remove('gas')
@@ -88,7 +88,7 @@ class DataManager(object):
         self.glist  = np.where(self.ptype == ptype_ints['gas'])[0]
         self.slist  = np.where(self.ptype == ptype_ints['star'])[0]
         self.dmlist = np.where(self.ptype == ptype_ints['dm'])[0]        
-        #self.dm2list = np.where(self.ptype == ptype_ints['dm2'])[0]
+        self.dm2list = np.where(self.ptype == ptype_ints['dm2'])[0]
         self.bhlist = np.where(self.ptype == ptype_ints['bh'])[0]
         self.dlist = np.where(self.ptype == ptype_ints['dust'])[0]
 
@@ -120,7 +120,7 @@ class DataManager(object):
         self.obj.simulation.ngas  = len(self.glist)
         self.obj.simulation.nstar = len(self.slist)
         self.obj.simulation.ndm   = len(self.dmlist)
-        #self.obj.simulation.ndm2  = len(self.dm2list)
+        self.obj.simulation.ndm2  = len(self.dm2list)
         self.obj.simulation.nbh   = len(self.bhlist)
         self.obj.simulation.ndust = len(self.dlist)
 
