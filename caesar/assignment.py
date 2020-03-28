@@ -90,7 +90,7 @@ def assign_clouds_to_galaxies(obj):
             obj.galaxies[cloud.parent_galaxy_index].cloud_index_list.append(i)
 
             
-def assign_central_galaxies(obj):
+def assign_central_galaxies(obj,central_mass_definition='total'):
     """Assign central galaxies.
 
     Iterate through halos and consider the most massive galaxy within
@@ -115,7 +115,7 @@ def assign_central_galaxies(obj):
         if len(halo.galaxy_index_list) == 0:
             continue
 
-        galaxy_masses = np.array([s.masses['total'] for s in halo.galaxies])
+        galaxy_masses = np.array([s.masses[central_mass_definition] for s in halo.galaxies])
         central_index = np.argmax(galaxy_masses)
         obj.galaxies[halo.galaxy_index_list[central_index]].central = True
 
