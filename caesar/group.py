@@ -196,8 +196,17 @@ class Group(object):
 
 
         if self.obj.simulation.nbh > 0:
-            mass_bh = np.sum(self.obj.data_manager.mass[self.obj.data_manager.bhlist][self.bhlist])
-            self.masses['bh']  = self.obj.yt_dataset.quan(mass_bh, self.obj.units['mass'])
+            #mass_bh = np.sum(self.obj.data_manager.mass[self.obj.data_manager.bhlist][self.bhlist])
+            if self.obj.data_manager.use_bhmass:
+                mass_bh = self.obj.data_manager.bhmass[self.bhlist].d
+            else:
+                mass_bh = self.obj.data_manager.mass[self.obj.data_manager.bhlist][self.bhlist]
+
+            if len(mass_bh):
+                self.masses['bh']  = self.obj.yt_dataset.quan(np.max(mass_bh), self.obj.units['mass'])
+                mass_baryon       += np.sum(mass_bh)
+            else: self.masses['bh'] = self.obj.yt_dataset.quan(0.0, self.obj.units['mass'])
+
 
         if self.obj.simulation.ndust > 0:
             mass_dust = np.sum(self.obj.data_manager.mass[self.obj.data_manager.dlist][self.dlist])
