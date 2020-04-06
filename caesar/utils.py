@@ -1,5 +1,11 @@
 import numpy as np
 from yt.funcs import mylog
+import os
+import psutil
+
+def memlog(msg):
+    process = psutil.Process(os.getpid())
+    mylog.info('%s, RAM=%g GB'%(msg,process.memory_info()[0]/2.**30))
 
 def rotator(vals, ALPHA=0, BETA=0):
     """Rotate particle set around given angles.

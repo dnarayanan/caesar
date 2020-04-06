@@ -1,6 +1,7 @@
 import numpy as np
 
 from caesar.property_manager import ptype_ints, get_particles_for_FOF, get_property, has_property
+from caesar.utils import memlog
 
 class DataManager(object):
     """Class to handle the initial IO and data storage for the duration of
@@ -19,15 +20,20 @@ class DataManager(object):
         self._pdata_loaded = False
         self._determine_ptypes()
 
-    def _member_search_init(self):
-        """Method to run all required methods for member_search()"""
+    def _member_search_init(self, select='all'):
+        """Collect particle information for member_search()"""
         self._determine_ptypes()
-        self.load_particle_data()
+        self.load_particle_data(select=select)
+        memlog('Loaded particle data.')
         self._assign_particle_counts()
-        self._load_gas_data()
-        self._load_star_data()
+        if select is 'all': self._load_gas_data()
+        else: self._load_gas_data(select=select[self.ptypes.index('gas')])
+        if select is 'all': self._load_star_data()
+        else: self._load_star_data(select=select[self.ptypes.index('star')])
         if self.blackholes:
-            self._load_bh_data()
+            if select is 'all': self._load_bh_data()
+            else: self._load_bh_data(select=select[self.ptypes.index('bh')])
+        memlog('Loaded baryon data.')
         
     def _determine_ptypes(self):
         """Determines what particle/field types to collect."""
@@ -47,12 +53,13 @@ class DataManager(object):
             self.ptypes.append('dust')
             self.dust = True
         self.ptypes.append('dm')
+        self.ptypes.append('dm2')
 
         #if self.obj._ds_type.grid:
         #    self.ptypes.remove('gas')
         #print self.ptypes
         
-    def load_particle_data(self):
+    def load_particle_data(self, select=None):
         """Loads positions, velocities, masses, particle types, and indexes.
         Assigns a global glist, slist, dlist, dmlist, and bhlist used
         throughout the group analysis.  Finally assigns
@@ -60,7 +67,7 @@ class DataManager(object):
         if self._pdata_loaded:
             return
         
-        pdata      = get_particles_for_FOF(self.obj, self.ptypes)
+        pdata      = get_particles_for_FOF(self.obj, self.ptypes, select)
         self.pos   = pdata['pos']
         self.vel   = pdata['vel']
         self.pot   = pdata['pot']
@@ -74,13 +81,14 @@ class DataManager(object):
         self._assign_local_lists()
         self._check_for_lowres_dm()
         
-        self._pdata_loaded = True
+        if select is None: self._pdata_loaded = True
 
     def _assign_local_lists(self):
         """Assigns local lists."""
         self.glist  = np.where(self.ptype == ptype_ints['gas'])[0]
         self.slist  = np.where(self.ptype == ptype_ints['star'])[0]
         self.dmlist = np.where(self.ptype == ptype_ints['dm'])[0]        
+        self.dm2list = np.where(self.ptype == ptype_ints['dm2'])[0]
         self.bhlist = np.where(self.ptype == ptype_ints['bh'])[0]
         self.dlist = np.where(self.ptype == ptype_ints['dust'])[0]
 
@@ -112,60 +120,88 @@ class DataManager(object):
         self.obj.simulation.ngas  = len(self.glist)
         self.obj.simulation.nstar = len(self.slist)
         self.obj.simulation.ndm   = len(self.dmlist)
+        self.obj.simulation.ndm2  = len(self.dm2list)
         self.obj.simulation.nbh   = len(self.bhlist)
-        self.obj.simulation.ndust   = len(self.dlist)
+        self.obj.simulation.ndust = len(self.dlist)
 
 
-    def _load_gas_data(self):
-        """If gas is present loads gas SFR/Metallicity/Temperatures."""
+    def _load_gas_data(self,select='all'):
+        """If gas is present loads gas SFR, metallicities, temperatures, nH.
+           If select is not 'all', return all particles with select>=0 """
+
         if self.obj.simulation.ngas == 0:
             return
         
         sfr_unit = '%s/%s' % (self.obj.units['mass'], self.obj.units['time'])
         dustmass_unit = '%s' % (self.obj.units['mass'])
+        gnh_unit = '1/%s**3' % (self.obj.units['length'])
 
         sfr = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), sfr_unit)
         gZ  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')        
         gT  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), self.obj.units['temperature'])
+        gnh  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), gnh_unit)
         dustmass = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas),'')
         #dustmass = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')#dustmass_unit)
             
+        if select is 'all': 
+            flag = [True]*self.obj.simulation.ngas
+        else:
+            flag = (select>=0)
+
         if has_property(self.obj, 'gas', 'sfr'):
-            sfr = get_property(self.obj, 'sfr', 'gas').to(sfr_unit)
+            sfr = get_property(self.obj, 'sfr', 'gas')[flag].to(sfr_unit)
 
         if has_property(self.obj, 'gas', 'metallicity'):            
-            gZ  = get_property(self.obj, 'metallicity', 'gas')
+            gZ  = get_property(self.obj, 'metallicity', 'gas')[flag]
 
         if has_property(self.obj, 'gas', 'temperature'):
-            gT  = get_property(self.obj, 'temperature', 'gas').to(self.obj.units['temperature'])
+            gT  = get_property(self.obj, 'temperature', 'gas')[flag].to(self.obj.units['temperature'])
 
-        
+        if has_property(self.obj, 'gas', 'rho'):
+            from astropy import constants as const
+            from yt import YTQuantity
+            redshift = self.obj.simulation.redshift
+            h = self.obj.simulation.hubble_constant
+            m_p = YTQuantity.from_astropy(const.m_p)
+            gnh  = get_property(self.obj, 'rho', 'gas')[flag].in_cgs() * h*h*0.76*(1+redshift)**3/m_p.in_cgs()
+ 
         if has_property(self.obj, 'gas', 'dustmass'):
-            dustmass = get_property(self.obj,'dustmass','gas')
+            dustmass = get_property(self.obj,'dustmass','gas')[flag]
             #dustmass = get_property(self.obj,'dustmass','gas'))#.to(dustmass_unit)
 
 
         self.gsfr = sfr
         self.gZ   = gZ
         self.gT   = gT
+        self.gnh   = gnh
         self.dustmass = self.obj.yt_dataset.arr(dustmass,'code_mass').in_units('Msun')
 
-    def _load_star_data(self):
+    def _load_star_data(self, select='all'):
         """If star is present load Metallicity if present"""
         if self.obj.simulation.nstar == 0:
             return
 
+        if select is 'all': 
+            flag = [True]*self.obj.simulation.nstar
+        else:
+            flag = (select>=0)
+
         if has_property(self.obj, 'star', 'metallicity'):
-            self.sZ  = get_property(self.obj, 'metallicity', 'star')
+            self.sZ  = get_property(self.obj, 'metallicity', 'star')[flag]
 
 
 
-    def _load_bh_data(self):
+    def _load_bh_data(self, select='all'):
         """If blackholes are present, loads BH_Mdot"""
         from yt.funcs import mylog
+
+        if select is 'all': 
+            flag = [True]*self.obj.simulation.nbh
+        else:
+            flag = (select>=0)
+
         if has_property(self.obj, 'bh', 'bhmass'):
-            self.bhmass     = self.obj.yt_dataset.arr(get_property(self.obj, 'bhmass', 'bh').d*1e10,
-                                                      'Msun/h').to(self.obj.units['mass'])#I don't know how to convert this automatically
+            self.bhmass     = self.obj.yt_dataset.arr(get_property(self.obj, 'bhmass', 'bh').d[flag]*1e10, 'Msun/h').to(self.obj.units['mass'])  # I don't know how to convert this automatically
             self.use_bhmass = True
             mylog.info('BH_Mass available, units=1e10 Msun/h')
             mylog.info('Using BH_Mass instead of BH particle masses')
@@ -178,7 +214,7 @@ class DataManager(object):
             #bhmdot_unit = '15.036260693283424*Msun/yr'
             #bhmdot_unit = '%s/%s' %(self.obj.units['mass'], self.obj.units['time'])
 
-            bhmdot      = get_property(self.obj, 'bhmdot', 'bh').d #of course  it is dimentionless
+            bhmdot      = get_property(self.obj, 'bhmdot', 'bh').d[flag] #of course  it is dimentionless
             bhmdot      = self.obj.yt_dataset.arr(bhmdot, bhmdot_unit).to('%s/%s' %(self.obj.units['mass'], self.obj.units['time']))
             self.bhmdot = bhmdot
             mylog.info('BH_Mdot available, units=%s'%bhmdot_unit)

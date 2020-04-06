@@ -219,7 +219,6 @@ class Group(object):
             except AttributeError:
                 self.masses['dust'] = 0.0
 
-
         self.gas_fraction = 0.0
         if self.masses['baryon'] > 0:
             self.gas_fraction = self.masses['gas'].d / self.masses['baryon'].d
@@ -514,10 +513,13 @@ class Group(object):
         
         # Bullock spin or lambda prime
         #self.spin = self.angular_momentum / (1.4142135623730951 *
-        self.spin_param = self.obj.yt_dataset.quan(L, Lx.units) / (1.4142135623730951 *
+        if self.virial_quantities['r200c'] > 0:
+            self.spin_param = self.obj.yt_dataset.quan(L, Lx.units) / (1.4142135623730951 *
                                              self.masses['total'] *
                                              self.virial_quantities['circular_velocity'].to('km/s') *
                                              self.virial_quantities['r200c'].to('km'))
+        else:
+            self.spin_param = self.obj.yt_dataset.quan(0.0, '')
 
         PHI   = np.arctan2(Ly.d,Lx.d)
         THETA = np.arccos(Lz.d/L.d)
