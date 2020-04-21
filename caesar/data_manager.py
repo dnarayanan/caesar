@@ -172,9 +172,8 @@ class DataManager(object):
             from astropy import constants as const
             from yt import YTQuantity
             redshift = self.obj.simulation.redshift
-            h = self.obj.simulation.hubble_constant
             m_p = YTQuantity.from_astropy(const.m_p)
-            gnh  = get_property(self.obj, 'rho', 'gas')[flag].in_cgs() * h*h*0.76*(1+redshift)**3/m_p.in_cgs()
+            gnh  = get_property(self.obj, 'rho', 'gas')[flag].in_cgs() *0.76*(1+redshift)**3/m_p.in_cgs()
  
         if has_property(self.obj, 'gas', 'dustmass'):
             dustmass = get_property(self.obj,'dustmass','gas')[flag]

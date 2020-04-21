@@ -65,6 +65,8 @@ def fubar_halo(obj):
     if fof6d_flag:
         halos.run_fof6d('galaxy')  # run fof6d on halos to find galaxies
         halos.save_fof6dfile()  # save fof6d info
+        #snapname = ('%s/%s'%(obj.simulation.fullpath,obj.simulation.basename))
+        #nparts,gas_index,star_index,bh_index = run_fof_6d(snapname,16,0.02,1.0,nproc)
 
     # Process galaxies
     galaxies = fof6d(obj,'galaxy')  #instantiate a fof6d object

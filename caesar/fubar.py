@@ -384,13 +384,13 @@ def get_b(obj, group_type):
         if 'b_galaxy' in obj._kwargs and isinstance(obj._kwargs['b_galaxy'], (int, float)):
             b = float(obj._kwargs['b_galaxy'])
         else:
-            b *= 0.2  
+            b *= 0.1  
 
     if group_type == 'cloud':
         if 'b_cloud' in obj._kwargs and isinstance(obj._kwargs['b_cloud'], (int, float)):
             b = float(obj._kwargs['b_cloud'])
         else:
-            b *= 0.2 #BOBBY CONVERSATION: SET UP A CONFIG FILE THAT HAS A DEFAULT SET OF PARAMETERS -- WHETHER WE WANT TO RUN HALOS, GALAXIES ETC.  AND THEN HAVE THE CODE AUTMOATICALLY TURN ON CLOUDS IF WE SET -B_CLOUD linking lengths
+            b *= 0.1 #BOBBY CONVERSATION: SET UP A CONFIG FILE THAT HAS A DEFAULT SET OF PARAMETERS -- WHETHER WE WANT TO RUN HALOS, GALAXIES ETC.  AND THEN HAVE THE CODE AUTMOATICALLY TURN ON CLOUDS IF WE SET -B_CLOUD linking lengths
             
     mylog.info('Using b=%g for %s' % (b, group_types[group_type]))
     return b
