@@ -19,3 +19,6 @@ attributes.
 Further information about CAESAR (including installation and usage) please visit:
 
 http://caesar.readthedocs.org
+
+VERSION 0.2b0 changelog is detailed here:
+https://www.overleaf.com/read/tfpfstktkrjm
