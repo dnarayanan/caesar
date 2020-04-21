@@ -778,7 +778,8 @@ def get_group_properties(self,grp_list):
     get_group_overall_properties(self,grp_list)
     get_group_gas_properties(self,grp_list)
     get_group_star_properties(self,grp_list)
-    get_group_bh_properties(self,grp_list)
+    if self.obj.data_manager.blackholes:
+        get_group_bh_properties(self,grp_list)
 
     from caesar.utils import calculate_local_densities
     calculate_local_densities(self.obj, grp_list)

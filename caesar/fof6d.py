@@ -92,11 +92,17 @@ class fof6d:
 
     def plist_init(self,parent=None):
 
+        from caesar.group import MINIMUM_DM_PER_HALO,MINIMUM_STARS_PER_GALAXY
         # set up particle lists
         if self.obj_type == 'halo' or parent is None:
             grpid = self.obj.data_manager.haloid - 1
+            if len(grpid[grpid>=0]) < MINIMUM_DM_PER_HALO:
+                sys.exit('Not enough halo particles for a single valid halo (%d < %d); exiting'%(len(grpid[grpid>=0]),MINIMUM_DM_PER_HALO))
         else:
             grpid = parent.tags_fof6d
+            if len(grpid[grpid>=0]) < MINIMUM_STARS_PER_GALAXY:
+                self.nparttot = 0
+                return
 
         # sort by grpid
         from caesar.property_manager import ptype_ints

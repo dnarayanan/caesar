@@ -207,7 +207,7 @@ class DataManager(object):
         if ds.cosmological_simulation:
             from yt.utilities.cosmology import Cosmology
             co = Cosmology(hubble_constant=ds.hubble_constant, omega_matter=ds.omega_matter, omega_lambda=ds.omega_lambda)
-            self.age = (ds.current_time - co.t_from_z(1./self.age-1.)).in_units('Gyr')  # age at time of snapshot 
+            self.age = (ds.current_time - co.t_from_z(1./self.age-1.)).in_units('Gyr').astype(MY_DTYPE)  # age at time of snapshot 
 
     def _load_bh_data(self, select='all'):
         """If blackholes are present, loads BH_Mdot"""

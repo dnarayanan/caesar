@@ -69,6 +69,7 @@ def fubar_halo(obj):
     # Process galaxies
     galaxies = fof6d(obj,'galaxy')  #instantiate a fof6d object
     galaxies.plist_init(parent=halos)  # get particle list for computing galaxy properties
+    if galaxies.nparttot == 0: return  # plist_init didn't find enough particles to group
     galaxies.load_lists(parent=halos)  # create galaxy_list, load particle index lists for galaxies
     get_group_properties(galaxies,galaxies.obj.galaxy_list)  # compute galaxy properties
 
@@ -78,6 +79,7 @@ def fubar_halo(obj):
         galaxies.load_lists('cloud')  # load particle index lists for galaxies
         clouds = fof6d(obj,'cloud')  #instantiate a fof6d object
         clouds.plist_init(parent=galaxies)  # initialize comptutation of cloud properties
+        if clouds.nparttot == 0: return  # plist_init didn't find enough particles to group
         get_group_properties(clouds)  # compute cloud properties
         galaxies.load_lists('cloud')
    
