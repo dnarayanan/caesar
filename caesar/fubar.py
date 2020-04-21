@@ -612,6 +612,8 @@ def fubar(obj, group_type, **kwargs):
     if group_type == 'halo':
         obj.halos  = group_list
         obj.nhalos = len(obj.halos)
+        #for ig in range(obj.nhalos):
+        #    if ig < 5: print('%d: dm %g gas %g star %g bh %g [%g %g %g] r200 %g vc %g sig %g %g %g'%(ig,np.log10(obj.halos[ig].masses['dm']),np.log10(obj.halos[ig].masses['gas']),np.log10(obj.halos[ig].masses['stellar']),np.log10(obj.halos[ig].masses['bh']),obj.halos[ig].pos[0],obj.halos[ig].pos[1],obj.halos[ig].pos[2],obj.halos[ig].radii['r500c'],obj.halos[ig].virial_quantities['circular_velocity'],obj.halos[ig].velocity_dispersions['gas'],obj.halos[ig].velocity_dispersions['stellar'],obj.halos[ig].velocity_dispersions['dm']))
     elif group_type == 'galaxy':
         obj.galaxies  = group_list
         obj.ngalaxies = len(obj.galaxies)

@@ -1,10 +1,12 @@
 import numpy as np
+
 from caesar.property_manager import DatasetType
 from caesar.particle_list import ParticleListContainer
 from caesar.simulation_attributes import SimulationAttributes
 
 import six
 from yt.funcs import mylog, get_hash
+
 
 class CAESAR(object):
     """Master CAESAR class.
@@ -63,6 +65,7 @@ class CAESAR(object):
         self.nclouds = 0
         self.halos = []
         self.galaxies = []
+        self.group_types = []
         
         self.reset_default_returns()
         
@@ -329,14 +332,17 @@ class CAESAR(object):
         self._args   = args
         self._kwargs = kwargs
 
-        self.data_manager._member_search_init()
-        
-        from caesar.fubar import fubar
-        fubar(self, 'halo')
-        fubar(self, 'galaxy')
-        fubar(self,'cloud')
+        if 'v01_member_search' in self._kwargs and self._kwargs['v01_member_search']:
+            from caesar.fubar import fubar
+            self.data_manager._member_search_init()
+            fubar(self, 'halo')
+            fubar(self, 'galaxy')
+            fubar(self,'cloud')
+        else:
+            from caesar.fubar_halo import fubar_halo
+            fubar_halo(self)
 
-        
+
         import caesar.assignment as assign
         import caesar.linking as link
         assign.assign_galaxies_to_halos(self)
@@ -345,10 +351,9 @@ class CAESAR(object):
         link.link_clouds_and_galaxies(self)
         assign.assign_central_galaxies(self)
         link.create_sublists(self)
-     
-        
-        import caesar.hydrogen_mass_calc as mass_calc
-        mass_calc.hydrogen_mass_calc(self)
+
+        #import caesar.hydrogen_mass_calc as mass_calc
+        #mass_calc.hydrogen_mass_calc(self)
 
         from caesar.zoom_funcs import all_object_contam_check
         all_object_contam_check(self)

@@ -1,5 +1,7 @@
 import numpy as np
 
+MY_DTYPE = np.float32
+
 # Field name aliases
 particle_data_aliases = {
     'pos':'particle_position',
@@ -17,7 +19,7 @@ particle_data_aliases = {
     'pid':'particle_index',
     'fh2':'FractionH2',
     'metallicity':'metallicity',
-    'age':'StellarFormationTime',
+    'aform':'StellarFormationTime',
     'bhmdot':'BH_Mdot',
     'bhmass':'BH_Mass',
     'haloid':'HaloID',
@@ -214,7 +216,6 @@ class DatasetType(object):
             The requested property values.
 
         """
-        #print(requested_ptype, requested_prop, self.indexes, isinstance(self.indexes, str))
         if not self.has_ptype(requested_ptype):
             raise NotImplementedError('ptype %s not found!' % requested_ptype)
         if not self.has_property(requested_ptype, requested_prop):
@@ -233,13 +234,49 @@ class DatasetType(object):
             (requested_prop == 'pos' or requested_prop == 'vel')):
             data = self._get_gas_grid_posvel(requested_prop)
         else:
-            data = self.dd[ptype, prop]
+            if self.ds_type == 'GizmoDataset':  # assumes this has Simba units, which is fairly standard
+                data = self._get_simba_property(requested_ptype,requested_prop)
+            else:
+                data = self.dd[ptype, prop]
 
-        if not isinstance(self.indexes, str):
-            data = data[self.indexes]
-            self.indexes = 'all'
+        #if not isinstance(self.indexes, str):
+        #    data = data[self.indexes]
+        #    self.indexes = 'all'
         return data
 
+    def _get_simba_property(self,ptype,prop):
+        from readgadget import readsnap
+        snapfile = ('%s/%s'%(self.ds.fullpath,self.ds.basename))
+        # set up units coming out of pygr
+        prop_unit = {'mass':'Msun', 'pos':'kpccm', 'vel':'km/s', 'pot':'Msun * kpccm**2 / s**2', 'rho':'g / cm**3', 'sfr':'Msun / yr', 'u':'K', 'Dust_Masses':'Msun', 'bhmass':'Msun', 'bhmdot':'Msun / yr'}
+
+        # damn you little h!
+        if prop is 'mass' or prop is 'dustmass' or prop is 'bhmass' or prop is 'pos':
+            hfact = 1./self.ds.hubble_constant
+        elif prop is 'rho':
+            hfact = self.ds.hubble_constant**2
+        else:
+            hfact = 1.
+
+        # deal with differences in pygr vs. yt/caesar naming
+        if ptype is 'bh': ptype = 'bndry'
+        if prop is 'temperature': prop = 'u'
+        if prop is 'haloid' or prop is 'dustmass' or prop is 'aform' or prop is 'bhmass' or prop is 'bhmdot': prop = self.get_property_name(ptype, prop)
+
+        # read in the data
+        data = readsnap(snapfile, prop, ptype, units=1, suppress=1) * hfact
+
+        # set to doubles
+        if prop == 'HaloID' or prop == 'particle_index':  # this fixes a bug in our Gizmo, that HaloID is output as a float!
+            data = data.astype(np.int64)
+        else:
+            data = data.astype(np.float32)
+
+        if prop in prop_unit.keys():
+            data = self.ds.arr(data, prop_unit[prop])
+        else:
+            data = self.ds.arr(data, '')
+        return data
 
     def _get_gas_grid_posvel(self,request):
         """Return a typical Nx3 array for gas grid positions."""
@@ -350,7 +387,7 @@ def get_high_density_gas_indexes(obj):
     indexes = np.where(rho >= nH_thresh)[0]
     return indexes
 
-def get_particles_for_FOF(obj, ptypes, select='all'):
+def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
     """This function concats all of the valid particle/field types
     into pos/vel/mass/ptype/index arrays for use throughout the 
     analysis.
@@ -370,22 +407,22 @@ def get_particles_for_FOF(obj, ptypes, select='all'):
         Dictionary containing the keys 'pos','vel','mass','ptype','indexes'.
 
     """    
-    pos  = np.empty((0,3))
-    vel  = np.empty((0,3))
-    mass = np.empty(0)
-    pot = np.empty(0)
+    pos  = np.empty((0,3),dtype=MY_DTYPE)
+    vel  = np.empty((0,3),dtype=MY_DTYPE)
+    mass = np.empty(0,dtype=MY_DTYPE)
+    pot = np.empty(0,dtype=MY_DTYPE)
     if 'fof_from_snap' in obj._kwargs and obj._kwargs['fof_from_snap']==1:
-        haloid  = np.empty(0, dtype=np.int32)
+        haloid  = np.empty(0, dtype=np.int64)
 
     ptype   = np.empty(0,dtype=np.int32)
-    indexes = np.empty(0,dtype=np.int32)
+    indexes = np.empty(0,dtype=np.int64)
 
     for ip,p in enumerate(ptypes):
         if not has_ptype(obj, p):
             continue
       
-        if select == 'all': 
-            count = len(get_property(obj, 'mass', p))
+        count = len(get_property(obj, 'mass', p))
+        if select is 'all': 
             flag = [True]*count
         else:
             flag = (select[ip]>=0)
@@ -404,12 +441,13 @@ def get_particles_for_FOF(obj, ptypes, select='all'):
 
         if 'fof_from_snap' in obj._kwargs and obj._kwargs['fof_from_snap']==1:
             data = get_property(obj, 'haloid', p)[flag]
-            haloid = np.append(haloid, data.d.astype(np.int32), axis=0)
+            haloid = np.append(haloid, data.d.astype(np.int64), axis=0)
 
         nparts = len(data)
 
         ptype   = np.append(ptype,   np.full(nparts, ptype_ints[p], dtype=np.int32), axis=0)
-        indexes = np.append(indexes, np.arange(0, nparts, dtype=np.int32))
+        indexes = np.append(indexes, np.arange(0, count, dtype=np.int64)[flag])
+        #indexes = np.append(indexes, np.arange(0, nparts, dtype=np.int64))
 
     if 'fof_from_snap' in obj._kwargs and obj._kwargs['fof_from_snap']==1:
         return dict(pos=pos,vel=vel,pot=pot,mass=mass,haloid=haloid,ptype=ptype,indexes=indexes)
@@ -433,17 +471,19 @@ def get_haloid(obj, ptypes, offset=-1):
 
     Returns
     -------
-    haloids for each particle type in ptypes
+    list of array of haloids for each particle type in ptypes
 
     """    
     haloid = []
 
+    obj.npartsnap = 0  # number of particles in snapshot
     for p in ptypes:
         if has_ptype(obj, p): 
             data = (get_property(obj, 'haloid', p).d.astype(np.int64) + offset)
+            obj.npartsnap += len(data)
         else: 
             data = []
         haloid.append(data)
 
-    return haloid
+    return np.asarray(haloid)
 

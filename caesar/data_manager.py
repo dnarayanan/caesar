@@ -2,6 +2,7 @@ import numpy as np
 
 from caesar.property_manager import ptype_ints, get_particles_for_FOF, get_property, has_property
 from caesar.utils import memlog
+from caesar.property_manager import MY_DTYPE
 
 class DataManager(object):
     """Class to handle the initial IO and data storage for the duration of
@@ -22,9 +23,10 @@ class DataManager(object):
 
     def _member_search_init(self, select='all'):
         """Collect particle information for member_search()"""
+        memlog('Initializing member search, loading particles')
         self._determine_ptypes()
         self.load_particle_data(select=select)
-        memlog('Loaded particle data.')
+        memlog('Loaded particle data')
         self._assign_particle_counts()
         if select is 'all': self._load_gas_data()
         else: self._load_gas_data(select=select[self.ptypes.index('gas')])
@@ -33,7 +35,7 @@ class DataManager(object):
         if self.blackholes:
             if select is 'all': self._load_bh_data()
             else: self._load_bh_data(select=select[self.ptypes.index('bh')])
-        memlog('Loaded baryon data.')
+        memlog('Loaded baryon data')
         
     def _determine_ptypes(self):
         """Determines what particle/field types to collect."""
@@ -42,7 +44,6 @@ class DataManager(object):
             if 'PartType5' in self.obj._ds_type.ds.particle_fields_by_type:
                 if 'BH_Mdot' in self.obj._ds_type.ds.particle_fields_by_type['PartType5'] or 'StellarFormationTime' in self.obj._ds_type.ds.particle_fields_by_type['PartType5']:
                     from yt.funcs import mylog
-                    mylog.warning('Enabling black holes')
                     self.ptypes.append('bh')
                     self.blackholes = True
             else:
@@ -53,7 +54,8 @@ class DataManager(object):
             self.ptypes.append('dust')
             self.dust = True
         self.ptypes.append('dm')
-        self.ptypes.append('dm2')
+        if 'dm2' in self.obj._kwargs and self.obj._kwargs['dm2']:
+            self.ptypes.append('dm2')
 
         #if self.obj._ds_type.grid:
         #    self.ptypes.remove('gas')
@@ -73,7 +75,7 @@ class DataManager(object):
         self.pot   = pdata['pot']
         self.mass  = pdata['mass']
         self.ptype = pdata['ptype']
-        self.index = pdata['indexes']
+        self.indexes = pdata['indexes']
         if ('fof_from_snap' in self.obj._kwargs and self.obj._kwargs['fof_from_snap']==1):
             self.haloid = pdata['haloid']
         pdata      = None
@@ -94,7 +96,7 @@ class DataManager(object):
 
     def _reset_dm_indexes(self):
         """Reset the dark matter index list after we detect a zoom."""
-        self.index[self.dmlist] = np.arange(0,len(self.dmlist), dtype=np.int32)
+        self.indexes[self.dmlist] = np.arange(0,len(self.dmlist), dtype=np.int32)
 
     def _check_for_lowres_dm(self):
         """Check and account for low-resolution dark matter in non 
@@ -123,6 +125,7 @@ class DataManager(object):
         self.obj.simulation.ndm2  = len(self.dm2list)
         self.obj.simulation.nbh   = len(self.bhlist)
         self.obj.simulation.ndust = len(self.dlist)
+        self.obj.simulation.ntot  = self.obj.simulation.ngas+self.obj.simulation.nstar+self.obj.simulation.ndm+self.obj.simulation.ndm2+self.obj.simulation.nbh+self.obj.simulation.ndust
 
 
     def _load_gas_data(self,select='all'):
@@ -141,6 +144,8 @@ class DataManager(object):
         gT  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), self.obj.units['temperature'])
         gnh  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), gnh_unit)
         dustmass = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas),'')
+        gfHI  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')        
+        gfH2  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')        
         #dustmass = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')#dustmass_unit)
             
         if select is 'all': 
@@ -153,6 +158,12 @@ class DataManager(object):
 
         if has_property(self.obj, 'gas', 'metallicity'):            
             gZ  = get_property(self.obj, 'metallicity', 'gas')[flag]
+
+        if has_property(self.obj, 'gas', 'nh'):            
+            gfHI  = get_property(self.obj, 'nh', 'gas')[flag]
+
+        if has_property(self.obj, 'gas', 'fh2'):            
+            gfH2  = get_property(self.obj, 'fh2', 'gas')[flag]
 
         if has_property(self.obj, 'gas', 'temperature'):
             gT  = get_property(self.obj, 'temperature', 'gas')[flag].to(self.obj.units['temperature'])
@@ -174,6 +185,8 @@ class DataManager(object):
         self.gZ   = gZ
         self.gT   = gT
         self.gnh   = gnh
+        self.gfHI   = gfHI
+        self.gfH2   = gfH2
         self.dustmass = self.obj.yt_dataset.arr(dustmass,'code_mass').in_units('Msun')
 
     def _load_star_data(self, select='all'):
@@ -189,7 +202,12 @@ class DataManager(object):
         if has_property(self.obj, 'star', 'metallicity'):
             self.sZ  = get_property(self.obj, 'metallicity', 'star')[flag]
 
-
+        ds = self.obj.yt_dataset
+        self.age  = get_property(self.obj, 'aform', 'star')[flag]  # a_exp at time of formation
+        if ds.cosmological_simulation:
+            from yt.utilities.cosmology import Cosmology
+            co = Cosmology(hubble_constant=ds.hubble_constant, omega_matter=ds.omega_matter, omega_lambda=ds.omega_lambda)
+            self.age = (ds.current_time - co.t_from_z(1./self.age-1.)).in_units('Gyr')  # age at time of snapshot 
 
     def _load_bh_data(self, select='all'):
         """If blackholes are present, loads BH_Mdot"""
@@ -203,12 +221,11 @@ class DataManager(object):
         if has_property(self.obj, 'bh', 'bhmass'):
             self.bhmass     = self.obj.yt_dataset.arr(get_property(self.obj, 'bhmass', 'bh').d[flag]*1e10, 'Msun/h').to(self.obj.units['mass'])  # I don't know how to convert this automatically
             self.use_bhmass = True
-            mylog.info('BH_Mass available, units=1e10 Msun/h')
-            mylog.info('Using BH_Mass instead of BH particle masses')
         else:
-            mylog.info('Using BH particle mass')
+            mylog.warning('No black holes found')
+            self.use_bhmass = False
 
-        if has_property(self.obj, 'bh', 'bhmdot'):
+        if has_property(self.obj, 'bh', 'bhmdot') and self.use_bhmass:
             #units mutlitplied by ((All.UnitMass_in_g / SOLAR_MASS) / (All.UnitTime_in_s / SEC_PER_YEAR))
             bhmdot_unit = '10.22465727143273*Msun/h/yr'
             #bhmdot_unit = '15.036260693283424*Msun/yr'
@@ -217,8 +234,10 @@ class DataManager(object):
             bhmdot      = get_property(self.obj, 'bhmdot', 'bh').d[flag] #of course  it is dimentionless
             bhmdot      = self.obj.yt_dataset.arr(bhmdot, bhmdot_unit).to('%s/%s' %(self.obj.units['mass'], self.obj.units['time']))
             self.bhmdot = bhmdot
-            mylog.info('BH_Mdot available, units=%s'%bhmdot_unit)
-        else: mylog.warning('BH_Mdot not available')
+            #mylog.info('BH_Mdot available, units=%s'%bhmdot_unit)
+        else: 
+            if self.use_bhmass: 
+                mylog.warning('Black holes are there, but BH_Mdot not available!')
 
 
 

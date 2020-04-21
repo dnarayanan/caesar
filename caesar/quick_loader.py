@@ -96,7 +96,6 @@ class CAESAR:
             self.simulation = SimulationAttributes()
             self.simulation._unpack(self, hd)
 
-            mylog.info('Loading halos')
             self._galaxy_index_list = None
             if 'halo_data/lists/galaxy_index_list' in hd:
                 self._galaxy_index_list = LazyArray(
@@ -122,7 +121,6 @@ class CAESAR:
             self.ngalaxies = 0
             self.galaxies = LazyList(self.ngalaxies, lambda i: Galaxy(self, i))
             if 'galaxy_data' in hd:
-                mylog.info('Loading galaxies')
                 self._cloud_index_list = None
                 if 'galaxy_data/lists/cloud_index_list' in hd:
                     self._cloud_index_list = LazyArray(
@@ -148,7 +146,6 @@ class CAESAR:
             self.nclouds = 0
             self.clouds = LazyList(self.nclouds, lambda i: Cloud(self, i))
             if 'cloud_data' in hd:
-                mylog.info('Loading clouds')
                 for k, v in hd['cloud_data'].items():
                     if type(v) is h5py.Dataset:
                         self._cloud_data[k] = LazyArray(

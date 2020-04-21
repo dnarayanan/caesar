@@ -14,6 +14,15 @@ group_types = dict(
     cloud='clouds'
 )
 
+list_types = dict(
+    gas='gas',
+    star='stellar',
+    bh='bh',
+    dust='dust',
+    dm='dm',
+    dm2='dm2'
+)
+
 info_blacklist = [
     '_glist','glist_end','glist_start',
     '_slist','slist_end','slist_start',
@@ -73,7 +82,9 @@ class Group(object):
         self.masses = {}
         self.radii = {} 
         self.temperatures = {}
-        self.spin_param = 0.0
+        self.velocity_dispersions = {}
+        self.rotation = {}
+        self.virial_quantities = {}
     def _append_global_index(self, i):
         if not hasattr(self, 'global_indexes'):
             self.global_indexes = []
@@ -154,7 +165,7 @@ class Group(object):
         """Assign glist/slist/dmlist/bhlist/dlist for this group.  
 		Also sets the ngas/nstar/ndm/nbh/ndust attributes."""
         ptypes  = self.obj.data_manager.ptype[self.global_indexes]
-        indexes = self.obj.data_manager.index[self.global_indexes]
+        indexes = self.obj.data_manager.indexes[self.global_indexes]
 
         # lists for the concatinated global list
         self.__glist = np.where(ptypes == ptype_ints['gas'])[0]
@@ -412,16 +423,11 @@ class Group(object):
         collectRadii = np.zeros(len(sim.Densities), dtype = np.float64) # empty array of desired densities in Msun/kpc**3
         collectMasses = np.zeros(len(sim.Densities), dtype = np.float64) # empty array of masses at desired radii
         get_virial_mr(sim.Densities.d, pmass[::-1], periodic_r[::-1], collectRadii, collectMasses)
-        self.radii['virial'] = self.obj.yt_dataset.quan(collectRadii[0], 'kpc')
-        self.radii['r200c'] = self.obj.yt_dataset.quan(collectRadii[1], 'kpc')
-        self.radii['r500c'] = self.obj.yt_dataset.quan(collectRadii[2], 'kpc')
-        self.radii['r2500c'] = self.obj.yt_dataset.quan(collectRadii[3], 'kpc')
-        
+        #self.radii['virial'] = self.obj.yt_dataset.quan(collectRadii[0], 'kpc')
         PiFac = 4./3. * np.pi
-        self.masses['virial'] = self.obj.yt_dataset.quan(collectMasses[0], 'Msun')
-        self.masses['m200c'] = self.obj.yt_dataset.quan(collectMasses[1], 'Msun')
-        self.masses['m500c'] = self.obj.yt_dataset.quan(collectMasses[2], 'Msun')
-        self.masses['m2500c'] = self.obj.yt_dataset.quan(collectMasses[3], 'Msun')
+        for ir,rvname in enumerate(['200c','500c','2500c']):
+            self.radii['r'+rvname] = self.obj.yt_dataset.quan(collectRadii[ir], 'kpc')
+            self.masses['m'+rvname] = self.obj.yt_dataset.quan(collectMasses[ir], 'Msun')
         #self.masses['virial'] = 100.*critical_density * PiFac*self.radii['virial']**3
         #self.masses['m200c'] = 200.*critical_density * PiFac*self.radii['r200c']**3
         #self.masses['m500c'] = 500.*critical_density * PiFac*self.radii['r500c']**3
@@ -438,7 +444,7 @@ class Group(object):
         vT = self.obj.yt_dataset.quan(3.6e5 * (vc.d / 100.0)**2, 'K')
 
         # convert units
-        self.radii['virial'] = self.radii['virial'].to(self.obj.units['length'])
+        #self.radii['virial'] = self.radii['virial'].to(self.obj.units['length'])
         self.radii['r200c']  = self.radii['r200c'].to(self.obj.units['length'])
         self.radii['r500c']  = self.radii['r500c'].to(self.obj.units['length'])
         self.radii['r2500c']  = self.radii['r2500c'].to(self.obj.units['length'])
@@ -456,7 +462,7 @@ class Group(object):
         
 
         self.virial_quantities = dict(
-            radius = self.radii['virial'],
+            #radius = self.radii['virial'],
             r200c  = self.radii['r200c'],
             r500c  = self.radii['r500c'],
             r2500c  = self.radii['r2500c'],
@@ -478,8 +484,6 @@ class Group(object):
         v = self.obj.data_manager.vel[self.global_indexes]
         m = self.obj.data_manager.mass[self.global_indexes]
         
-        self.velocity_dispersions = dict() 
-        
         self.velocity_dispersions['all']     = get_sigma(v,m)
         self.velocity_dispersions['dm']      = get_sigma(v[ ptypes == ptype_ints['dm']],m[ ptypes == ptype_ints['dm']])
         self.velocity_dispersions['baryon']  = get_sigma(v[(ptypes == ptype_ints['gas']) | (ptypes == ptype_ints['star'])],m[(ptypes == ptype_ints['gas']) | (ptypes == ptype_ints['star'])])
@@ -495,6 +499,7 @@ class Group(object):
         pos  = self.obj.yt_dataset.arr(self.obj.data_manager.pos[self.global_indexes],  self.obj.units['length'])
         vel  = self.obj.yt_dataset.arr(self.obj.data_manager.vel[self.global_indexes],  self.obj.units['velocity'])
         mass = self.obj.yt_dataset.arr(self.obj.data_manager.mass[self.global_indexes], self.obj.units['mass'])
+        ptype = self.obj.yt_dataset.arr(self.obj.data_manager.ptype[self.global_indexes], self.obj.units['mass'])
 
         px = mass * vel[:,0]
         py = mass * vel[:,1]
@@ -507,19 +512,20 @@ class Group(object):
         Ly = np.sum( z*px - x*pz )
         Lz = np.sum( x*py - y*px )
         L  = np.sqrt(Lx**2 + Ly**2 + Lz**2)
+        
         #self.angular_momentum        = self.obj.yt_dataset.quan(L, Lx.units)
         self.angular_momentum_vector = self.obj.yt_dataset.arr([Lx.d,Ly.d,Lz.d], Lx.units)
 
         
         # Bullock spin or lambda prime
         #self.spin = self.angular_momentum / (1.4142135623730951 *
-        if self.virial_quantities['r200c'] > 0:
-            self.spin_param = self.obj.yt_dataset.quan(L, Lx.units) / (1.4142135623730951 *
+        if self.virial_quantities['r200'] > 0:
+            self.virial_quantities['spin_param'] = self.obj.yt_dataset.quan(L, Lx.units) / (1.4142135623730951 *
                                              self.masses['total'] *
                                              self.virial_quantities['circular_velocity'].to('km/s') *
-                                             self.virial_quantities['r200c'].to('km'))
+                                             self.virial_quantities['r200'].to('km'))
         else:
-            self.spin_param = self.obj.yt_dataset.quan(0.0, '')
+            self.virial_quantities['spin_param'] = self.obj.yt_dataset.quan(0.0, '')
 
         PHI   = np.arctan2(Ly.d,Lx.d)
         THETA = np.arccos(Lz.d/L.d)
@@ -714,6 +720,8 @@ class Galaxy(Group):
         super(Galaxy, self).__init__(obj)
         self.central = False
         self.halo = None
+        self.clouds = []
+        self.cloud_index_list = np.array([])
         
 class Halo(Group):
     """Halo class which has the dmlist attribute, and child boolean."""
@@ -759,3 +767,69 @@ def create_new_group(obj, group_type):
         return Galaxy(obj)
     elif group_type == 'cloud':
         return Cloud(obj)
+
+
+''' New group functions from Romeel's rewrite April 2020 '''
+
+def get_group_properties(self,grp_list):
+
+    from caesar.group_funcs import get_group_overall_properties,get_group_gas_properties,get_group_star_properties,get_group_bh_properties
+
+    get_group_overall_properties(self,grp_list)
+    get_group_gas_properties(self,grp_list)
+    get_group_star_properties(self,grp_list)
+    get_group_bh_properties(self,grp_list)
+
+    from caesar.utils import calculate_local_densities
+    calculate_local_densities(self.obj, grp_list)
+
+    if self.obj_type == 'halo':
+        sort_groups(grp_list,'total')
+        self.obj.halos = self.obj.halo_list
+        self.obj.nhalos = len(self.obj.halo_list)
+    if self.obj_type == 'galaxy':
+        # compute some extra quantities for galaxies 
+        from caesar.hydrogen_mass_calc import get_HIH2_masses,get_aperture_masses
+        get_HIH2_masses(self)
+        if 'aperture' in self.obj._kwargs:
+            get_aperture_masses(self,aperture=float(self.obj._kwargs['aperture']))
+        else:
+            get_aperture_masses(self)
+        # sort and load galaxies into list
+        sort_groups(grp_list,'stellar')
+        self.obj.galaxies = self.obj.galaxy_list
+        self.obj.ngalaxies = len(self.obj.galaxy_list)
+    if self.obj_type == 'cloud':
+        sort_groups(grp_list,'gas')
+        self.obj.clouds = self.obj.cloud_list
+        self.obj.nclouds = len(self.obj.cloud_list)
+
+    return
+
+def sort_groups(grp_list,sort_key):
+    grp_list.sort(key = lambda x: x.masses[sort_key], reverse=True)
+    for i in range(0,len(grp_list)):
+        grp_list[i].GroupID = i
+    return
+
+def collate_group_ids(grp_list,part_type,ntot):
+    # Auxiliary function to collate individual group lists for given particle type into a single
+    # list grpids for cython processing.  Records each group's range within grpids in gid_bins.
+    from caesar.fof6d import find_bins
+    if part_type == 'all': suffix = 'global_indexes'
+    elif part_type == 'gas': suffix = 'glist'
+    elif part_type == 'star': suffix = 'slist'
+    elif part_type == 'bh': suffix = 'bhlist'
+    elif part_type == 'dm': suffix = 'dmlist'
+    ngroup = len(grp_list)
+    grpids = np.zeros(ntot,dtype=np.int64)
+    gid_bins = np.zeros(ngroup+1,dtype=np.int64)
+    i0 = 0
+    for igrp in range(ngroup):
+        mylist = 'grp_list[igrp].'+suffix
+        i1 = i0 + len(eval(mylist))
+        gid_bins[igrp+1] = i1
+        grpids[i0:i1] = eval(mylist)
+        i0 = i1
+
+    return ngroup, grpids, gid_bins
