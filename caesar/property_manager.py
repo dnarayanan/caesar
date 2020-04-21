@@ -251,7 +251,7 @@ class DatasetType(object):
         prop_unit = {'mass':'Msun', 'pos':'kpccm', 'vel':'km/s', 'pot':'Msun * kpccm**2 / s**2', 'rho':'g / cm**3', 'sfr':'Msun / yr', 'u':'K', 'Dust_Masses':'Msun', 'bhmass':'Msun', 'bhmdot':'Msun / yr'}
 
         # damn you little h!
-        if prop is 'mass' or prop is 'dustmass' or prop is 'bhmass' or prop is 'pos':
+        if prop is 'mass' or prop is 'pos':
             hfact = 1./self.ds.hubble_constant
         elif prop is 'rho':
             hfact = self.ds.hubble_constant**2

@@ -382,13 +382,16 @@ def get_group_gas_properties(group,grp_list):
         float[:]   gsfr = group.obj.data_manager.gsfr[grpids]
         float[:]   gZ = group.obj.data_manager.gZ[grpids]
         float[:]   gtemp = group.obj.data_manager.gT[grpids]
+        float[:]   gfH2 = group.obj.data_manager.gfH2[grpids]
         float[:]   mdust = group.obj.data_manager.dustmass[grpids]
         # general variables
         int ng = ngroup
         int my_nproc = group.nproc
         int i,ig,istart,iend
+        double XH = group.obj.simulation.XH
         # Things to compute
         float[:]   grp_mass = np.zeros(ngroup,dtype=MY_DTYPE)  # total mass
+        float[:]   grp_mH2 = np.zeros(ngroup,dtype=MY_DTYPE)  # total mass
         float[:]   grp_mdust = np.zeros(ngroup,dtype=MY_DTYPE)  # dust mass
         float[:]   grp_mnonsf = np.zeros(ngroup,dtype=MY_DTYPE)  # mass of non-SF gas
         float[:]   grp_sfr = np.zeros(ngroup,dtype=MY_DTYPE)  # SFR
@@ -405,6 +408,7 @@ def get_group_gas_properties(group,grp_list):
         iend = hid_bins[ig+1]
         for i in range(istart,iend):
             grp_mass[ig] += gm[i]
+            grp_mH2[ig] += XH*gm[i]*gfH2[i]
             grp_mdust[ig] += mdust[i]
             grp_sfr[ig] += gsfr[i]
             grp_Zm[ig] += gZ[i]*gm[i]
@@ -425,6 +429,7 @@ def get_group_gas_properties(group,grp_list):
 
     for ig in range(ng):
         grp_list[ig].sfr = group.obj.yt_dataset.quan(grp_sfr[ig], '%s/%s' % (group.obj.units['mass'],group.obj.units['time']))
+        grp_list[ig].masses['H2'] = group.obj.yt_dataset.quan(grp_mH2[ig], group.obj.units['mass'])
         grp_list[ig].metallicities = dict(
             mass_weighted = group.obj.yt_dataset.quan(grp_Zm[ig], ''),
             sfr_weighted  = group.obj.yt_dataset.quan(grp_Zsfr[ig], ''),
