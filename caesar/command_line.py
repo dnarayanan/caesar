@@ -21,7 +21,7 @@ def run():
     parser.add_argument('-fof6d_mingrp',type=float,help='Set min group size for fof6d')
     parser.add_argument('-fof6d_LL_factor',type=float,help='Set linking length factor for fof6d')
     parser.add_argument('-fof6d_vel_LL',type=float,help='Set velocity linking length for fof6d, in units of local vel disp')
-    parser.add_argument('-nproc',type=int,help='Set number of processors for fof6d and group property calculation')
+    parser.add_argument('-nproc', type=int, help='Set number of processors for fof6d and group property calculation', default=1)
     parser.add_argument('-bh', '--blackholes', help='Black holes present?',
                         dest='OPTIONS', action='append_const', const='blackholes')
     parser.add_argument('-d', '--dust', help='Active dust present?',
@@ -32,7 +32,12 @@ def run():
                         dest='OPTIONS', action='append_const', const='unbind_galaxies')
     parser.add_argument('-lr', '--lowres', type=int, help='Lowres particle types (Gadget/GIZMO HDF5 ONLY)', nargs='+')
     parser.add_argument('-q', '--quick', action="store_true", default=False, help='Use the quick-loading CAESAR backend if loading an existing output file')
+    parser.add_argument('--use-the-old-and-slow-loader', action="store_true", default=False)
     args = parser.parse_args()
+
+    if args.quick:
+        import warnings
+        warnings.warn('The quick-loader is now the default behavior. The -q and --quick flags will be removed soon.', stacklevel=2)
 
     var_dict = vars(args)
     if args.OPTIONS is not None:
@@ -55,34 +60,31 @@ def run():
         hd.close()
     except:
         pass
-    
+
     if caesar_file:
-        if args.quick:
-            open_caesar_file_quick(args.input)
+        if args.use_the_old_and_slow_loader:
+            import IPython
+            from .old_loader import load
+            obj = load(args.input)
+
+            print('')
+            print("CAESAR file loaded into the 'obj' variable")
+            print('')
+
+            IPython.embed()
         else:
             open_caesar_file(args.input)
     else:
         run_caesar(args.input, var_dict)
 
 
-def open_caesar_file_quick(infile):
-    import IPython
-    from .quick_loader import quick_load
-    obj = quick_load(infile)
-
-    IPython.embed(header="CAESAR file loaded into the 'obj' variable")
-
-        
 def open_caesar_file(infile):
     import IPython
     from .loader import load
     obj = load(infile)
 
-    print('')
-    print("CAESAR file loaded into the 'obj' variable")
-    print('')
+    IPython.embed(header="CAESAR file loaded into the 'obj' variable")
 
-    IPython.embed()
 
 def run_caesar(infile, args):
     import yt

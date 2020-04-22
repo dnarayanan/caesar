@@ -106,7 +106,6 @@ def get_IC_pos(group, ic_ds, radius_type,search_factor=2.5, return_mask=False):
     ic_ds_type = ic_ds.__class__.__name__
     if ic_ds_type not in ptype_aliases:
         raise NotImplementedError('%s not yet supported' % ic_ds_type)
-    group.obj._check_for_yt_dataset()
     if group.obj.yt_dataset.domain_width[0].d != ic_ds.domain_width[0].d:
         raise Exception('IC and SNAP boxes do not match! (%f vs %f)' %
                         (ic_ds.domain_width[0].d,
@@ -188,7 +187,6 @@ def construct_lowres_tree(group, lowres):
     obj = group.obj
     if hasattr(obj, '_lowres') and obj._lowres['ptypes'] == lowres:
         return
-    group.obj._check_for_yt_dataset()
     mylog.info('Gathering low-res particles and constructing tree')
     from caesar.property_manager import get_property
     

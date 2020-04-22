@@ -1,4 +1,5 @@
 import numpy as np
+from yt.funcs import mylog
 
 from caesar.property_manager import ptype_ints, get_particles_for_FOF, get_property, has_property
 from caesar.utils import memlog
@@ -44,13 +45,11 @@ class DataManager(object):
         if True:
             if 'PartType5' in self.obj._ds_type.ds.particle_fields_by_type:
                 if 'BH_Mdot' in self.obj._ds_type.ds.particle_fields_by_type['PartType5'] or 'StellarFormationTime' in self.obj._ds_type.ds.particle_fields_by_type['PartType5']:
-                    from yt.funcs import mylog
                     self.ptypes.append('bh')
                     self.blackholes = True
             else:
                 mylog.warning('No black holes found')
         if 'dust' in self.obj._kwargs and self.obj._kwargs['dust']:
-            from yt.funcs import mylog
             mylog.warning('Enabling active dust particles')
             self.ptypes.append('dust')
             self.dust = True
@@ -110,7 +109,6 @@ class DataManager(object):
         dmmass = self.mass[self.dmlist]
         unique = np.unique(dmmass)
         if len(unique) > 1:
-            from yt.funcs import mylog
             mylog.info('Found %d DM species, assuming a zoom' % len(unique))
             minmass = np.min(unique)
             lowres  = np.where(dmmass > minmass)[0]
@@ -188,6 +186,7 @@ class DataManager(object):
         self.gfHI   = gfHI
         self.gfH2   = gfH2
         self.dustmass = self.obj.yt_dataset.arr(dustmass,'code_mass').in_units('Msun')
+        self.dustmass.dtype = np.float32
 
     def _load_star_data(self, select='all'):
         """If star is present load Metallicity if present"""
@@ -211,7 +210,6 @@ class DataManager(object):
 
     def _load_bh_data(self, select='all'):
         """If blackholes are present, loads BH_Mdot"""
-        from yt.funcs import mylog
 
         if select is 'all': 
             flag = [True]*self.obj.simulation.nbh
