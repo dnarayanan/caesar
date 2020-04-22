@@ -411,7 +411,7 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
     vel  = np.empty((0,3),dtype=MY_DTYPE)
     mass = np.empty(0,dtype=MY_DTYPE)
     pot = np.empty(0,dtype=MY_DTYPE)
-    if 'fof_from_snap' in obj._kwargs and obj._kwargs['fof_from_snap']==1:
+    if 'haloid' in obj._kwargs and 'snap' in obj._kwargs['haloid']:
         haloid  = np.empty(0, dtype=np.int64)
 
     ptype   = np.empty(0,dtype=np.int32)
@@ -439,7 +439,7 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
         data = get_property(obj, 'pot', p)[flag]
         pot = np.append(pot, data.d, axis=0)
 
-        if 'fof_from_snap' in obj._kwargs and obj._kwargs['fof_from_snap']==1:
+        if 'haloid' in obj._kwargs and 'snap' in obj._kwargs['haloid']:
             data = get_property(obj, 'haloid', p)[flag]
             haloid = np.append(haloid, data.d.astype(np.int64), axis=0)
 
@@ -449,7 +449,7 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
         indexes = np.append(indexes, np.arange(0, count, dtype=np.int64)[flag])
         #indexes = np.append(indexes, np.arange(0, nparts, dtype=np.int64))
 
-    if 'fof_from_snap' in obj._kwargs and obj._kwargs['fof_from_snap']==1:
+    if 'haloid' in obj._kwargs and 'snap' in obj._kwargs['haloid']:
         return dict(pos=pos,vel=vel,pot=pot,mass=mass,haloid=haloid,ptype=ptype,indexes=indexes)
     else: return dict(pos=pos,vel=vel,pot=pot,mass=mass,ptype=ptype,indexes=indexes)
 

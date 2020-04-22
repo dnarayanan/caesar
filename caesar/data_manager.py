@@ -40,14 +40,15 @@ class DataManager(object):
     def _determine_ptypes(self):
         """Determines what particle/field types to collect."""
         self.ptypes = ['gas','star']
-        if 'blackholes' in self.obj._kwargs and self.obj._kwargs['blackholes']:
+        #if 'blackholes' in self.obj._kwargs and self.obj._kwargs['blackholes']:
+        if True:
             if 'PartType5' in self.obj._ds_type.ds.particle_fields_by_type:
                 if 'BH_Mdot' in self.obj._ds_type.ds.particle_fields_by_type['PartType5'] or 'StellarFormationTime' in self.obj._ds_type.ds.particle_fields_by_type['PartType5']:
                     from yt.funcs import mylog
                     self.ptypes.append('bh')
                     self.blackholes = True
             else:
-                mylog.warning('You have enabled black holes, but no BH particle type is in the simulation snapshot')
+                mylog.warning('No black holes found')
         if 'dust' in self.obj._kwargs and self.obj._kwargs['dust']:
             from yt.funcs import mylog
             mylog.warning('Enabling active dust particles')
@@ -76,7 +77,7 @@ class DataManager(object):
         self.mass  = pdata['mass']
         self.ptype = pdata['ptype']
         self.indexes = pdata['indexes']
-        if ('fof_from_snap' in self.obj._kwargs and self.obj._kwargs['fof_from_snap']==1):
+        if ('haloid' in self.obj._kwargs and 'snap' in self.obj._kwargs['haloid']):
             self.haloid = pdata['haloid']
         pdata      = None
 

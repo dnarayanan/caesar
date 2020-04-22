@@ -16,6 +16,7 @@ import sys
 import os
 import pdb
 from caesar.utils import memlog
+from caesar.property_manager import MY_DTYPE
 
 class fof6d:
 
@@ -24,7 +25,6 @@ class fof6d:
         self.obj._args   = obj._args
         self.obj._kwargs = obj._kwargs
         self.obj_type = group_type
-        self._determine_ptypes()
         self.Lbox = obj.simulation.boxsize.d
         self.counts = {}
 
@@ -45,49 +45,46 @@ class fof6d:
             unbind_str = 'unbind_%s' % group_types[gt]
             setattr(self.obj.simulation, unbind_str, False)
 
-    def _determine_ptypes(self):
-        """Determines what particle/field types to collect."""
-        self.obj.ptypes = ['gas','star']
-        if 'blackholes' in self.obj._kwargs and self.obj._kwargs['blackholes']:
-            if 'PartType5' in self.obj._ds_type.ds.particle_fields_by_type:
-                if 'BH_Mdot' in self.obj._ds_type.ds.particle_fields_by_type['PartType5'] or 'StellarFormationTime' in self.obj._ds_type.ds.particle_fields_by_type['PartType5']:
-                    from yt.funcs import mylog
-                    self.obj.ptypes.append('bh')
-                    self.obj.blackholes = True
-            else:
-                mylog.warning('You have enabled black holes, but no BH particle type is in the simulation snapshot')
-        if 'dust' in self.obj._kwargs and self.obj._kwargs['dust']:
-            from yt.funcs import mylog
-            mylog.warning('Enabling active dust particles')
-            self.obj.ptypes.append('dust')
-            self.obj.dust = True
-        self.obj.ptypes.append('dm')
-        self.obj.ptypes.append('dm2')
-
-    def load_haloid(self,source='snapshot'):
+    def load_haloid(self):
         # Get Halo IDs, either from snapshot or else run fof.
         # This will be a list of numpy arrays for each ptype
-        if ('fof_from_snap' in self.obj._kwargs and self.obj._kwargs['fof_from_snap']==1) and source=='snapshot':
+        if 'haloid' in self.obj._kwargs and 'snap' in self.obj._kwargs['haloid']:
             from caesar.property_manager import get_haloid
             memlog('Using FOF Halo ID from snapshots')
-            self.haloid = get_haloid(self.obj, self.obj.ptypes, offset=-1)
-        elif source=='fof':  
+            self.haloid = get_haloid(self.obj, self.obj.data_manager.ptypes, offset=-1)
+        elif 'haloid' in self.obj._kwargs and 'fof' in self.obj._kwargs['haloid']:
             from caesar.fubar import get_mean_interparticle_separation,get_b,fof
-            from caesar.property_manager import get_property,has_ptype
-            memlog('Running FOF to get Halo IDs')
+            from caesar.property_manager import get_property,has_ptype,ptype_ints
             LL = get_mean_interparticle_separation(self.obj) * get_b(self.obj, 'halo')
-            pos = np.empty((0,3))
-            for ip,p in enumerate(self.obj.ptypes):  # get positions
+            memlog('Running 3D FOF to get Halo IDs, LL=%g'%LL)
+            pos = np.empty((0,3),dtype=MY_DTYPE)
+            ptype = np.empty(0,dtype=np.int32)
+            for ip,p in enumerate(self.obj.data_manager.ptypes):  # get positions
                 if not has_ptype(self.obj, p): continue
-                pos.append(get_property(obj, 'pos', p).to(obj.units['length']))
-            haloid_all = fof(self.obj, pos, LL, group_type='halo', **kwargs)  # run FOF
+                data = get_property(self.obj, 'pos', p)
+                pos = np.append(pos, data.d, axis=0)
+                ptype = np.append(ptype, np.full(len(data), ptype_ints[p], dtype=np.int32), axis=0)
+            haloid_all = fof(self.obj, pos, LL, group_type='halo')  # run FOF
             self.haloid = []
-            for ip,p in enumerate(self.obj.ptypes):  # fill haloid arrays for each ptype
-                if not has_ptype(self.obj, p): continue
-                self.haloid.append(haloid_all[self.obj.ptype==p])
-        elif source=='rockstar':  
+            haloid = np.empty(0,dtype=np.int64)
+            for p in self.obj.data_manager.ptypes:  # fill haloid arrays for each ptype
+                if has_ptype(self.obj, p):
+                    data = haloid_all[ptype==ptype_ints[p]]
+                    datasel = data[data>=0]
+                else:
+                    data = np.empty(0,dtype=np.int64)
+                    datasel = np.empty(0,dtype=np.int64)
+                self.haloid.append(data)
+                haloid = np.append(haloid,datasel,axis=0)
+            self.haloid = np.asarray(self.haloid)
+            self.obj.data_manager.haloid = haloid
+        elif 'haloid' in self.obj._kwargs and 'rockstar' in self.obj._kwargs['haloid']:
             import sys
             sys.exit('Sorry, reading from rockstar files not implemented yet')
+        else:
+            from caesar.property_manager import get_haloid
+            memlog('No Halo ID source specified -- trying the snapshot...')
+            self.haloid = get_haloid(self.obj, self.obj.data_manager.ptypes, offset=-1)
 
 
     def plist_init(self,parent=None):
@@ -108,7 +105,7 @@ class fof6d:
         from caesar.property_manager import ptype_ints
         self.nparttot = len(grpid)
         self.nparttype = {}
-        for p in self.obj.ptypes:
+        for p in self.obj.data_manager.ptypes:
             self.nparttype[p] = len(grpid[self.obj.data_manager.ptype==ptype_ints[p]])
         sort_grpid = np.argsort(grpid)
         self.pid_sorted = np.arange(self.nparttot,dtype=np.int64)[sort_grpid]
@@ -187,7 +184,7 @@ class fof6d:
             my_ptype = self.obj.data_manager.ptype[my_indexes]
             mygrp.global_indexes = my_indexes
             offset = 0
-            for ip,p in enumerate(self.obj.ptypes):
+            for ip,p in enumerate(self.obj.data_manager.ptypes):
                 if not has_ptype(self.obj, p): continue
                 if p == 'gas': 
                     mygrp.glist = my_indexes[my_ptype==ptype_ints[p]]-offset
@@ -245,9 +242,10 @@ class fof6d:
         hf = h5py.File(fof6d_file,'r')
         self.tags_fof6d = np.asarray(hf['fof6d_tags'])
         self.group_parents = np.asarray(hf['group_parents'])
-        assert len(self.tags_fof6d)==self.nparttot,'Assertion failed: len(fof6d_tags) does not match length of particle list in halos: %d != %d.  Perhaps you are using a fof6d file generated from a different halo catalog?'%(len(self.tags_fof6d),self.nparttot)
-        assert len(self.group_parents)==self.counts[self.obj_type],'Assertion failed: len(group_parents) does not match length of halo list: %d != %d.  Perhaps you are using a fof6d file generated from a different halo catalog?'%(len(self.group_parents),self.counts[self.obj_type])
         hf.close()
+        if len(self.tags_fof6d)!=self.nparttot or len(self.group_parents)!=self.counts[self.obj_type]:
+            mylog.warning('fof6d_file invalid! len(fof6d_tags) does not match length of particle list in halos (%d != %d) and/or len(group_parents) does not match length of halo list (%d != %d) -- RUNNING FOF6D'%(len(self.tags_fof6d),self.nparttot,len(self.group_parents),self.counts[self.obj_type]))
+            return True
         return False
 
     def save_fof6dfile(self):
