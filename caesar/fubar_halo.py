@@ -56,10 +56,9 @@ def fubar_halo(obj):
 
     # Find galaxies, or load galaxy membership info
     if not obj.simulation.baryons_present: return  # if no baryons, we're done
-    if 'fof6d' in obj._kwargs and obj._kwargs['fof6d']:
-        fof6d_flag = True
-    else:
-        return  # no galaxy finder specified; currently fof6d is the only option
+    fof6d_flag = True
+    if 'fof6d' in obj._kwargs and not obj._kwargs['fof6d']:  # fof6d for galaxies/clouds not requested
+        return 
     if ('fof6d_file' in obj._kwargs and obj._kwargs['fof6d_file'] is not None):
         fof6d_flag = halos.load_fof6dfile()  # load galaxy ID's from fof6d_file
     if fof6d_flag:

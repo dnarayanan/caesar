@@ -84,7 +84,11 @@ class fof6d:
         else:
             from caesar.property_manager import get_haloid
             memlog('No Halo ID source specified -- trying the snapshot...')
-            self.haloid = get_haloid(self.obj, self.obj.data_manager.ptypes, offset=-1)
+            try:
+                self.haloid = get_haloid(self.obj, self.obj.data_manager.ptypes, offset=-1)
+                self.obj._kwargs['haloid'] = 'snap'
+            except:
+                sys.exit("No Halo IDs found in snapshot -- please specify a source (haloid='fof' or 'snap')")
 
 
     def plist_init(self,parent=None):
