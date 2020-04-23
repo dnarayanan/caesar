@@ -48,7 +48,8 @@ class DataManager(object):
                     self.ptypes.append('bh')
                     self.blackholes = True
             else:
-                mylog.warning('No black holes found')
+                self.blackholes = False
+                memlog('No black holes found')
         if 'dust' in self.obj._kwargs and self.obj._kwargs['dust']:
             mylog.warning('Enabling active dust particles')
             self.ptypes.append('dust')
@@ -186,7 +187,7 @@ class DataManager(object):
         self.gfHI   = gfHI
         self.gfH2   = gfH2
         self.dustmass = self.obj.yt_dataset.arr(dustmass,'code_mass').in_units('Msun')
-        self.dustmass.dtype = np.float32
+        self.dustmass.dtype = MY_DTYPE
 
     def _load_star_data(self, select='all'):
         """If star is present load Metallicity if present"""

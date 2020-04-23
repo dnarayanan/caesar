@@ -184,7 +184,7 @@ class fof6d:
             if self.grouplist[igrp] < 0: continue
             mygrp = create_new_group(self.obj, self.obj_type)
             my_indexes = self.pid_sorted[self.hid_bins[igrp]:self.hid_bins[igrp+1]]  # indexes for parts in this group
-        # load indexes into lists for a given group, globally and for each particle type
+            # load indexes into lists for a given group, globally and for each particle type
             my_ptype = self.obj.data_manager.ptype[my_indexes]
             mygrp.global_indexes = my_indexes
             offset = 0

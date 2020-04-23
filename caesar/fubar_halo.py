@@ -81,8 +81,8 @@ def fubar_halo(obj):
         clouds = fof6d(obj,'cloud')  #instantiate a fof6d object
         clouds.plist_init(parent=galaxies)  # initialize comptutation of cloud properties
         if clouds.nparttot == 0: return  # plist_init didn't find enough particles to group
-        get_group_properties(clouds)  # compute cloud properties
         galaxies.load_lists('cloud')
+        get_group_properties(clouds,clouds.obj.cloud_list)  # compute cloud properties
    
     # reset particle lists to have original snapshot ID's; must do this after all group processing is finished
     reset_global_particle_IDs(obj)

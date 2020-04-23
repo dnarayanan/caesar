@@ -795,7 +795,7 @@ def get_group_properties(self,grp_list):
         if 'aperture' in self.obj._kwargs:
             get_aperture_masses(self,aperture=float(self.obj._kwargs['aperture']))
         else:
-            get_aperture_masses(self)
+            get_aperture_masses(self)  # use default aperture size
         # sort and load galaxies into list
         sort_groups(grp_list,'stellar')
         self.obj.galaxies = self.obj.galaxy_list
