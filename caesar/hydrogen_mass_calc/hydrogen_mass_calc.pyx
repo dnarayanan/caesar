@@ -374,6 +374,7 @@ def get_HIH2_masses(galaxies,aperture=30,rho_thresh=0.13):
         double[:]   galaxy_mass = galmass
         float[:,:]  gas_pos = galaxies.obj.data_manager.pos[grpids]
         float[:]    gas_mass = galaxies.obj.data_manager.mass[grpids]
+        float[:]    gas_nh = galaxies.obj.data_manager.gnh[grpids]
         float[:]    HImass = galaxies.obj.data_manager.gfHI[grpids]
         float[:]    H2mass = galaxies.obj.data_manager.gfH2[grpids]
         int[:]      galaxy_indexes = np.zeros(ngal,dtype=np.int32)
@@ -386,6 +387,7 @@ def get_HIH2_masses(galaxies,aperture=30,rho_thresh=0.13):
         double      myHI, myH2
         ## things to compute
         double[:]   galaxy_HImass = np.zeros(ngal)
+        double[:]   galaxy_H2mass = np.zeros(ngal)
         double[:]   apert_HImass = np.zeros(ngal)
         double[:]   apert_H2mass = np.zeros(ngal)
         double[:]   halo_HImass = np.zeros(nhalo)
@@ -403,6 +405,10 @@ def get_HIH2_masses(galaxies,aperture=30,rho_thresh=0.13):
 
     # compile HI and H2 masses for galaxies in halos
     for ih in prange(npart,nogil=True):
+        if gas_nh[ih] < rho_th:  # sometimes wind particles (incorrectly) carry H2 mass into halo gas
+            H2mass[ih] = 0.
+        if H2mass[ih] + HImass[ih] > 1.:
+            HImass[ih] = 1.-H2mass[ih]    # ensure mass conservation
         HImass[ih] *= XH * gas_mass[ih]
         H2mass[ih] *= XH * gas_mass[ih]
 
@@ -415,7 +421,7 @@ def get_HIH2_masses(galaxies,aperture=30,rho_thresh=0.13):
         igstart = galind_bins[ih]
         igend = galind_bins[ih+1]
         if igstart < igend:
-            _get_galaxy_hydrogen_masses(igstart, igend, istart, iend, galaxy_pos, galaxy_mass, gas_pos, HImass, H2mass, Lbox, galaxy_HImass, apert_HImass, apert_H2mass, apert2)
+            _get_galaxy_hydrogen_masses(igstart, igend, istart, iend, galaxy_pos, galaxy_mass, gas_pos, HImass, H2mass, Lbox, galaxy_HImass, galaxy_H2mass, apert_HImass, apert_H2mass, apert2)
 
     # fill galaxy and halo lists
     for ih in range(nhalo):
@@ -423,9 +429,11 @@ def get_HIH2_masses(galaxies,aperture=30,rho_thresh=0.13):
     apert_str = '%dkpc'%aperture
     for ig in range(ngal):
         galaxies.obj.galaxy_list[ig].masses['HI'] = galaxies.obj.yt_dataset.quan(galaxy_HImass[ig], galaxies.obj.units['mass'])
+        galaxies.obj.galaxy_list[ig].masses['H2'] = galaxies.obj.yt_dataset.quan(galaxy_H2mass[ig], galaxies.obj.units['mass'])
         galaxies.obj.galaxy_list[ig].masses['HI_%s'%(apert_str)] = galaxies.obj.yt_dataset.quan(apert_HImass[ig], galaxies.obj.units['mass'])
         galaxies.obj.galaxy_list[ig].masses['H2_%s'%(apert_str)] = galaxies.obj.yt_dataset.quan(apert_H2mass[ig], galaxies.obj.units['mass'])
         #if ig < 10: print(ig,np.log10(galaxies.obj.galaxy_list[ig].masses['HI']),np.log10(galaxies.obj.galaxy_list[ig].masses['H2']), np.log10(galaxies.obj.galaxy_list[ig].masses['HI_30kpc']), np.log10(galaxies.obj.galaxy_list[ig].masses['H2_30kpc']))
+        #if ig < 10: print(ig,np.log10(galaxies.obj.galaxy_list[ig].masses['H2']), np.log10(galaxies.obj.galaxy_list[ig].masses['H2_30kpc']), np.log10(galaxies.obj.galaxy_list[ig].masses['H2'])- np.log10(galaxies.obj.galaxy_list[ig].masses['H2_30kpc']))
 
     return 
 
@@ -433,7 +441,7 @@ def get_HIH2_masses(galaxies,aperture=30,rho_thresh=0.13):
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void _get_galaxy_hydrogen_masses(int igstart, int igend, int istart, int iend, double[:,:] galaxy_pos, double[:] galaxy_mass, float[:,:] gpos, float[:] HImass, float[:] H2mass, float Lbox, double[:] galaxy_HImass, double[:] apert_HImass, double[:] apert_H2mass, double apert2) nogil:
+cdef void _get_galaxy_hydrogen_masses(int igstart, int igend, int istart, int iend, double[:,:] galaxy_pos, double[:] galaxy_mass, float[:,:] gpos, float[:] HImass, float[:] H2mass, float Lbox, double[:] galaxy_HImass, double[:] galaxy_H2mass, double[:] apert_HImass, double[:] apert_H2mass, double apert2) nogil:
     """Function to assign halo gas to galaxies.
 
     When we assign galaxies in CAESAR, we only consider dense gas.
@@ -468,6 +476,7 @@ cdef void _get_galaxy_hydrogen_masses(int igstart, int igend, int istart, int ie
                 apert_HImass[j] += HImass[i]
                 apert_H2mass[j] += H2mass[i]
         galaxy_HImass[max_index] += HImass[i]
+        galaxy_H2mass[max_index] += H2mass[i]
 
     return
 
