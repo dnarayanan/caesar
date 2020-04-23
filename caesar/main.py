@@ -104,11 +104,6 @@ class CAESAR(object):
         self._ds_type = DatasetType(self._ds)
         self._assign_simulation_attributes()
         
-    def _check_for_yt_dataset(self):
-        """Check to see if a yt_dataset has been assigned, if not 
-        raise an exception."""
-        check = self.yt_dataset
-        
     @property
     def _has_galaxies(self):
         """Checks if any galaxies are present."""
@@ -131,7 +126,6 @@ class CAESAR(object):
         if isinstance(self._dm, int):
             from caesar.data_manager import DataManager
             self._dm = DataManager(self)
-        self._check_for_yt_dataset()
         return self._dm
         
     def _assign_simulation_attributes(self):

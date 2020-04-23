@@ -7,25 +7,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('caesar_file')
 args = parser.parse_args()
 
-obj = caesar.load(args.caesar_file)
+obj = caesar.old_load(args.caesar_file)
 qobj = caesar.quick_load(args.caesar_file)
-
-assert len(obj.clouds) == len(qobj.clouds)
-for cloud, qcloud in zip(obj.clouds, qobj.clouds):
-    for k, v in cloud.__dict__.items():
-        if k[0] != '_' and k not in ['obj']:
-            if isinstance(getattr(cloud, k), np.ndarray):
-                if np.any(getattr(cloud, k) != getattr(qcloud, k)):
-                    print(k)
-                    pprint.pprint(getattr(cloud, k))
-                    pprint.pprint(getattr(qcloud, k))
-                    print()
-            else:
-                if getattr(cloud, k) != getattr(qcloud, k):
-                    print(k)
-                    print(getattr(cloud, k))
-                    print(getattr(qcloud, k))
-                    print()
 
 assert len(obj.galaxies) == len(qobj.galaxies)
 for galaxy, qgalaxy in zip(obj.galaxies, qobj.galaxies):
@@ -60,3 +43,22 @@ for halo, qhalo in zip(obj.halos, qobj.halos):
                     pprint.pprint(getattr(halo, k))
                     pprint.pprint(getattr(qhalo, k))
                     print()
+
+assert len(obj.clouds) == len(qobj.clouds)
+for cloud, qcloud in zip(obj.clouds, qobj.clouds):
+    for k, v in cloud.__dict__.items():
+        if k[0] != '_' and k not in ['obj']:
+            if isinstance(getattr(cloud, k), np.ndarray):
+                if np.any(getattr(cloud, k) != getattr(qcloud, k)):
+                    print(k)
+                    pprint.pprint(getattr(cloud, k))
+                    pprint.pprint(getattr(qcloud, k))
+                    print()
+            else:
+                if getattr(cloud, k) != getattr(qcloud, k):
+                    print(k)
+                    print(getattr(cloud, k))
+                    print(getattr(qcloud, k))
+                    print()
+
+
