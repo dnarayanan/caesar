@@ -10,11 +10,10 @@
 
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
-from astropy import units as u
 import time
 import sys
 import os
-import pdb
+import h5py
 from caesar.utils import memlog
 from caesar.property_manager import MY_DTYPE
 
@@ -79,7 +78,6 @@ class fof6d:
             self.haloid = np.asarray(self.haloid)
             self.obj.data_manager.haloid = haloid
         elif 'haloid' in self.obj._kwargs and 'rockstar' in self.obj._kwargs['haloid']:
-            import sys
             sys.exit('Sorry, reading from rockstar files not implemented yet')
         else:
             from caesar.property_manager import get_haloid
@@ -119,9 +117,7 @@ class fof6d:
 
     def run_fof6d(self, target_type, nHlim=0.13, Tlim=1.e5, sfflag=True, minstars=24):
 
-        import multiprocessing
         from joblib import Parallel, delayed
-        from yt.extern.tqdm import tqdm
         from caesar.fubar import get_b
         from caesar.group import group_types
 
@@ -134,8 +130,10 @@ class fof6d:
         self.sfflag = sfflag  # if True, always include particles with nonzero SF regardless of other crit
         self.minstars = minstars
         # set eligible galaxy gas: nH>nHlim, with T<Tlim OR star-forming
-        if self.sfflag: self.dense_crit = '(gnh>%g)&((gtemp<%g)|(gsfr>0))'%(self.nHlim,self.Tlim)
-        else: self.dense_crit = '(gnh>%g)&(gtemp<%g))'%(self.nHlim,self.Tlim)
+        if self.sfflag:
+            self.dense_crit = lambda gnh, gtemp, gsfr: (gnh>self.nHlim)&((gtemp<self.Tlim)|(gsfr>0))
+        else:
+            self.dense_crit = lambda gnh, gtemp, gsfr: (gnh>self.nHlim)&(gtemp<self.Tlim)
 
         # collect indices for eligible particles
         memlog('Running fof6d on %d halos using %d proc(s)'%(len(self.obj.halo_list),self.nproc))
@@ -234,15 +232,14 @@ class fof6d:
 
 
     def load_fof6dfile(self):
-        import h5py
         import os
         from yt.funcs import mylog
         fof6d_file = self.obj._kwargs['fof6d_file']
         if os.path.isfile(fof6d_file):
-                mylog.info('Reading galaxy membership from fof6d file %s'%fof6d_file)
+            mylog.info('Reading galaxy membership from fof6d file %s'%fof6d_file)
         else:
-                mylog.info('fof6d file %s not found! Running fof6d' % fof6d_file)
-                return True
+            mylog.info('fof6d file %s not found! Running fof6d' % fof6d_file)
+            return True
         hf = h5py.File(fof6d_file,'r')
         self.tags_fof6d = np.asarray(hf['fof6d_tags'])
         self.group_parents = np.asarray(hf['group_parents'])
@@ -253,8 +250,6 @@ class fof6d:
         return False
 
     def save_fof6dfile(self):
-        from caesar.property_manager import ptype_ints
-        import h5py
         if 'fof6d_file' not in self.obj._kwargs:
             return
         fof6d_file = self.obj._kwargs['fof6d_file']
@@ -316,7 +311,7 @@ def setup_indexes(self,halo_indexes):
     gtemp = self.obj.data_manager.gT[gas_indexes]
     gsfr = self.obj.data_manager.gsfr[gas_indexes]
     gnh = self.obj.data_manager.gnh[gas_indexes]
-    select_dense_gas = eval(self.dense_crit)
+    select_dense_gas = self.dense_crit(gnh, gtemp, gsfr)
     dense_indexes = gas_indexes[select_dense_gas]
     # add in other particle types
     bh_indexes = halo_indexes[my_ptype == ptype_ints['bh']]
@@ -354,7 +349,7 @@ def fof6d_halo(nparthalo,npart,pos,vel,minstars,Lbox,fof_LL,vel_LL,kerneltab):
     nfof = 0
     galindex = np.zeros(npart,dtype=int)-1
     for igrp in range(len(groups)):
-        if fof6d_results[igrp] == None: continue  # no valid galaxies
+        if fof6d_results[igrp] is None: continue  # no valid galaxies
         istart = groups[igrp][0]  # starting particle index for group igrp
         iend = groups[igrp][1]
         galindex[istart:iend] = np.where(fof6d_results[igrp][1]>=0,fof6d_results[igrp][1]+nfof,-1)  # for particles in galaxies, increment galaxy ID with counter (nfof)
@@ -363,7 +358,6 @@ def fof6d_halo(nparthalo,npart,pos,vel,minstars,Lbox,fof_LL,vel_LL,kerneltab):
     # reset back into original particle order and collect tags for particles in this halo
     for i in range(npart):
         fof6d_tags[pindex[i]] = galindex[i]
-    group_nums = np.unique(galindex[galindex>=0])
 
     # returns the group to which each particle belongs (-1 if not in group)
     return fof6d_tags  
@@ -379,7 +373,7 @@ def fof6d_main(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,mingrp,fof_LL,vel_L
     nlist = neigh.radius_neighbors(poslist)  # get neighbor properties (radii, indices)
 
     # compute velocity criterion for neighbors, based on local velocity dispersion 
-    if vel_LL != None:
+    if vel_LL is not None:
         LLinv = 1./fof_LL
         sigma = np.zeros(nactive)
         siglist = []  # list of boolean arrays storing whether crit is satisfied for each neighbor pair
@@ -410,7 +404,6 @@ def fof6d_main(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,mingrp,fof_LL,vel_L
     galind = np.zeros(nactive,dtype=int)-1
     linked = []
     galcount = 0
-    counter = 0
     for ipart in range(nactive):
         densest = dense_order[ipart]  # get next densest particle
         galind_ngb = galind[nlist[1][densest]]  # indices of neighbors' galaxies
@@ -487,7 +480,6 @@ def fof_sorting(groups,pos,vel,haloID,pindex,fof_LL,Lbox,mingrp,idir):
             if periodic(pos[idir][i],oldpos,Lbox) > fof_LL or i == iend-1:  
                 groups[grpcount][1] = i  # set end of old group to be i
                 groups.append([i,i])  # add new group, starting at i; second index is a dummy that will be overwritten when the end of the group is found
-                posrange = [min(pos[idir][groups[grpcount][0]:i]),max(pos[idir][groups[grpcount][0]:i])]
                 grpcount += 1
             oldpos = pos[idir][i]
     assert grpcount>0,'fof6d : Found no groups or unable to separate groups via sorting; exiting. %d %d %d %d'%(idir,len(groups),len(oldgroups),npart)
@@ -515,7 +507,7 @@ def progress_bar(progress,barLength=10,t=None):
         progress = 1
         status = "Done!\r\n"
     block = int(round(barLength*progress))
-    if t==None: text = "\r[{0}] {1}% {2}".format( "#"*block + "-"*(barLength-block), np.round(progress*100,2), status)
+    if t is None: text = "\r[{0}] {1}% {2}".format( "#"*block + "-"*(barLength-block), np.round(progress*100,2), status)
     else: text = "\r[{0}] {1}% [t={2} s] {3}".format( "#"*block + "-"*(barLength-block), np.round(progress*100,2), np.round(t,2), status)
     sys.stdout.write(text)
     sys.stdout.flush()
@@ -554,19 +546,7 @@ def kernel(r_over_h,kerneltab):
 #
 # Romeel Dave, 25 Feb 2019
 
-from pygadgetreader import *
-import numpy as np
-from scipy import stats
-from sklearn.neighbors import NearestNeighbors
 from astropy import constants as const
-from astropy import units as u
-#from numba import jit
-import h5py
-import time
-import sys
-import os
-
-import pdb
 
 #BASEDIR = sys.argv[1]
 #snapnum = sys.argv[2]
@@ -593,42 +573,43 @@ vel_LL = 1.0  # velocity space linking length factor, multiplies local velocity 
 
 # Loads gas, star, BH information from snapshot.  Requires HaloID for all particles.
 def loadsnap(snap,t0):
-    redshift = readheader(snap,'redshift')
-    h = readheader(snap,'h')
+    import pygadgetreader as pygr
+    redshift = pygr.readheader(snap,'redshift')
+    h = pygr.readheader(snap,'h')
 
     # get gas Halo IDs so we can select only gas particles in halos
-    ghalo = np.array(readsnap(snap,'HaloID','gas'),dtype=int)  # Halo ID of gas; 0=not in halo
+    ghalo = np.array(pygr.readsnap(snap,'HaloID','gas'),dtype=int)  # Halo ID of gas; 0=not in halo
     ngastot = len(ghalo)
     gas_select = (ghalo>0)
     ngastot = np.uint64(len(ghalo))
     pindex = np.arange(ngastot,dtype=np.uint64)  # keep an index for the original order of the particles
 
     # Load in gas info for selecting gas particles
-    gnh = readsnap(snap,'rho','gas',units=1)[gas_select]*h*h*0.76*(1+redshift)**3/const.m_p.to('g').value   # number density in phys H atoms/cm^3
-    gsfr = readsnap(snap,'sfr','gas',units=1)[gas_select]
-    gtemp = readsnap(snap,'u','gas',units=1)[gas_select]  # temperature in K
+    gnh = pygr.readsnap(snap,'rho','gas',units=1)[gas_select]*h*h*0.76*(1+redshift)**3/const.m_p.to('g').value   # number density in phys H atoms/cm^3
+    gsfr = pygr.readsnap(snap,'sfr','gas',units=1)[gas_select]
+    gtemp = pygr.readsnap(snap,'u','gas',units=1)[gas_select]  # temperature in K
     # Apply additional selection criteria on gas
     dense_gas_select = ((gnh>0.13)&((gtemp<1.e5)|(gsfr>0))) # dense, cool, or SF gas only 
     gas_select[gas_select>0] = (gas_select[gas_select>0] & dense_gas_select)
 
     # load in selected gas 
-    gpos = readsnap(snap,'pos','gas',units=1)[gas_select]/h  # positions in ckpc
-    gvel = readsnap(snap,'vel','gas',units=1,suppress=1)[gas_select] # vel in physical km/s
-    ghalo = np.array(readsnap(snap,'HaloID','gas'),dtype=int)[gas_select]  # Halo ID of gas; 0=not in halo
+    gpos = pygr.readsnap(snap,'pos','gas',units=1)[gas_select]/h  # positions in ckpc
+    gvel = pygr.readsnap(snap,'vel','gas',units=1,suppress=1)[gas_select] # vel in physical km/s
+    ghalo = np.array(pygr.readsnap(snap,'HaloID','gas'),dtype=int)[gas_select]  # Halo ID of gas; 0=not in halo
 
     # load in all stars+BHs; don't bother with halo selection since most will be in halos anyways
-    shalo = np.array(readsnap(snap,'HaloID','star'),dtype=int)  # Halo ID of gas; 0=not in halo
+    shalo = np.array(pygr.readsnap(snap,'HaloID','star'),dtype=int)  # Halo ID of gas; 0=not in halo
     star_select = (shalo==2)
-    spos = readsnap(snap,'pos','star',units=1)[star_select]/h  # star positions in ckpc
-    svel = readsnap(snap,'vel','star',units=1,suppress=1)[star_select] # star vels in physical km/s
-    shalo = np.array(readsnap(snap,'HaloID','star'),dtype=int)[star_select]  # Halo ID of stars
+    spos = pygr.readsnap(snap,'pos','star',units=1)[star_select]/h  # star positions in ckpc
+    svel = pygr.readsnap(snap,'vel','star',units=1,suppress=1)[star_select] # star vels in physical km/s
+    shalo = np.array(pygr.readsnap(snap,'HaloID','star'),dtype=int)[star_select]  # Halo ID of stars
     nstartot = np.uint64(len(spos))
     try:
-        bhhalo = np.array(readsnap(snap,'HaloID','bndry'),dtype=int)  # Halo ID of gas; 0=not in halo
+        bhhalo = np.array(pygr.readsnap(snap,'HaloID','bndry'),dtype=int)  # Halo ID of gas; 0=not in halo
         bh_select = (bhhalo==2)
-        bpos = readsnap(snap,'pos','bndry',units=1)[bh_select]/h  # BH positions in ckpc
-        bvel = readsnap(snap,'vel','bndry',units=1,suppress=1)[bh_select] # BH vels in physical km/s
-        bhalo = np.array(readsnap(snap,'HaloID','bndry'),dtype=int)[bh_select]  # Halo ID of BHs
+        bpos = pygr.readsnap(snap,'pos','bndry',units=1)[bh_select]/h  # BH positions in ckpc
+        bvel = pygr.readsnap(snap,'vel','bndry',units=1,suppress=1)[bh_select] # BH vels in physical km/s
+        bhalo = np.array(pygr.readsnap(snap,'HaloID','bndry'),dtype=int)[bh_select]  # Halo ID of BHs
         nbhtot = np.uint64(len(bpos))
     except: 
         print('fof6d : Creating one fake BH particle at origin (not in a halo) to avoid crash.')
@@ -648,6 +629,7 @@ def loadsnap(snap,t0):
 # for gas, stars, and BHs.  Returns a list of galaxy IDs for all gas, stars, and BHs in
 # snapshot, with galaxy ID = -1 for particles not in a fof6d galaxy
 def reset_order_old(galindex,pindex,ngas,nstar,nbh,snap):
+    import pygadgetreader as pygr
     # create galaxy ID arrays for gas, stars, BHs
     gindex = np.zeros(ngas,dtype=np.int64)-1
     sindex = np.zeros(nstar,dtype=np.int64)-1
@@ -662,9 +644,9 @@ def reset_order_old(galindex,pindex,ngas,nstar,nbh,snap):
             bindex[pindex[i]-(ngas+nstar)] = galindex[i]
 
     if False:  # a check for debugging
-        ghalo = np.array(readsnap(snap,'HaloID','gas'),dtype=int)  # Halo ID of gas; 0=not in halo
-        shalo = np.array(readsnap(snap,'HaloID','star'),dtype=int)  # Halo ID of gas; 0=not in halo
-        bhalo = np.array(readsnap(snap,'HaloID','bndry'),dtype=int)  # Halo ID of gas; 0=not in halo
+        ghalo = np.array(pygr.readsnap(snap,'HaloID','gas'),dtype=int)  # Halo ID of gas; 0=not in halo
+        shalo = np.array(pygr.readsnap(snap,'HaloID','star'),dtype=int)  # Halo ID of gas; 0=not in halo
+        bhalo = np.array(pygr.readsnap(snap,'HaloID','bndry'),dtype=int)  # Halo ID of gas; 0=not in halo
         assert len(ghalo)==len(gindex),'Gas lengths not equal! %d != %d'%(len(ghalo),len(gindex))
         assert len(shalo)==len(sindex),'Star lengths not equal! %d != %d'%(len(shalo),len(sindex))
         assert len(bhalo)==len(bindex),'BH lengths not equal! %d != %d'%(len(bhalo),len(bindex))
@@ -682,50 +664,10 @@ def periodic(x1,x2,L):  # periodic distance between scalars x1 and k2
     if dx>0.5*L: return L-dx
     else: return dx
 
-# progress bar, from https://stackoverflow.com/questions/3160699/python-progress-bar
-def progress_bar(progress,barLength=10,t=None):
-    status = ""
-    if isinstance(progress, int):
-        progress = float(progress)
-    if not isinstance(progress, float):
-        progress = 0
-        status = "error: progress var must be float\r\n"
-    if progress < 0:
-        progress = 0
-        status = "Halt...\r\n"
-    if progress >= 1:
-        progress = 1
-        status = "Done!\r\n"
-    block = int(round(barLength*progress))
-    if t==None: text = "\r[{0}] {1}% {2}".format( "#"*block + "-"*(barLength-block), np.round(progress*100,2), status)
-    else: text = "\r[{0}] {1}% [t={2} s] {3}".format( "#"*block + "-"*(barLength-block), np.round(progress*100,2), np.round(t,2), status)
-    sys.stdout.write(text)
-    sys.stdout.flush()
-
 
 #=========================================================
 # 6DFOF ROUTINES
 #=========================================================
-
-# set up kernel table
-def kernel_table(h,ntab=1000):
-    kerneltab = np.zeros(ntab+1)
-    hinv = 1./h
-    norm = 0.31832*hinv**3
-    for i in range(ntab):
-        r = 1.*i/ntab
-        q = 2*r*hinv
-        if q > 2: kerneltab[i] = 0.0
-        elif q > 1: kerneltab[i] = 0.25*norm*(2-q)**3
-        else: kerneltab[i] = norm*(1-1.5*q*q*(1-0.5*q))
-    return kerneltab
-
-# kernel table lookup
-def kernel(r_over_h,kerneltab):
-    ntab = len(kerneltab)-1
-    rtab = ntab*r_over_h+0.5
-    itab = rtab.astype(int)
-    return kerneltab[itab]
 
 def fof6d_old(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,fof_LL,vel_LL=None,nfof=0):
     # find neighbors of all particles within fof_LL
@@ -738,7 +680,7 @@ def fof6d_old(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,fof_LL,vel_LL=None,n
     nlist = neigh.radius_neighbors(poslist)  # get neighbor properties (radii, indices)
 
     # compute velocity criterion for neighbors, based on local velocity dispersion 
-    if vel_LL != None:
+    if vel_LL is not None:
         LLinv = 1./fof_LL
         sigma = np.zeros(nactive)
         siglist = []  # list of boolean arrays storing whether crit is satisfied for each neighbor pair
@@ -769,7 +711,6 @@ def fof6d_old(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,fof_LL,vel_LL=None,n
     galind = np.zeros(nactive,dtype=int)-1
     linked = []
     galcount = 0
-    counter = 0
     for ipart in range(nactive):
         densest = dense_order[ipart]  # get next densest particle
         galind_ngb = galind[nlist[1][densest]]  # indices of neighbors' galaxies
@@ -895,7 +836,6 @@ def fof_sorting_old(groups,pos,vel,haloID,pindex,fof_LL,Lbox,idir,mingrp=16):
             if periodic(pos[idir][i],oldpos,Lbox) > fof_LL or i == iend-1:  
                 groups[grpcount][1] = i  # set end of old group to be i
                 groups.append([i,i])  # add new group, starting at i; second index is a dummy that will be overwritten when the end of the group is found
-                posrange = [min(pos[idir][groups[grpcount][0]:i]),max(pos[idir][groups[grpcount][0]:i])]
                 grpcount += 1
             oldpos = pos[idir][i]
     #assert grpcount>0,'fof6d : Unable to separate groups via sorting; exiting.'
@@ -909,13 +849,14 @@ def fof_sorting_old(groups,pos,vel,haloID,pindex,fof_LL,Lbox,idir,mingrp=16):
     return groups
 
 def fofrad_old(snap,nproc,mingrp,LL_factor,vel_LL):
+    import pygadgetreader as pygr
     t0 = time.time()
-    Lbox = readheader(snap,'boxsize')
-    h = readheader(snap,'h')
+    Lbox = pygr.readheader(snap,'boxsize')
+    h = pygr.readheader(snap,'h')
     Lbox = Lbox/h  # to kpc
-    #Omega = readheader(snap,'O0')
-    #Lambda = readheader(snap,'Ol')
-    n_side = int(readhead(snap,'dmcount')**(1./3.)+0.5)
+    #Omega = pygr.readheader(snap,'O0')
+    #Lambda = pygr.readheader(snap,'Ol')
+    n_side = int(pygr.readheader(snap,'dmcount')**(1./3.)+0.5)
     MIS = Lbox/n_side
     fof_LL = LL_factor*MIS
     print('fof6d : Guessing %d particles per side, fof_LL=%g ckpc' % (n_side,fof_LL))
@@ -965,7 +906,6 @@ def fofrad_old(snap,nproc,mingrp,LL_factor,vel_LL):
         for igrp in igser: results[igrp] = fof6d_old(igrp,groups,pos.T[groups[igrp][0]:groups[igrp][1]],vel.T[groups[igrp][0]:groups[igrp][1]],kerneltab,t0,Lbox,fof_LL,vel_LL)
         print('\nfof6d : Doing %d groups with npart>%d on %d cores (progressbar approximate) [t=%.2f s]'%(len(igpar),npart_par,nproc,time.time()-t0))
         if len(igpar)>0: 
-            import multiprocessing
             from joblib import Parallel, delayed
             results_par = Parallel(n_jobs=nproc)(delayed(fof6d)(igrp,groups,pos.T[groups[igrp][0]:groups[igrp][1]],vel.T[groups[igrp][0]:groups[igrp][1]],kerneltab,t0,Lbox,fof_LL,vel_LL) for igrp in igpar)
 
@@ -981,7 +921,6 @@ def fofrad_old(snap,nproc,mingrp,LL_factor,vel_LL):
         result = results[igrp]
         istart = groups[igrp][0]  # starting particle index for group igrp
         iend = groups[igrp][1]
-        posgrp = pos.T[groups[igrp][0]:groups[igrp][1]]
         galindex[istart:iend] = np.where(result[1]>=0,result[1]+nfof,-1)  # for particles in groups, increment group ID with counter (nfof)
         #if nfof<1 and len(result[1][result[1]>=0])>0: 
         #        print 'inserting IDs',igrp,nfof,result[0],groups[igrp][1]-groups[igrp][0]
@@ -993,7 +932,7 @@ def fofrad_old(snap,nproc,mingrp,LL_factor,vel_LL):
     gindex,sindex,bindex = reset_order_old(galindex,pindex,ngastot,nstartot,nbhtot,snap)
 
     if 0:
-        spos = readsnap(snap,'pos','star',units=1)/h  # star positions in ckpc
+        spos = pygr.readsnap(snap,'pos','star',units=1)/h  # star positions in ckpc
         for ifof in range(nfof):
             sgrp = spos[ifof==sindex]
             sgrp = sgrp.T
@@ -1018,11 +957,10 @@ def run_fof_6d(snapfile,mingrp,LL_factor,vel_LL,nproc):
     else: print('fof6d : Doing snapfile: %s'%snapfile)
 
 # Set up multiprocessing
+    import multiprocessing
     if nproc == 0:   # use all available cores
         num_cores = multiprocessing.cpu_count()
     if nproc != 1:   # if multi-core, set up Parallel processing
-        import multiprocessing
-        from joblib import Parallel, delayed
         num_cores = multiprocessing.cpu_count()
         if nproc < 0: print('fof6d : Using %d cores (all but %d)'%(num_cores+nproc+1,-nproc-1) )
         if nproc > 1: 

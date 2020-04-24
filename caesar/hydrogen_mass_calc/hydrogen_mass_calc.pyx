@@ -361,8 +361,8 @@ def get_HIH2_masses(galaxies,aperture=30,rho_thresh=0.13):
         compute_selfshield(galaxies.obj,grpids,rho_thresh)
 
     # set up mass computation
-    galpos = np.asarray([i.pos for i in galaxies.obj.galaxy_list])
-    galmass = np.asarray([i.masses['total'] for i in galaxies.obj.galaxy_list])
+    galpos = np.asarray([i.pos for i in galaxies.obj.galaxy_list], dtype=np.float64)
+    galmass = np.asarray([i.masses['total'] for i in galaxies.obj.galaxy_list], dtype=np.float64)
     cdef:
         ## global quantities
         int         nhalo = len(galaxies.obj.halo_list)
@@ -564,8 +564,8 @@ def get_aperture_masses(galaxies,aperture=30):
     _, grpids, gid_bins = collate_group_ids(galaxies.obj.halo_list,'all',galaxies.obj.simulation.ntot)
 
     # set up mass computation
-    galpos = np.asarray([i.pos for i in galaxies.obj.galaxy_list])
-    galmass = np.asarray([i.masses['total'] for i in galaxies.obj.galaxy_list])
+    galpos = np.asarray([i.pos for i in galaxies.obj.galaxy_list], dtype=np.float64)
+    galmass = np.asarray([i.masses['total'] for i in galaxies.obj.galaxy_list], dtype=np.float64)
     ptype_array = []
     for pt in ['gas','star','dm']:  # this is the ordering for ptypes to be computed
         ptype_array.append(ptype_ints[pt])
