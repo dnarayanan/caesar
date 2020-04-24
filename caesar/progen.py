@@ -132,7 +132,7 @@ def progen_finder(obj_current, obj_progens, snap_current, snap_progens):
     ## halos (use DM)
     data_type  = 'halo'
     if obj_current.nhalos == 0 or obj_progens.nhalos == 0:
-        mylog.warning('0 %s found!  skipping progen' % group_type[data_type])
+        mylog.warning('0 %s found!  skipping progen' % group_types[data_type])
     elif not check_if_progen_is_present(data_type, caesar_file):
         nobjs        = obj_current.nhalos
         PID_current  = readsnap(snap_current.snap, 'pid', 1)
