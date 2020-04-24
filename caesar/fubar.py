@@ -1,15 +1,14 @@
 import numpy as np
 import h5py
 from caesar.group import create_new_group, group_types
-from caesar.property_manager import get_property, get_particles_for_FOF, get_high_density_gas_indexes
+from caesar.property_manager import get_property, get_high_density_gas_indexes
 from caesar.property_manager import ptype_ints
 from caesar.utils import calculate_local_densities
-from caesar.fof6d import *
+from caesar.fof6d import run_fof_6d
 
 import six
 from yt.funcs import mylog
 from yt.extern.tqdm import tqdm
-from yt.units.yt_array import uconcatenate, YTArray
 from yt.data_objects.octree_subset import YTPositionArray
 from yt.utilities.lib.contour_finding import ParticleContourTree
 from yt.geometry.selection_routines import AlwaysSelector

@@ -1,11 +1,12 @@
 import os
+import sys
 
 import yt
 from yt.funcs import mylog
 
 import caesar
 from caesar.progen import progen_finder
-from caesar.progen_rad import *
+from caesar.progen_rad import run_progen_rad
 class Snapshot(object):
     """Class for tracking paths and data for simulation snapshots.
 
@@ -212,8 +213,7 @@ def drive(snapdirs, snapname, snapnums, progen=False, progen_rad = False, skipra
             snap.member_search(skipran, **kwargs)
 
     if (progen == True) and (progen_rad == True):
-        print('You can only set progen or progen_rad as True; exiting')
-        sys.exit()
+        sys.exit('You can only set progen or progen_rad as True; exiting')
 
     if progen or progen_rad:
         if using_mpi:

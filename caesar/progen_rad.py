@@ -8,14 +8,14 @@
 # Last modified: Romeel Dave 18 Feb 2019
 
 import caesar
-from pygadgetreader import *
+from pygadgetreader import readsnap
 import numpy as np
 from scipy import stats
 import time
 import sys
 import os
-import pdb
-from glob import glob
+import joblib
+from joblib import Parallel, delayed
 
 
 #===============================================
@@ -169,12 +169,9 @@ def run_progen_rad(obj_current,obj_progens,snap_current,snap_progens):
     '''
 # Set up multiprocessing; note: this doesn't help much, because this only parallelizes over galaxy ID searches, not the sorting.
     if nproc == 0:   # use all available cores
-        num_cores = multiprocessing.cpu_count()
+        num_cores = joblib.cpu_count()
     if nproc != 1:   # if multi-core, set up Parallel processing
-        import multiprocessing
-        from joblib import Parallel, delayed
-        from functools import partial
-        num_cores = multiprocessing.cpu_count()
+        num_cores = joblib.cpu_count()
         if nproc < 0: print('progen : Using %d cores (all but %d)'%(num_cores+nproc+1,-nproc-1) )
         if nproc > 1: print('progen : Using %d of %d cores'%(nproc,num_cores))
         else: print('progen : Using single core')
