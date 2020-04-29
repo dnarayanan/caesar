@@ -52,42 +52,44 @@ class fof6d:
             memlog('Using FOF Halo ID from snapshots')
             self.haloid = get_haloid(self.obj, self.obj.data_manager.ptypes, offset=-1)
         elif 'haloid' in self.obj._kwargs and 'fof' in self.obj._kwargs['haloid']:
-            from caesar.fubar import get_mean_interparticle_separation,get_b,fof
-            from caesar.property_manager import get_property,has_ptype,ptype_ints
-            LL = get_mean_interparticle_separation(self.obj) * get_b(self.obj, 'halo')
-            memlog('Running 3D FOF to get Halo IDs, LL=%g'%LL)
-            pos = np.empty((0,3),dtype=MY_DTYPE)
-            ptype = np.empty(0,dtype=np.int32)
-            for ip,p in enumerate(self.obj.data_manager.ptypes):  # get positions
-                if not has_ptype(self.obj, p): continue
-                data = get_property(self.obj, 'pos', p)
-                pos = np.append(pos, data.d, axis=0)
-                ptype = np.append(ptype, np.full(len(data), ptype_ints[p], dtype=np.int32), axis=0)
-            haloid_all = fof(self.obj, pos, LL, group_type='halo')  # run FOF
-            self.haloid = []
-            haloid = np.empty(0,dtype=np.int64)
-            for p in self.obj.data_manager.ptypes:  # fill haloid arrays for each ptype
-                if has_ptype(self.obj, p):
-                    data = haloid_all[ptype==ptype_ints[p]]
-                    datasel = data[data>=0]
-                else:
-                    data = np.empty(0,dtype=np.int64)
-                    datasel = np.empty(0,dtype=np.int64)
-                self.haloid.append(data)
-                haloid = np.append(haloid,datasel,axis=0)
-            self.haloid = np.asarray(self.haloid)
-            self.obj.data_manager.haloid = haloid
+            self.run_caesar_fof(self.obj)
         elif 'haloid' in self.obj._kwargs and 'rockstar' in self.obj._kwargs['haloid']:
             sys.exit('Sorry, reading from rockstar files not implemented yet')
         else:
-            #from caesar.property_manager import get_haloid
-            #memlog('No Halo ID source specified -- trying the snapshot...')
-            #try:
-            #    self.haloid = get_haloid(self.obj, self.obj.data_manager.ptypes, offset=-1)
-            #    self.obj._kwargs['haloid'] = 'snap'
-            #except:
-            sys.exit("No Halo IDs found in snapshot -- please specify a source (haloid='fof' or 'snap')")
+            from caesar.property_manager import get_haloid
+            memlog('No Halo ID source specified -- running FOF.  This is the yt 3D FOF for halos and our homegrown 6D FOF for galaxies ...')
+            try:
+                self.run_caesar_fof(self.obj)
+                self.obj._kwargs['haloid'] = 'fof'
+            except:
+                sys.exit("No Halo IDs found in snapshot -- please specify a source (haloid='fof' or 'snap')")
 
+    def run_caesar_fof(self,obj):
+        from caesar.fubar import get_mean_interparticle_separation,get_b,fof
+        from caesar.property_manager import get_property,has_ptype,ptype_ints
+        LL = get_mean_interparticle_separation(self.obj) * get_b(self.obj, 'halo')
+        memlog('Running 3D FOF to get Halo IDs, LL=%g'%LL)
+        pos = np.empty((0,3),dtype=MY_DTYPE)
+        ptype = np.empty(0,dtype=np.int32)
+        for ip,p in enumerate(self.obj.data_manager.ptypes):  # get positions
+            if not has_ptype(self.obj, p): continue
+            data = get_property(self.obj, 'pos', p)
+            pos = np.append(pos, data.d, axis=0)
+            ptype = np.append(ptype, np.full(len(data), ptype_ints[p], dtype=np.int32), axis=0)
+        haloid_all = fof(self.obj, pos, LL, group_type='halo')  # run FOF
+        self.haloid = []
+        haloid = np.empty(0,dtype=np.int64)
+        for p in self.obj.data_manager.ptypes:  # fill haloid arrays for each ptype
+            if has_ptype(self.obj, p):
+                data = haloid_all[ptype==ptype_ints[p]]
+                datasel = data[data>=0]
+            else:
+                data = np.empty(0,dtype=np.int64)
+                datasel = np.empty(0,dtype=np.int64)
+            self.haloid.append(data)
+            haloid = np.append(haloid,datasel,axis=0)
+        self.haloid = np.asarray(self.haloid)
+        self.obj.data_manager.haloid = haloid
 
     def plist_init(self,parent=None):
 
