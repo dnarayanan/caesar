@@ -80,13 +80,13 @@ class fof6d:
         elif 'haloid' in self.obj._kwargs and 'rockstar' in self.obj._kwargs['haloid']:
             sys.exit('Sorry, reading from rockstar files not implemented yet')
         else:
-            from caesar.property_manager import get_haloid
-            memlog('No Halo ID source specified -- trying the snapshot...')
-            try:
-                self.haloid = get_haloid(self.obj, self.obj.data_manager.ptypes, offset=-1)
-                self.obj._kwargs['haloid'] = 'snap'
-            except:
-                sys.exit("No Halo IDs found in snapshot -- please specify a source (haloid='fof' or 'snap')")
+            #from caesar.property_manager import get_haloid
+            #memlog('No Halo ID source specified -- trying the snapshot...')
+            #try:
+            #    self.haloid = get_haloid(self.obj, self.obj.data_manager.ptypes, offset=-1)
+            #    self.obj._kwargs['haloid'] = 'snap'
+            #except:
+            sys.exit("No Halo IDs found in snapshot -- please specify a source (haloid='fof' or 'snap')")
 
 
     def plist_init(self,parent=None):
