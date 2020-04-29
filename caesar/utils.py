@@ -140,9 +140,9 @@ def info_printer(obj, group_type, top):
         for o in group_list:
             cgsm = -1
             if (hasattr(o,'central_galaxy')) & (hasattr(o.central_galaxy,'masses')): cgsm = o.central_galaxy.masses['stellar']
-            output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.3f  %0.2e\t|  %0.2e \n' % \
+            output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e\t|  %0.2e \n' % \
                       (o.GroupID, o.masses['dm'], o.masses['stellar'],
-                       o.masses['gas'],o.radii['total'], o.gas_fraction,
+                       o.masses['gas'],o.radii['total_half_mass'],
                        o.local_number_density, cgsm)
             cnt += 1
             if cnt > top: break
@@ -153,9 +153,9 @@ def info_printer(obj, group_type, top):
         for o in group_list:
             phm, phid = -1, -1
             if o.halo is not None: phm, phid = o.halo.masses['total'], o.halo.GroupID
-            output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.3f  %0.2e  %s\t|  %0.2e  %d \n' % \
+            output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %s\t|  %0.2e  %d \n' % \
                       (o.GroupID, o.masses['stellar'], o.masses['gas'],
-                       o.sfr, o.radii['total'], o.gas_fraction,
+                       o.sfr, o.radii['total_half_mass'], 
                        o.local_number_density, o.central,
                        phm, phid)
             cnt += 1
@@ -166,9 +166,9 @@ def info_printer(obj, group_type, top):
         #         ' 0000  4.80e+09  4.80e+09  4.80e+09  7.64e-09  0.000  7.64e-09  False
         for o in group_list:
             halo = o.obj.galaxies[o.parent_galaxy_index].halo
-            output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.3f  %0.2e  %s\t|  %0.2e  %d \n' % \
+            output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e   %0.2e  %s\t|  %0.2e  %d \n' % \
                       (o.GroupID, o.masses['stellar'], o.masses['gas'],
-                       o.sfr, o.radii['total'], o.gas_fraction,
+                       o.sfr, o.radii['total_half_mass'],
                        o.local_number_density, o.central,
                        halo.masses['dm'], halo.GroupID)
             cnt += 1
