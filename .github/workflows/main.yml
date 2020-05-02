@@ -17,6 +17,8 @@ jobs:
       - uses: actions/checkout@v1
       - name: gizmo_64
         run: |
+          python -m pip install .
+          cd scripts/
           curl -LO http://yt-project.org/data/gizmo_64.tar.gz
           tar xf gizmo_64.tar.gz
-          ls
+          python commit_tests.py gizmo_64/output/snap_N64L16_000.hdf5 gizmo_64/output/snap_N64L16_135.hdf5
