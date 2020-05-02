@@ -16,6 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: gizmo_64
-        run: curl -LO http://yt-project.org/data/gizmo_64.tar.gz
-        run: tar xf gizmo_64.tar.gz
-        run: ls
+        run: |
+          curl -LO http://yt-project.org/data/gizmo_64.tar.gz
+          tar xf gizmo_64.tar.gz
+          ls
