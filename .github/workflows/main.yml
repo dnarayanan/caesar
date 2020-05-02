@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  # Trigger the workflow on push or pull request,
+  # but only for the master branch
+  push:
+    branches:
+      - citest
+  pull_request:
+    branches:
+      - citest
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: gizmo_64
+        run: curl -LO http://yt-project.org/data/gizmo_64.tar.gz
+        run: tar xf gizmo_64.tar.gz
+        run: ls
