@@ -17,7 +17,13 @@ jobs:
       - uses: actions/checkout@v1
       - name: gizmo_64
         run: |
+          cd ..
           python3 -m pip install setuptools
+          python3 -m pip install numpy cython
+          git clone https://github.com/yt-project/yt
+          cd yt
+          python3 -m pip install .
+          cd ../caesar
           python3 -m pip install .
           cd scripts/
           curl -LO http://yt-project.org/data/gizmo_64.tar.gz
