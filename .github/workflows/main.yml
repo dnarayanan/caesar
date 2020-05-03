@@ -41,15 +41,17 @@ jobs:
           python3 -m pip install --user numpy cython
           git clone https://github.com/yt-project/yt
           cd yt
+          git checkout yt-4.0
           python3 -m pip install --user .
-          cd ../caesar
 
       - name: Install caesar
         run: |
-          cd ~/caesar
+          cd
+          pwd
+          ls
           python3 -m pip install --user .
 
       - name: gizmo_64
         run: |
-          cd ~/caesar
+          cd
           python3 scripts/commit_tests.py ~/datasets/gizmo_64/output/snap_N64L16_000.hdf5 ~/datasets/gizmo_64/output/snap_N64L16_135.hdf5
