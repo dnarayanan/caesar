@@ -39,7 +39,7 @@ jobs:
           python3 -m pip install --user setuptools
           python3 -m pip install --user wheel
           python3 -m pip install --user numpy cython
-          git clone --depth=1 https://github.com/yt-project/yt
+          git clone https://github.com/yt-project/yt
           cd yt
           git checkout yt-4.0
           python3 -m pip install --user .
