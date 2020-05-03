@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v1
 
       - name: Init
-        run: mkdir ~/datasets
+        run: pwd && mkdir ~/datasets
 
       - name: Cache datasets
         uses: actions/cache@v1
@@ -39,16 +39,13 @@ jobs:
           python3 -m pip install --user setuptools
           python3 -m pip install --user wheel
           python3 -m pip install --user numpy cython
-          git clone https://github.com/yt-project/yt
+          git clone --depth=1 https://github.com/yt-project/yt
           cd yt
           git checkout yt-4.0
           python3 -m pip install --user .
 
       - name: Install caesar
         run: |
-          cd
-          pwd
-          ls
           python3 -m pip install --user .
 
       - name: gizmo_64
