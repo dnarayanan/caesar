@@ -16,6 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v1
 
+      - name: Init
+        run: mkdir ~/datasets
+
       - name: Cache datasets
         uses: actions/cache@v1
         env:
