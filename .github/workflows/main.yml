@@ -51,5 +51,5 @@ jobs:
 
       - name: gizmo_64
         run: |
-          cd
+          cd /home/runner/work/caesar/caesar
           python3 scripts/commit_tests.py ~/datasets/gizmo_64/output/snap_N64L16_000.hdf5 ~/datasets/gizmo_64/output/snap_N64L16_135.hdf5
