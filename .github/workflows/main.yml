@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v1
 
       - name: Init
-        run: pwd && mkdir ~/datasets
+        run: mkdir ~/datasets
 
       - name: Cache datasets
         uses: actions/cache@v1
@@ -46,6 +46,7 @@ jobs:
 
       - name: Install caesar
         run: |
+          cd /home/runner/work/caesar/caesar
           python3 -m pip install --user .
 
       - name: gizmo_64
