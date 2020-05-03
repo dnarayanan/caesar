@@ -43,6 +43,10 @@ jobs:
           cd yt
           git checkout yt-4.0
           python3 -m pip install --user .
+          cd ..
+          git clone https://github.com/dnarayanan/pygadgetreader
+          cd pygadgetreader
+          python3 -m pip install --user .
 
       - name: Install caesar
         run: |
