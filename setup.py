@@ -56,7 +56,7 @@ setup(
     },
     packages=find_packages(),
     setup_requires=['numpy','cython>=0.22'],
-    install_requires=['numpy','h5py','cython','psutil', 'scipy'],
+    install_requires=['numpy','h5py','cython','psutil', 'scipy', 'joblib'],
     cmdclass={'sdist':sdist, 'build_ext':build_ext, 'build_py':build_py},
     ext_modules=cython_extensions,
 )
