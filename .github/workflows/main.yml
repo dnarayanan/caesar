@@ -21,6 +21,8 @@ jobs:
           mkdir ~/datasets
           python3 --version
           python3 -m pip --version
+          python3 -m pip install --upgrade pip
+          python3 -m pip --version
 
       - name: Cache datasets
         uses: actions/cache@v1
