@@ -35,6 +35,7 @@ jobs:
 
       - name: Install caesar
         run: |
+          python3 -m pip install --user setuptools
           cd /home/runner/work/caesar/caesar
           python3 -m pip install --user .
 
