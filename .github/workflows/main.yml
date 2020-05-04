@@ -36,7 +36,7 @@ jobs:
           mv gizmo_64/output/snap_N64L16_000.hdf5 .
           mv gizmo_64/output/snap_N64L16_135.hdf5 .
           rm -r gizmo_64/output/*
-          mv snap*.hdf6 gizmo_64/output/
+          mv snap*.hdf5 gizmo_64/output/
 
       - name: Install caesar
         # update pip so we can install from git URLs
