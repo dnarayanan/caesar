@@ -35,7 +35,7 @@ jobs:
           rm gizmo_64.tar.gz
           mv gizmo_64/output/snap_N64L16_000.hdf5 .
           mv gizmo_64/output/snap_N64L16_135.hdf5 .
-          rm gizmo_64/output/*
+          rm -r gizmo_64/output/*
           mv snap*.hdf6 gizmo_64/output/
 
       - name: Install caesar
