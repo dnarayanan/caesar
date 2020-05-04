@@ -19,10 +19,7 @@ jobs:
       - name: Init
         run: |
           mkdir ~/datasets
-          python3 --version
-          python3 -m pip --version
           python3 -m pip install --upgrade pip
-          python3 -m pip --version
 
       - name: Cache datasets
         uses: actions/cache@v1
@@ -39,8 +36,9 @@ jobs:
           tar xf gizmo_64.tar.gz
 
       - name: Install caesar
+        # numpy and cython are required for yt because its setup.py is dumb
         run: |
-          python3 -m pip install --user setuptools
+          python3 -m pip install --user setuptools numpy cython
           cd /home/runner/work/caesar/caesar
           python3 -m pip install --user .
 
