@@ -19,7 +19,7 @@ for snap in snaps:
     obj.member_search()
     obj.save('caesar_snap.hdf5')
 
-    obj = caesar.load('caesar_simba.hdf5')
+    obj = caesar.load('caesar_snap.hdf5')
 
     # This indirectly tests a fair few fields
     print(obj.galinfo())
