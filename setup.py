@@ -36,9 +36,17 @@ class sdist(_sdist):
             
 cython_extensions = [
     Extension('caesar.group_funcs',
-              ['caesar/group_funcs/group_funcs.pyx']),
+              sources=['caesar/group_funcs/group_funcs.pyx'],
+              extra_compile_args=["-fopenmp"],
+              extra_link_args=["-fopenmp"]),
     Extension('caesar.hydrogen_mass_calc',
-              ['caesar/hydrogen_mass_calc/hydrogen_mass_calc.pyx'])
+              sources=['caesar/hydrogen_mass_calc/hydrogen_mass_calc.pyx'],
+              extra_compile_args=["-fopenmp"],
+              extra_link_args=["-fopenmp"]),
+    Extension('caesar.cyloser',
+              sources=['caesar/pyloser/cyloser.pyx'],
+              extra_compile_args=["-fopenmp"],
+              extra_link_args=["-fopenmp"])
 ]
 
 setup(
