@@ -89,7 +89,6 @@ def compute_mags(phot):
         # variables
         float[:,:] spect_dust = np.zeros((ng,nlam),dtype=MY_DTYPE)   # galaxy spectra with extinction
         float[:,:] spect_nodust = np.zeros((ng,nlam),dtype=MY_DTYPE)   # galaxy spectra without extinction
-        float[:,:] mymags = np.zeros((4,nbands),dtype=MY_DTYPE)   # abs, abs_nd, app, app_nd
         # things to compute
         float[:,:] absmags = np.zeros((ng,nbands),dtype=MY_DTYPE)    # absolute mags
         float[:,:] appmags = np.zeros((ng,nbands),dtype=MY_DTYPE)    # apparent mags
@@ -102,12 +101,7 @@ def compute_mags(phot):
         iend = starid_bins[ig+1]
         # compute spectrum of galaxy with and without dust
         get_galaxy_spectrum(istart,iend,sm,sage,sZ,svz,AV_star,extinctions,nextinct,ssfr[ig],nlam,nage,nZ,ssp_wavelengths,ssp_ages,ssp_logZ,ssp_spectra,spect_dust[ig],spect_nodust[ig])
-        get_magnitudes(nbands,nlam,itrans,ftrans,jtrans,ztrans,iwave0,iwave1,iwz0,iwz1,lumtoflux,lumtoflux_abs,spect_dust[ig],spect_nodust[ig],mymags)
-        for ib in range(nbands):
-            absmags[ig,ib] = mymags[0,ib]
-            absmags_nd[ig,ib] = mymags[1,ib]
-            appmags[ig,ib] = mymags[2,ib]
-            appmags_nd[ig,ib] = mymags[3,ib]
+        get_magnitudes(nbands,nlam,itrans,ftrans,jtrans,ztrans,iwave0,iwave1,iwz0,iwz1,lumtoflux,lumtoflux_abs,spect_dust[ig],spect_nodust[ig],absmags[ig],absmags_nd[ig],appmags[ig],appmags_nd[ig])
         for ip in range(nlam-1):
             L_FIR[ig] += (spect_nodust[ig][ip]-spect_dust[ig][ip])*dnu[ip]
 
@@ -118,7 +112,7 @@ def compute_mags(phot):
         phot.groups[ig].appmag = {}
         phot.groups[ig].appmag_nodust = {}
         for ib,b in enumerate(phot.band_names):
-            #if ig<3 and phot.band_meanwave[ib]<8000: print("%d %d %s %g %g %g %g %g %g"%(ig,ib,b,np.log10(phot.groups[ig].masses['stellar']),phot.groups[ig].sfr.d,absmags[ig,ib],absmags_nd[ig,ib],appmags[ig,ib],appmags_nd[ig,ib]))
+            #if ig<=10 and ib == 14: print("%d %d %s %g  %g %g %g %g"%(ig,ib,b,np.log10(phot.groups[ig].masses['stellar']),absmags[ig,ib],absmags_nd[ig,ib],appmags[ig,ib],appmags_nd[ig,ib]))
             phot.groups[ig].absmag[b] = absmags[ig,ib]
             phot.groups[ig].absmag_nodust[b] = absmags_nd[ig,ib]
             phot.groups[ig].appmag[b] = appmags[ig,ib]
@@ -130,17 +124,17 @@ def compute_mags(phot):
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void get_magnitudes(int nbands, int nlam, int[:] itrans, float[:] ftrans, int[:] jtrans, float[:] ztrans, int[:] iwave0, int[:] iwave1, int[:] iwz0, int[:] iwz1, float lumtoflux, float lumtoflux_abs, float[:] spect_dust, float[:] spect_nodust, float[:,:] mymags) nogil:
+cdef void get_magnitudes(int nbands, int nlam, int[:] itrans, float[:] ftrans, int[:] jtrans, float[:] ztrans, int[:] iwave0, int[:] iwave1, int[:] iwz0, int[:] iwz1, float lumtoflux, float lumtoflux_abs, float[:] spect_dust, float[:] spect_nodust, float[:] absmag, float[:] absmag_nd, float[:] appmag, float[:] appmag_nd) nogil:
 
     cdef int ib
 
     for ib in range(nbands):
         # compute absolute magnitudes
-        mymags[0,ib] = apply_bands(ib,spect_dust,ftrans,iwave0[ib],iwave1[ib],itrans[ib],lumtoflux_abs)
-        mymags[1,ib] = apply_bands(ib,spect_nodust,ftrans,iwave0[ib],iwave1[ib],itrans[ib],lumtoflux_abs)
+        absmag[ib] = apply_bands(ib,spect_dust,ftrans,iwave0[ib],iwave1[ib],itrans[ib],lumtoflux_abs)
+        absmag_nd[ib] = apply_bands(ib,spect_nodust,ftrans,iwave0[ib],iwave1[ib],itrans[ib],lumtoflux_abs)
         # Compute apparent magnitudes
-        mymags[2,ib] = apply_bands(ib,spect_dust,ztrans,iwz0[ib],iwz1[ib],jtrans[ib],lumtoflux)
-        mymags[3,ib] = apply_bands(ib,spect_nodust,ztrans,iwz0[ib],iwz1[ib],jtrans[ib],lumtoflux)
+        appmag[ib] = apply_bands(ib,spect_dust,ztrans,iwz0[ib],iwz1[ib],jtrans[ib],lumtoflux)
+        appmag_nd[ib] = apply_bands(ib,spect_nodust,ztrans,iwz0[ib],iwz1[ib],jtrans[ib],lumtoflux)
 
     return
 
@@ -151,14 +145,16 @@ cdef float apply_bands(int iband, float[:] spectrum, float[:] ftrans, int iwave0
 
     cdef int i
     cdef double lum=0., res=0.
+    cdef float bandmag
 
     for i in range(iwave0,iwave1):
         lum += spectrum[i]*ftrans[i-iwave0+itrans]
         res += ftrans[i-iwave0+itrans]
     if res > 0 and lum > 0:
-        return <float>(-48.6-2.5*c_log10(lum*lumtoflux/res))
+        bandmag = <float>(-48.6-2.5*c_log10(lum*lumtoflux/res))
     else:
-        return 100.0   # set mag=100 for no flux
+        bandmag = 100.0   # set mag=100 for no flux
+    return bandmag
 
 @cython.cdivision(True)
 @cython.wraparound(False)
@@ -309,11 +305,8 @@ def compute_AV(phot):
         int my_nproc = phot.nproc
         int nkerntab = len(phot.kerntab)
         bint usedust = phot.use_dust
-        int i,ig,ip,idim,ikern,istart,iend,igstart,igend
         float Lbox = phot.boxsize
-        float dx2, Zave, mgtot, boverh, kernint_val
-        float dx[3]
-        float dtm_slope, dtm_int, dtm
+        int ig,ip,istart,iend,igstart,igend
         # useful constants
         float redshift = phot.obj.simulation.redshift
         double NHcol_fact = 1.99e33*0.76*(1.+redshift)*(1.+redshift)/(3.086e21**2*1.673e-24)
@@ -329,56 +322,46 @@ def compute_AV(phot):
         igstart = gasid_bins[ig]
         igend = gasid_bins[ig+1]
         for ip in range(istart,iend):
-            Zcol[ip] = 0.
-            for i in range(igstart,igend):
-                for idim in range(3):
-                    dx[idim] = spos[ip,idim] - gpos[i,idim]
-                    if dx[idim] > 0.5*Lbox: dx[idim] -= Lbox
-                    if dx[idim] > 0.5*Lbox: dx[idim] += Lbox
-                if dx[idir] > 0: continue  # only use gas in front of stars
-                if idim == 0: dx2 = dx[1]*dx[1]+dx[2]*dx[2]
-                if idim == 1: dx2 = dx[0]*dx[0]+dx[2]*dx[2]
-                if idim == 2: dx2 = dx[0]*dx[0]+dx[1]*dx[1]
-                if dx2 > ghsm[i]*ghsm[i]: continue  # gas does not intersect LOS to star
-                boverh = c_sqrt(dx2/(ghsm[i]*ghsm[i]))
-                ikern = <int>(nkerntab*boverh)
-                kernint_val = kerntab[ikern]
-                Zcol[ip] += gm[i]*gZ[i] * kernint_val / (ghsm[i]*ghsm[i]) # sum metal column
-            A_V[ip] = Zcol[ip] * NHcol_fact * AV_fact
-            if A_V[ip] == 0.: continue  # nothing else to do for this star
-
-    if phot.use_dust:
-        return np.array(A_V,dtype=MY_DTYPE)
-
-    # when using metals, adjust extinction at low metallicity
-    for ig in prange(ng,nogil=True,schedule='dynamic',num_threads=my_nproc):
-        istart = starid_bins[ig]
-        iend = starid_bins[ig+1]
-        igstart = gasid_bins[ig]
-        igend = gasid_bins[ig+1]
-        for ip in range(istart,iend):
-            Zcol[ip] = 0.
-            for i in range(igstart,igend):
-                for idim in range(3):
-                    dx[idim] = spos[ip,idim] - gpos[i,idim]
-                    if dx[idim] > 0.5*Lbox: dx[idim] -= Lbox
-                    if dx[idim] > 0.5*Lbox: dx[idim] += Lbox
-                if dx[idir] > 0: continue  # only use gas in front of stars
-                if idim == 0: dx2 = dx[1]*dx[1]+dx[2]*dx[2]
-                if idim == 1: dx2 = dx[0]*dx[0]+dx[2]*dx[2]
-                if idim == 2: dx2 = dx[0]*dx[0]+dx[1]*dx[1]
-                if dx2 > ghsm[i]*ghsm[i]: continue  # gas does not intersect LOS to star
-                Zcol[ip] += gZ[i]
-            if Zcol[ip]>0 and not usedust:      #  use average Z to adjust dust-to-metal ratio
-                Zcol[ip] /= 0.0134
-                # z- and Z-dependent fit to Simba-100 dust-to-metal ratio (Li etal 2019)
-                dtm_slope = -0.104*redshift + 0.97  # slope at a given redshift
-                dtm_int = -0.059*redshift + 0.005   # intercept at a given redshift
-                dtm = 10**(dtm_slope*c_log10(Zcol[ip]) + dtm_int)  # dtm value at given metallicity
-                if dtm<dtm_MW: A_V[ip] *= dtm/dtm_MW  # scale dust extinction to MW dtm value
+            A_V[ip] = star_AV(ip, idir, igstart, igend, spos, gpos, gm, gZ, ghsm,  Lbox, nkerntab, kerntab, redshift, dtm_MW,  NHcol_fact, AV_fact, usedust)
 
     return np.array(A_V,dtype=MY_DTYPE)
 
+@cython.cdivision(True)
+@cython.wraparound(False)
+@cython.boundscheck(False)
+cdef float star_AV(int ip, int idir, int igstart, int igend, float[:,:] spos, float[:,:] gpos, float[:] gm, float[:] gZ, float[:] ghsm, float Lbox, int nkerntab, float[:] kerntab, float redshift, float dtm_MW, float NHcol_fact, float AV_fact, bint usedust) nogil:
+
+    cdef:
+        int i,idim
+        float A_V,Zcol=0.
+        float dx2, kernint_val
+        float dx[3]
+        float dtm_slope, dtm_int, dtm
+
+    for i in range(igstart,igend):
+        for idim in range(3):
+            dx[idim] = spos[ip,idim] - gpos[i,idim]
+            if dx[idim] > 0.5*Lbox: dx[idim] -= Lbox
+            if dx[idim] > 0.5*Lbox: dx[idim] += Lbox
+        if dx[idir] > 0: continue  # only use gas in front of stars
+        if idim == 0: dx2 = dx[1]*dx[1]+dx[2]*dx[2]
+        if idim == 1: dx2 = dx[0]*dx[0]+dx[2]*dx[2]
+        if idim == 2: dx2 = dx[0]*dx[0]+dx[1]*dx[1]
+        if dx2 > ghsm[i]*ghsm[i]: continue  # gas does not intersect LOS to star
+        ikern = <int>(nkerntab*c_sqrt(dx2/(ghsm[i]*ghsm[i])))
+        kernint_val = kerntab[ikern]
+        Zcol += gm[i]*gZ[i] * kernint_val / (ghsm[i]*ghsm[i]) # sum metal column
+    A_V = Zcol * NHcol_fact * AV_fact
+
+    if Zcol>0 and not usedust:      #  use average Z to adjust dust-to-metal ratio
+        Zcol /= 0.0134
+        # z- and Z-dependent fit to Simba-100 dust-to-metal ratio (Li etal 2019)
+        dtm_slope = -0.104*redshift + 0.97  # slope at a given redshift
+        dtm_int = -0.059*redshift + 0.005   # intercept at a given redshift
+        dtm = 10**(dtm_slope*c_log10(Zcol) + dtm_int)  # dtm value at given metallicity
+        if dtm<dtm_MW: A_V *= dtm/dtm_MW  # scale dust extinction to MW dtm value
+
+    return A_V
 
 @cython.cdivision(True)
 @cython.wraparound(False)
