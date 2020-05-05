@@ -216,7 +216,7 @@ class photometry:
             self.band_iwz1[ib] = ind[-1]+1
             ftrans = np.interp(self.ssp_wavelengths[ind],band_wave*self.obj.simulation.scale_factor,band_trans)  # transmission at those wavelengths
             dnu = CLIGHT_AA/self.ssp_wavelengths[ind[0]:ind[-1]+1] - CLIGHT_AA/self.ssp_wavelengths[ind[0]+1:ind[-1]+2]  # convert to delta-nu
-            self.band_ztrans = np.append(self.band_ztrans, ftrans*dnu*cosmic_ext[ind])
+            self.band_ztrans = np.append(self.band_ztrans, np.array(ftrans*dnu*cosmic_ext[ind]))
             self.band_indz[ib+1] = len(self.band_ztrans)
 
         memlog('Computing %d bands: %s'%(len(self.band_names),self.band_names))

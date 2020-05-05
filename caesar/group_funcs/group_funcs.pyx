@@ -48,7 +48,7 @@ cdef int mycmp(const_void * pa, const_void * pb) nogil:  # qsort comparison func
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef int nogil_CoM_quants(int ig, float[:,:] pos, float[:,:] vel, float[:] mass, float[:] pot, float[:] grp_mtot, int istart, int iend, int ndim, float Lbox, float[:,:] grp_pos, float[:,:] grp_vel) nogil:
+cdef void nogil_CoM_quants(int ig, float[:,:] pos, float[:,:] vel, float[:] mass, float[:] pot, float[:] grp_mtot, int istart, int iend, int ndim, float Lbox, float[:,:] grp_pos, float[:,:] grp_vel, float[:,:] grp_minpotpos, float[:,:] grp_minpotvel) nogil:
     """ Computes center-of-mass position and velocity, as well as minimum potential position.
 
     ig: group index
@@ -87,13 +87,17 @@ cdef int nogil_CoM_quants(int ig, float[:,:] pos, float[:,:] vel, float[:] mass,
         if pot[i] < minpot:
             minpotpart = i
             minpot = pot[i]
-    return minpotpart
+    for ip in range(ndim):
+        grp_minpotpos[ig,ip] = pos[minpotpart,ip]  # position of minimum potential particle, of any type
+        grp_minpotvel[ig,ip] = vel[minpotpart,ip]  # velocity of minimum potential particle, of any type
+
+    return 
 
 
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void nogil_load_partinfo(float[:] mass, float[:,:] pos, float[:,:] vel, int[:] ptype, float *cent_pos, float *cent_vel, part_struct *pinfo, float Lbox, int istart, int iend, int ndim) nogil:
+cdef void nogil_load_partinfo(float[:] mass, float[:,:] pos, float[:,:] vel, int[:] ptype, float[:] cent_pos, float[:] cent_vel, part_struct *pinfo, float Lbox, int istart, int iend, int ndim) nogil:
     """ Computes center-of-mass position and velocity, as well as minimum potential position.
 
     ig: group index
@@ -170,7 +174,7 @@ cdef float nogil_velocity_dispersions(part_struct *pinfo, int ip, int[:] group_p
 
     Returns the velocity dispersion
     """
-    cdef int i, j, ngp, npt=0
+    cdef int i, idim, ngp, npt=0
     cdef double mtot=0., vdisp = 0.
     cdef double vcom[3]
    
@@ -199,7 +203,7 @@ cdef float nogil_velocity_dispersions(part_struct *pinfo, int ip, int[:] group_p
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] group_ptypes, float *L) nogil:
+cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] group_ptypes, float[:] L) nogil:
     """ Compute angular quantities associated with rotating the galaxy along its angular mom vector
 
     pinfo: struct holding mass, radii, ptypes of particles
@@ -217,7 +221,7 @@ cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] gro
     cdef float x[3]
     cdef float v[3]
     cdef float e[3]
-    cdef float Lmag,phi,theta,jz,rz
+    cdef double Lmag,phi,theta,jz,rz
     cdef double krot=0., ktot=0.
     cdef double m_tot=0., m_counterrot=0.
 
@@ -279,13 +283,13 @@ cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] gro
                 m_counterrot += pinfo[i].m
             m_tot += pinfo[i].m
             # compute kappa_rot, which is fraction of KE in ordered rotation (Sales+11 eq 1)
-            krot += 0.5*pinfo[i].m*(jz/rz)**2   # this is 0.5*m*vphi^2
+            if rz > 0: krot += 0.5*pinfo[i].m*(jz/rz)**2   # this is 0.5*m*vphi^2
             ktot += 0.5*pinfo[i].m*v2
 
     # bulge_to_total is defined as twice the fraction of counter-rotating mass
-    L[5] = 2.*m_counterrot / m_tot
+    L[5] = <float>(2.*m_counterrot / m_tot)
     if L[5] > 1.: L[5] = 1.
-    L[6] = krot / ktot  # kappa_rot
+    L[6] = <float>(krot / ktot)  # kappa_rot
 
     return
 
@@ -595,10 +599,7 @@ def get_group_overall_properties(group,grp_list):
         float Lbox = group.obj.simulation.boxsize.d
         int gtflag,minpotpart
         int i,j,ig,ip,ir,istart,iend,binary
-        float[3] dx,cent_pos,cent_vel
-        float[7] Ltmp
-        float[:] my_mvir = np.zeros(nDens,dtype=MY_DTYPE)
-        float[:] my_rvir = np.zeros(nDens,dtype=MY_DTYPE)
+        float[3] dx
         float mtarget
         part_struct *grp_partinfo
         float r200_fact, G_in_simunits
@@ -606,29 +607,26 @@ def get_group_overall_properties(group,grp_list):
         # things to compute
         float[:]   grp_mtot = np.zeros(ngroup,dtype=MY_DTYPE)  # total masses
         float[:,:] grp_mass = np.zeros((ngroup,nptypes),dtype=MY_DTYPE)  # masses in the various types
-        int[:,:]    grp_count = np.zeros((ngroup,nptypes),dtype=np.int32)  # part counts in the various types
+        int[:,:]   grp_count = np.zeros((ngroup,nptypes),dtype=np.int32)  # part counts in the various types
         float[:,:] grp_pos = np.zeros((ngroup,ndim),dtype=MY_DTYPE)  # CoM positions
         float[:,:] grp_vel = np.zeros((ngroup,ndim),dtype=MY_DTYPE)  # CoM velocities
         float[:,:] grp_minpotpos = np.zeros((ngroup,ndim),dtype=MY_DTYPE)  # position of minimum potential
+        float[:,:] grp_minpotvel = np.zeros((ngroup,ndim),dtype=MY_DTYPE)  # velocity of minimum potential
         float[:,:] grp_R20 = np.zeros((ngroup,nptypes+2),dtype=MY_DTYPE)  # 80% mass-enclosing radius 
         float[:,:] grp_Rhalf = np.zeros((ngroup,nptypes+2),dtype=MY_DTYPE)  # half-mass radius
         float[:,:] grp_R80 = np.zeros((ngroup,nptypes+2),dtype=MY_DTYPE)  # 80% mass-enclosing radius 
         float[:,:] grp_vdisp = np.zeros((ngroup,nptypes+2),dtype=MY_DTYPE)  # velocity dispersions
-        float[:,:,:] grp_L = np.zeros((ngroup,7,nptypes+2),dtype=MY_DTYPE)  # holds angular quants (Lx,Ly,Lz,ALPHA,BETA,B/T,kappa_rot)
+        float[:,:,:] grp_L = np.zeros((ngroup,nptypes+2,7),dtype=MY_DTYPE)  # holds angular quants (Lx,Ly,Lz,ALPHA,BETA,B/T,kappa_rot)
         float[:,:] grp_mvir = np.zeros((ngroup,nDens),dtype=MY_DTYPE)  # virial masses like M500, M2500, ...
         float[:,:] grp_rvir = np.zeros((ngroup,nDens),dtype=MY_DTYPE)  # corresponding radii
 
     # preliminary stuff to set up calculation of properties
     npmax = max([hid_bins[i+1]-hid_bins[i] for i in range(0,ngroup)]) # get max number of particles in a group
     grp_partinfo = <part_struct *> malloc(npmax*sizeof(part_struct))  # allocate particle info
-    #my_mvir = <float *> malloc(nDens*sizeof(float))
-    #my_rvir = <float *> malloc(nDens*sizeof(float))
     if group.obj_type == 'halo': gtflag = 1
     elif group.obj_type == 'galaxy': gtflag = 2
     elif group.obj_type == 'cloud': gtflag = 3
     else: sys.exit('Group type %s not recognized'%group.obj_type)
-
-    #mylog.info('Processing %d %s with %d,%d,%d,%d gas,star,bh,tot parts'%(ngroup-igstart,group.obj_type,len(gid),len(sid),len(bhid),len(grpids)))
 
     ## loop over objects, calculate properties for each object
     for ig in prange(ng,nogil=True,schedule='dynamic',num_threads=my_nproc):
@@ -645,18 +643,13 @@ def get_group_overall_properties(group,grp_list):
             grp_mtot[ig] += grp_mass[ig,ip]
 
         # Center of mass quantities
-        minpotpart = nogil_CoM_quants(ig, pos, vel, mass, pot, grp_mtot, istart, iend, ndim, Lbox, grp_pos, grp_vel)
-        for ip in range(ndim):
-           grp_minpotpos[ig,ip] = pos[minpotpart,ip]  # position of minimum potential particle, of any type
+        nogil_CoM_quants(ig, pos, vel, mass, pot, grp_mtot, istart, iend, ndim, Lbox, grp_pos, grp_vel, grp_minpotpos, grp_minpotvel)
 
         # get radius of each particle, sort by radii
-        for ip in range(ndim):
-            cent_pos[ip] = grp_pos[ig,ip]  # use CoM position for galaxy center
-            cent_vel[ip] = grp_vel[ig,ip]
-            if gtflag == 1: # if halo, use min potential for halo center
-                cent_pos[ip] = grp_minpotpos[ig,ip]  
-                cent_vel[ip] = pos[minpotpart,ip]  
-        nogil_load_partinfo(mass, pos, vel, ptype, cent_pos, cent_vel, grp_partinfo, Lbox, istart, iend, ndim)
+        if gtflag == 1: # if halo, use min potential for halo center
+            nogil_load_partinfo(mass, pos, vel, ptype, grp_minpotpos[ig], grp_minpotvel[ig], grp_partinfo, Lbox, istart, iend, ndim)
+        else:
+            nogil_load_partinfo(mass, pos, vel, ptype, grp_pos[ig], grp_vel[ig], grp_partinfo, Lbox, istart, iend, ndim)
         qsort(<void*>grp_partinfo, <size_t>(iend-istart), sizeof(part_struct), mycmp)
 
         # calculate radii, velocity dispersions, angular quantities
@@ -680,32 +673,22 @@ def get_group_overall_properties(group,grp_list):
             # compute velocity dispersions for this ptype(s)
             grp_vdisp[ig,ip] = nogil_velocity_dispersions(grp_partinfo, ip, group_ptypes, iend-istart, ndim)
             # calculate angular quantities for this ptypes(s)
-            nogil_angular_quants(grp_partinfo, iend-istart, ip, group_ptypes, Ltmp)
-            for i in range(7): 
-                grp_L[ig,i,ip] = Ltmp[i]
+            nogil_angular_quants(grp_partinfo, iend-istart, ip, group_ptypes, grp_L[ig,ip])
 
         # calculate virial quantities
         if gtflag == 1:  # only calculate these for halos
-            nogil_virial_quants(grp_partinfo, Densities, iend-istart, nDens, my_rvir, my_mvir)
-            for i in range(nDens):
-                grp_mvir[ig,i] = my_mvir[i]
-                grp_rvir[ig,i] = my_rvir[i]
+            nogil_virial_quants(grp_partinfo, Densities, iend-istart, nDens, grp_rvir[ig], grp_mvir[ig])
 
     free(grp_partinfo)
 
     # assign quantities to groups, with units
     from caesar.property_manager import has_ptype
     L_units = 'Msun * kpccm * km/s'
-    #r200_fact = (group.obj.simulation.G / (100.0 * group.obj.simulation.Om_z * group.obj.simulation.H_z**2))**(1./3.)
     r200_fact = (200*group.obj.simulation.Om_z*1.3333333*np.pi*group.obj.simulation.critical_density.in_units('Msun/kpccm**3'))**(-1./3.)  
     G_in_simunits = group.obj.simulation.G.to('(km**2 * kpc)/(Msun * s**2)')  # so we get vcirc in km/s
     ds = group.obj.yt_dataset
     for ig in range(ng):
-        #mygroup = create_new_group(group.obj, group.obj_type)
         mygroup = grp_list[ig]
-        #if group.obj_type == 'halo': mygroup = group.obj.halo_list[ig]
-        #if group.obj_type == 'galaxy': mygroup = group.obj.galaxy_list[ig]
-        #if group.obj_type == 'cloud': mygroup = group.obj.cloud_list[ig]
         mygroup.masses['total'] = group.obj.yt_dataset.quan(grp_mtot[ig], group.obj.units['mass'])
         mbaryon = 0.
         for ip,p in enumerate(group.obj.data_manager.ptypes):
@@ -716,27 +699,29 @@ def get_group_overall_properties(group,grp_list):
         mygroup.masses['baryon'] = group.obj.yt_dataset.quan(mbaryon, group.obj.units['mass'])
         mygroup.pos = group.obj.yt_dataset.arr(grp_pos[ig], group.obj.units['length'])
         mygroup.vel = group.obj.yt_dataset.arr(grp_vel[ig], group.obj.units['velocity'])
+        mygroup.minpotpos = group.obj.yt_dataset.arr(grp_minpotpos[ig], group.obj.units['length'])
+        mygroup.minpotvel = group.obj.yt_dataset.arr(grp_minpotvel[ig], group.obj.units['velocity'])
         for ip in range(nptypes+2):
             if ip == nptypes+1:
                 mygroup.radii['total_m20'] = group.obj.yt_dataset.quan(grp_R20[ig,ip], group.obj.units['length'])
                 mygroup.radii['total_half_mass'] = group.obj.yt_dataset.quan(grp_Rhalf[ig,ip], group.obj.units['length'])
                 mygroup.radii['total_m80'] = group.obj.yt_dataset.quan(grp_R80[ig,ip], group.obj.units['length'])
                 mygroup.velocity_dispersions['total'] = group.obj.yt_dataset.quan(grp_vdisp[ig,ip], group.obj.units['velocity'])
-                mygroup.rotation['total_L'] = group.obj.yt_dataset.arr( [grp_L[ig,0,ip],grp_L[ig,1,ip],grp_L[ig,2,ip]], L_units)
-                mygroup.rotation['total_ALPHA'] = group.obj.yt_dataset.quan(grp_L[ig,3,ip],'')
-                mygroup.rotation['total_BETA'] = group.obj.yt_dataset.quan(grp_L[ig,4,ip],'')
-                mygroup.rotation['total_BoverT'] = group.obj.yt_dataset.quan(grp_L[ig,5,ip],'')
-                mygroup.rotation['total_kappa_rot'] = group.obj.yt_dataset.quan(grp_L[ig,6,ip],'')
+                mygroup.rotation['total_L'] = group.obj.yt_dataset.arr( [grp_L[ig,ip,0],grp_L[ig,ip,1],grp_L[ig,ip,2]], L_units)
+                mygroup.rotation['total_ALPHA'] = group.obj.yt_dataset.quan(grp_L[ig,ip,3],'')
+                mygroup.rotation['total_BETA'] = group.obj.yt_dataset.quan(grp_L[ig,ip,4],'')
+                mygroup.rotation['total_BoverT'] = group.obj.yt_dataset.quan(grp_L[ig,ip,5],'')
+                mygroup.rotation['total_kappa_rot'] = group.obj.yt_dataset.quan(grp_L[ig,ip,6],'')
             elif ip == nptypes:
                 mygroup.radii['baryon_m20'] = group.obj.yt_dataset.quan(grp_R20[ig,ip], group.obj.units['length'])
                 mygroup.radii['baryon_half_mass'] = group.obj.yt_dataset.quan(grp_Rhalf[ig,ip], group.obj.units['length'])
                 mygroup.radii['baryon_m80'] = group.obj.yt_dataset.quan(grp_R80[ig,ip], group.obj.units['length'])
                 mygroup.velocity_dispersions['baryon'] = group.obj.yt_dataset.quan(grp_vdisp[ig,ip], group.obj.units['velocity'])
-                mygroup.rotation['baryon_L'] = group.obj.yt_dataset.arr( [grp_L[ig,0,ip],grp_L[ig,1,ip],grp_L[ig,2,ip]], L_units)
-                mygroup.rotation['baryon_ALPHA'] = group.obj.yt_dataset.quan(grp_L[ig,3,ip],'')
-                mygroup.rotation['baryon_BETA'] = group.obj.yt_dataset.quan(grp_L[ig,4,ip],'')
-                mygroup.rotation['baryon_BoverT'] = group.obj.yt_dataset.quan(grp_L[ig,5,ip],'')
-                mygroup.rotation['baryon_kappa_rot'] = group.obj.yt_dataset.quan(grp_L[ig,6,ip],'')
+                mygroup.rotation['baryon_L'] = group.obj.yt_dataset.arr( [grp_L[ig,ip,0],grp_L[ig,ip,1],grp_L[ig,ip,2]], L_units)
+                mygroup.rotation['baryon_ALPHA'] = group.obj.yt_dataset.quan(grp_L[ig,ip,3],'')
+                mygroup.rotation['baryon_BETA'] = group.obj.yt_dataset.quan(grp_L[ig,ip,4],'')
+                mygroup.rotation['baryon_BoverT'] = group.obj.yt_dataset.quan(grp_L[ig,ip,5],'')
+                mygroup.rotation['baryon_kappa_rot'] = group.obj.yt_dataset.quan(grp_L[ig,ip,6],'')
             else:
                 if has_ptype(group.obj,group.obj.data_manager.ptypes[ip]):
                     name = list_types[group.obj.data_manager.ptypes[ip]]+'_m20'
@@ -748,31 +733,28 @@ def get_group_overall_properties(group,grp_list):
                     mygroup.velocity_dispersions[list_types[group.obj.data_manager.ptypes[ip]]] = group.obj.yt_dataset.quan(grp_vdisp[ig,ip], group.obj.units['velocity'])
                     name = list_types[group.obj.data_manager.ptypes[ip]]
                     mygroup.rotation[name+'_L'] = group.obj.yt_dataset.arr( [grp_L[ig,0,ip],grp_L[ig,1,ip],grp_L[ig,2,ip]], L_units)
-                    mygroup.rotation[name+'_ALPHA'] = group.obj.yt_dataset.quan(grp_L[ig,3,ip],'')
-                    mygroup.rotation[name+'_BETA'] = group.obj.yt_dataset.quan(grp_L[ig,4,ip],'')
-                    mygroup.rotation[name+'_BoverT'] = group.obj.yt_dataset.quan(grp_L[ig,5,ip],'')
-                    mygroup.rotation[name+'_kappa_rot'] = group.obj.yt_dataset.quan(grp_L[ig,6,ip],'')
+                    mygroup.rotation[name+'_ALPHA'] = group.obj.yt_dataset.quan(grp_L[ig,ip,3],'')
+                    mygroup.rotation[name+'_BETA'] = group.obj.yt_dataset.quan(grp_L[ig,ip,4],'')
+                    mygroup.rotation[name+'_BoverT'] = group.obj.yt_dataset.quan(grp_L[ig,ip,5],'')
+                    mygroup.rotation[name+'_kappa_rot'] = group.obj.yt_dataset.quan(grp_L[ig,ip,6],'')
 
         # some additional halo quantities to store
         if mygroup.obj_type is 'halo':
             mygroup.virial_quantities['r200'] = group.obj.yt_dataset.quan(r200_fact * grp_mtot[ig]**(1./3.), group.obj.units['length'])  # effective R200 calculated for total (FOF) mass.
             mygroup.virial_quantities['circular_velocity'] = group.obj.yt_dataset.quan(np.sqrt(G_in_simunits * grp_mtot[ig] / mygroup.virial_quantities['r200']), group.obj.units['velocity'])  # sqrt(GM_FOF/R_200)
             mygroup.virial_quantities['temperature'] = 3.6e5 * (mygroup.virial_quantities['circular_velocity'] / 100.0)**2  # eq 4 of Mo et al 2002 (K)
-            angular_momentum = group.obj.yt_dataset.quan(np.linalg.norm(grp_L[ig,:3,0]), L_units)
-            #mygroup.virial_quantities['spin_param'] = group.obj.yt_dataset.quan(angular_momentum / (1.4142135623730951 * mygroup.masses['total'] * mygroup.virial_quantities['circular_velocity'] * mygroup.virial_quantities['r200']), '')
+            angular_momentum = group.obj.yt_dataset.quan(np.linalg.norm(grp_L[ig,0,:3]), L_units)
             mygroup.virial_quantities['spin_param'] = angular_momentum / (1.4142135623730951 * mygroup.masses['total'] * mygroup.virial_quantities['circular_velocity'] * mygroup.virial_quantities['r200'])
             for ir,rtype in enumerate(['200c','500c','2500c']):  # these should match the ones in simulation.Densities
                 mygroup.virial_quantities['r'+rtype] = group.obj.yt_dataset.quan(grp_rvir[ig,ir], group.obj.units['length'])
                 mygroup.virial_quantities['m'+rtype] = group.obj.yt_dataset.quan(grp_mvir[ig,ir], group.obj.units['mass'])
 
-            #if ig < 0:
-            #    print('NEW:',mygroup.radii['total_m20'],mygroup.radii['total_half_mass'],mygroup.radii['total_m80'],mygroup.radii['baryon_m20'],mygroup.radii['baryon_half_mass'],mygroup.radii['baryon_m80'],mygroup.rotation['stellar_BoverT'],mygroup.rotation['gas_BoverT'],mygroup.rotation['stellar_kappa_rot'],mygroup.rotation['gas_kappa_rot'],mygroup.virial_quantities['spin_param'])
-            #grp_list[ig]._calculate_radial_quantities()
-            #print('OLD:',grp_list[ig].radii['total_half_mass'],grp_list[ig].radii['baryon_half_mass'],grp_list[ig].radii['gas_half_mass'],grp_list[ig].radii['stellar_half_mass'])
+        if ig < 0:
+            print('NEW: %g %g %g %g %g %g %g %g %g %g'%(mygroup.radii['total_m20'],mygroup.radii['total_half_mass'],mygroup.radii['total_m80'],mygroup.radii['baryon_m20'],mygroup.radii['baryon_half_mass'],mygroup.radii['baryon_m80'],mygroup.rotation['stellar_BoverT'],mygroup.rotation['gas_BoverT'],mygroup.rotation['stellar_kappa_rot'],mygroup.rotation['gas_kappa_rot']))
+            print('OLD: %g %g %g %g'%(grp_list[ig].radii['total_half_mass'],grp_list[ig].radii['baryon_half_mass'],grp_list[ig].radii['gas_half_mass'],grp_list[ig].radii['stellar_half_mass']))
 
         grp_list[ig] = mygroup
         #if ig < 5: print('%d: tot %g dm %g gas %g star %g bh %g [%g %g %g] sig %g %g %g'%(ig,np.log10(mygroup.masses['total']),np.log10(mygroup.masses['dm']),np.log10(mygroup.masses['gas']),np.log10(mygroup.masses['stellar']),np.log10(mygroup.masses['bh']),mygroup.pos[0],mygroup.pos[1],mygroup.pos[2],mygroup.velocity_dispersions['gas'],mygroup.velocity_dispersions['stellar'],mygroup.velocity_dispersions['dm']))
-
 
     memlog('Computed properties for %d %s'%(group.counts[group.obj_type],group_types[group.obj_type]))
 
