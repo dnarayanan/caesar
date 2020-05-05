@@ -45,17 +45,37 @@ def fubar_halo(obj):
     from caesar.group import get_group_properties
     from caesar.fubar import get_mean_interparticle_separation
 
+    # set up number of processors
+    obj.nproc = 1  # defaults to single core
+    if 'nproc' in obj._kwargs:
+        obj.nproc = int(obj._kwargs['nproc'])
+    if obj.nproc != 1:
+        import joblib
+        if obj.nproc < 0:
+            obj.nproc += joblib.cpu_count()+1
+        if obj.nproc == 0:
+            obj.nproc = joblib.cpu_count()
+    mylog.info('member_search() running on %d cores'%obj.nproc)
+    obj.load_haloid = False
+    if 'haloid' in obj._kwargs and 'snap' in obj._kwargs['haloid']:
+        obj.load_haloid = True
+
     # Process halos
     halos = fof6d(obj,'halo')  #instantiate a fof6d object
     halos.MIS = get_mean_interparticle_separation(obj).d # also computes omega_baryon and related quantities
     halos.load_haloid()
     halos.obj.data_manager._member_search_init(select=halos.haloid)  # load particle info, but only those selected to be in a halo
-    halos.plist_init()  # sort halo IDs
+    if not halos.plist_init():  # not enough halo particles found, nothing to do!
+        return  
     halos.load_lists()  # create halos, load particle indexes for halos
+    if len(halos.obj.halo_list) == 0:  # no valid halos found
+        mylog.warning('No valid halos found! Aborting member search')
+        return  
     get_group_properties(halos,halos.obj.halo_list)  # compute halo properties
 
     # Find galaxies, or load galaxy membership info
-    if not obj.simulation.baryons_present: return  # if no baryons, we're done
+    if not obj.simulation.baryons_present:  # if no baryons, we're done
+        return
     fof6d_flag = True
     if 'fof6d' in obj._kwargs and not obj._kwargs['fof6d']:  # fof6d for galaxies/clouds not requested
         return 
@@ -70,9 +90,15 @@ def fubar_halo(obj):
     # Process galaxies
     galaxies = fof6d(obj,'galaxy')  #instantiate a fof6d object
     galaxies.plist_init(parent=halos)  # get particle list for computing galaxy properties
-    if galaxies.nparttot == 0: return  # plist_init didn't find enough particles to group
+    if galaxies.nparttot == 0: # plist_init didn't find any particles in a galaxy
+        mylog.warning('Not enough eligible galaxy particles found!')
+        return  
     galaxies.load_lists(parent=halos)  # create galaxy_list, load particle index lists for galaxies
     get_group_properties(galaxies,galaxies.obj.galaxy_list)  # compute galaxy properties
+    if ('fsps_bands' in obj._kwargs) and obj._kwargs['fsps_bands'] is not None:
+        from caesar.pyloser.pyloser import photometry
+        galphot = photometry(obj,galaxies.obj.galaxy_list)
+        galphot.run_pyloser()
 
     # Find and process clouds
     if ('fofclouds' in obj._kwargs) and obj._kwargs['fofclouds']:

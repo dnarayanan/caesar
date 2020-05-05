@@ -14,6 +14,7 @@ import time
 import sys
 import os
 import h5py
+from yt.funcs import mylog
 from caesar.utils import memlog
 from caesar.property_manager import MY_DTYPE
 
@@ -28,15 +29,7 @@ class fof6d:
         self.counts = {}
 
         # set up number of processors
-        self.nproc = -5
-        if 'nproc' in self.obj._kwargs:
-            self.nproc = int(self.obj._kwargs['nproc'])
-        if self.nproc != 1:
-            import joblib 
-            if self.nproc < 0:
-                self.nproc += joblib.cpu_count()+1
-            if self.nproc == 0:
-                self.nproc = joblib.cpu_count()
+        self.nproc = obj.nproc
 
         # turn off unbinding; no need since fof6d already accounts for kinematics
         from caesar.group import group_types
@@ -47,7 +40,7 @@ class fof6d:
     def load_haloid(self):
         # Get Halo IDs, either from snapshot or else run fof.
         # This will be a list of numpy arrays for each ptype
-        if 'haloid' in self.obj._kwargs and 'snap' in self.obj._kwargs['haloid']:
+        if self.obj.load_haloid:
             from caesar.property_manager import get_haloid
             memlog('Using FOF Halo ID from snapshots')
             self.haloid = get_haloid(self.obj, self.obj.data_manager.ptypes, offset=-1)
@@ -98,12 +91,13 @@ class fof6d:
         if self.obj_type == 'halo' or parent is None:
             grpid = self.obj.data_manager.haloid - 1
             if len(grpid[grpid>=0]) < MINIMUM_DM_PER_HALO:
-                sys.exit('Not enough halo particles for a single valid halo (%d < %d); exiting'%(len(grpid[grpid>=0]),MINIMUM_DM_PER_HALO))
+                mylog.warning('Not enough halo particles for a single valid halo (%d < %d)'%(len(grpid[grpid>=0]),MINIMUM_DM_PER_HALO))
+                return False
         else:
             grpid = parent.tags_fof6d
             if len(grpid[grpid>=0]) < MINIMUM_STARS_PER_GALAXY:
                 self.nparttot = 0
-                return
+                return False
 
         # sort by grpid
         from caesar.property_manager import ptype_ints
@@ -116,6 +110,7 @@ class fof6d:
         self.grouplist = np.unique(grpid)  # list of objects (halo/galaxy/cloud) to process
         hid_sorted = grpid[sort_grpid]
         self.hid_bins = find_bins(hid_sorted,self.nparttot)
+        return True
 
     def run_fof6d(self, target_type, nHlim=0.13, Tlim=1.e5, sfflag=True, minstars=24):
 
