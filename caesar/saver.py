@@ -109,7 +109,6 @@ def _write_attrib(obj_list, k, v, hd):
         unit = True
     elif isinstance(v, np.ndarray) and np.shape(v)[0] == 3 and 'list' not in k:
         try:
-            print('obj_list: ',obj_list)
             data = np.vstack([getattr(i,k) for i in obj_list])
         except:
             mylog.warning('Saver unable to stack: %s %s %s',k,v,np.shape(v))

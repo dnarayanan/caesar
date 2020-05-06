@@ -221,7 +221,7 @@ cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] gro
     cdef float x[3]
     cdef float v[3]
     cdef float e[3]
-    cdef double Lmag,phi,theta,jz,rz
+    cdef double Lmag,phi,theta,jz,rz,v2
     cdef double krot=0., ktot=0.
     cdef double m_tot=0., m_counterrot=0.
 

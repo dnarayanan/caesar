@@ -86,14 +86,23 @@ def calculate_local_densities(obj, group_list):
     
     TREE = PeriodicCKDTree(box, pos)
 
-    search_radius = obj.simulation.search_radius
-    search_volume = 4.0/3.0 * np.pi * search_radius**3
+    if 'search_radius' in obj._kwargs:
+        if isinstance(obj._kwargs['search_radius'],(int,float)):
+            obj.simulation.search_radius = np.array([obj._kwargs['search_radius']])
+        else:
+            obj.simulation.search_radius = np.array(obj._kwargs['search_radius'])
+        obj.simulation.search_radius = obj.yt_dataset.arr(obj.simulation.search_radius, obj.units['length'])
 
     for group in group_list:
-        inrange = TREE.query_ball_point(group.pos, search_radius.d)
-        total_mass = obj.yt_dataset.quan(np.sum(mass[inrange]), obj.units['mass'])
-        group.local_mass_density   = total_mass / search_volume
-        group.local_number_density = float(len(inrange)) / search_volume
+        group.local_mass_density   = {}
+        group.local_number_density = {}
+        for search_radius in obj.simulation.search_radius:
+            search_volume = 4.0/3.0 * np.pi * search_radius**3
+            inrange = TREE.query_ball_point(group.pos, search_radius.d)
+            total_mass = obj.yt_dataset.quan(np.sum(mass[inrange]), obj.units['mass'])
+            rname = str(int(search_radius.d))
+            group.local_mass_density[rname] = total_mass / search_volume
+            group.local_number_density[rname] = float(len(inrange)) / search_volume
 
 
 def info_printer(obj, group_type, top):

@@ -33,7 +33,7 @@ class SimulationAttributes(object):
 
         sru = 'kpc'
         if self.cosmological_simulation: sru += 'cm'
-        self.search_radius   = ds.quan(1000.0, sru).to(obj.units['length'])
+        self.search_radius   = ds.arr([500,1000,2000], sru).to(obj.units['length'])
 
         H0 = ds.quan(self.hubble_constant * 100.0 * 3.24077929e-20, '1/s')
         if self.cosmological_simulation:
