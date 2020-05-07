@@ -160,8 +160,11 @@ class DataManager(object):
 
         if has_property(self.obj, 'gas', 'metallicity'):            
             gZ  = get_property(self.obj, 'metallicity', 'gas')[flag]
-        elif has_property(self.obj, 'gas', 'met_TNG'):
-            gZ  = get_property(self.obj, 'met_TNG', 'gas')[flag]  # for Illustris, array of mets
+        elif has_property(self.obj, 'gas', 'met_tng'):
+            gZ  = get_property(self.obj, 'met_tng', 'gas')[flag]  # for Illustris, array of mets
+        else:
+            mylog.warning('Metallicity not found: setting all gas to solar=0.0134')
+            gZ = 0.0134*np.ones(self.obj.simulation.nstar,dtype=MY_DTYPE)
 
         if has_property(self.obj, 'gas', 'nh'):            
             gfHI  = get_property(self.obj, 'nh', 'gas')[flag]
@@ -212,22 +215,23 @@ class DataManager(object):
 
         if has_property(self.obj, 'star', 'metallicity'):
             self.sZ  = get_property(self.obj, 'metallicity', 'star')[flag]
-        elif has_property(self.obj, 'star', 'met_TNG'):
-            self.sZ  = get_property(self.obj, 'met_TNG', 'star')[flag]  # for Illustris, array of mets
+        elif has_property(self.obj, 'star', 'met_tng'):  # try Illustris/TNG alias
+            self.sZ  = get_property(self.obj, 'met_tng', 'star')[flag]  
             #self.sZ  = np.sum(self.sZ.T[2:],axis=0)  # first two are H,He; the rest sum to give metallicity
             #self.sZ[self.sZ<0] = 0.  # some (very small) negative values, set to 0
         else:
             mylog.warning('Metallicity not found: setting all stars to solar=0.0134')
-            self.sZ = 0.0134*np.ones(self.obj.simulation.nstar)
+            self.sZ = 0.0134*np.ones(self.obj.simulation.nstar,dtype=MY_DTYPE)
 
         ds = self.obj.yt_dataset
         if has_property(self.obj, 'star', 'aform'):
             self.age  = get_property(self.obj, 'aform', 'star')[flag]  # a_exp at time of formation
-        elif has_property(self.obj, 'star', 'star_aform'):  # Illustris/TNG name
-            self.age  = get_property(self.obj, 'star_aform', 'star')[flag]  # for Illustris
+        elif has_property(self.obj, 'star', 'aform_tng'):  # try Illustris/TNG alias
+            self.age  = get_property(self.obj, 'aform_tng', 'star')[flag]  
             self.age  = abs(self.age)  # some negative values here too; not sure what to do?
         else:
-            mylog.warning('Stellar age not found -- photometry will not work')
+            self.age = np.zeros(self.obj.simulation.nstar,dtype=MY_DTYPE)
+            mylog.warning('Stellar age not found -- photometry will be incorrect!')
         if ds.cosmological_simulation:
             from yt.utilities.cosmology import Cosmology
             co = Cosmology(hubble_constant=ds.hubble_constant, omega_matter=ds.omega_matter, omega_lambda=ds.omega_lambda)
