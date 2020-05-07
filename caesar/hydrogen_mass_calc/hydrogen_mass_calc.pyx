@@ -485,19 +485,20 @@ cdef void _get_galaxy_hydrogen_masses(int igstart, int igend, int istart, int ie
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-def compute_selfshield(caesar_obj,grpids,rho_thresh):
+def compute_selfshield(caesar_obj,grpids,rho_thresh,uvb_model='FG11'):
     # Use Rahmati+13 to get self-shielded HI fractions, and Leroy+08 to get H2 fractions
     from caesar.property_manager import get_property
 
     cdef double gamma_HI
     from .treecool_data import UVB
-    uvb = UVB['FG11']
+    uvb = UVB[uvb_model]
 
     if np.log10(caesar_obj.simulation.redshift + 1.0) > uvb['logz'][len(uvb['logz'])-1]:
         gamma_HI = 0.0
     else:
         gamma_HI = np.interp(np.log10(caesar_obj.simulation.redshift + 1.0),
                              uvb['logz'],uvb['gH0'])
+    memlog('Computing HI (Rahmati+13) and H2 (Leroy+08) fracs w/%s bkgnd'%uvb_model)
 
     cdef:
         ## density thresholds in atoms/cm^3
@@ -539,7 +540,7 @@ def compute_selfshield(caesar_obj,grpids,rho_thresh):
             nHss      = nHss_part * (gtemp[i] * 1.0e-4)**0.17 * (gamma_HI * 1.0e12)**(2./3.)
             if nHss-1. < 1.e-4: continue  # no significant self-shielding adjustment needed; skip
             fgamma_HI = 0.98 * (1.0 + (gnh[i] / nHss)**(1.64))**(-2.28) + 0.02 * (1.0 + gnh[i] / nHss)**(-0.84)
-            ### Popping+09 equations 3, 7, 4
+            ### Popping+09 equation 7
             beta     = a / (c_sqrt(gtemp[i]/T0) *
                             (1.0 + c_sqrt(gtemp[i]/T0))**(1.0-b) *
                             (1.0 + c_sqrt(gtemp[i]/T1))**(1.0+b))   # cm^3/s
@@ -554,12 +555,11 @@ def compute_selfshield(caesar_obj,grpids,rho_thresh):
             fH2  = FSHIELD - fHI
 
         gfHI[i]    = fHI 
-        gfH2[i]    = fH2 * XH * gmass[i]
+        gfH2[i]    = fH2
 
     caesar_obj.data_manager.gfHI[grpids] = caesar_obj.yt_dataset.arr(gfHI, '')
     caesar_obj.data_manager.gfH2[grpids] = caesar_obj.yt_dataset.arr(gfH2, '')
 
-    memlog('Done assigning HI and H2 masses to particles')
     return 
 
 @cython.cdivision(True)

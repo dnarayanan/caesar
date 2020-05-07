@@ -140,14 +140,14 @@ class DataManager(object):
         dustmass_unit = '%s' % (self.obj.units['mass'])
         gnh_unit = '1/%s**3' % (self.obj.units['length'])
 
-        sfr = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), sfr_unit)
-        gZ  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')        
-        gT  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), self.obj.units['temperature'])
-        gnh  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), gnh_unit)
-        dustmass = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas),'')
-        gfHI  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')        
-        gfH2  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')        
-        ghsml  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), self.obj.units['length'])        
+        sfr = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), sfr_unit)
+        gZ  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), '')        
+        gT  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), self.obj.units['temperature'])
+        gnh  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), gnh_unit)
+        dustmass = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE),'')
+        gfHI  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), '')        
+        gfH2  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), '')        
+        ghsml  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), self.obj.units['length'])        
         #dustmass = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')#dustmass_unit)
             
         if select is 'all': 
@@ -160,12 +160,16 @@ class DataManager(object):
 
         if has_property(self.obj, 'gas', 'metallicity'):            
             gZ  = get_property(self.obj, 'metallicity', 'gas')[flag]
+        elif has_property(self.obj, 'gas', 'met_TNG'):
+            gZ  = get_property(self.obj, 'met_TNG', 'gas')[flag]  # for Illustris, array of mets
 
         if has_property(self.obj, 'gas', 'nh'):            
             gfHI  = get_property(self.obj, 'nh', 'gas')[flag]
 
         if has_property(self.obj, 'gas', 'fh2'):            
             gfH2  = get_property(self.obj, 'fh2', 'gas')[flag]
+        else:
+            mylog.warning('H2 fractions not found in snapshot -- will compute later')
 
         if has_property(self.obj, 'gas', 'temperature'):
             gT  = get_property(self.obj, 'temperature', 'gas')[flag].to(self.obj.units['temperature'])
@@ -182,7 +186,8 @@ class DataManager(object):
  
         if has_property(self.obj, 'gas', 'dustmass'):
             dustmass = get_property(self.obj,'dustmass','gas')[flag]
-            #dustmass = get_property(self.obj,'dustmass','gas'))#.to(dustmass_unit)
+        else:
+            mylog.warning('Dust masses not found in snapshot')
 
 
         self.gsfr = sfr
@@ -207,9 +212,22 @@ class DataManager(object):
 
         if has_property(self.obj, 'star', 'metallicity'):
             self.sZ  = get_property(self.obj, 'metallicity', 'star')[flag]
+        elif has_property(self.obj, 'star', 'met_TNG'):
+            self.sZ  = get_property(self.obj, 'met_TNG', 'star')[flag]  # for Illustris, array of mets
+            #self.sZ  = np.sum(self.sZ.T[2:],axis=0)  # first two are H,He; the rest sum to give metallicity
+            #self.sZ[self.sZ<0] = 0.  # some (very small) negative values, set to 0
+        else:
+            mylog.warning('Metallicity not found: setting all stars to solar=0.0134')
+            self.sZ = 0.0134*np.ones(self.obj.simulation.nstar)
 
         ds = self.obj.yt_dataset
-        self.age  = get_property(self.obj, 'aform', 'star')[flag]  # a_exp at time of formation
+        if has_property(self.obj, 'star', 'aform'):
+            self.age  = get_property(self.obj, 'aform', 'star')[flag]  # a_exp at time of formation
+        elif has_property(self.obj, 'star', 'star_aform'):  # Illustris/TNG name
+            self.age  = get_property(self.obj, 'star_aform', 'star')[flag]  # for Illustris
+            self.age  = abs(self.age)  # some negative values here too; not sure what to do?
+        else:
+            mylog.warning('Stellar age not found -- photometry will not work')
         if ds.cosmological_simulation:
             from yt.utilities.cosmology import Cosmology
             co = Cosmology(hubble_constant=ds.hubble_constant, omega_matter=ds.omega_matter, omega_lambda=ds.omega_lambda)

@@ -61,6 +61,20 @@ class fof6d:
         from caesar.fubar import get_mean_interparticle_separation,get_b,fof
         from caesar.property_manager import get_property,has_ptype,ptype_ints
         LL = get_mean_interparticle_separation(self.obj) * get_b(self.obj, 'halo')
+        if 'haloid_file' in self.obj._kwargs and self.obj._kwargs['haloid'] is not None:
+            haloid_file = self.obj._kwargs['haloid_file']
+            if os.path.isfile(haloid_file):
+                memlog('Reading 3D FOF Halo IDs from %s'%haloid_file)
+                hf = h5py.File(haloid_file,'r')
+                self.obj.data_manager.haloid = np.asarray(hf['all_haloids'])
+                self.haloid = []
+                for p in self.obj.data_manager.ptypes:  # read haloid arrays for each ptype
+                    self.haloid.append(np.asarray(hf['haloids_%s'%p]))
+                self.haloid = np.array(self.haloid)
+                hf.close()
+                return
+        else:
+            haloid_file = None
         memlog('Running 3D FOF to get Halo IDs, LL=%g'%LL)
         pos = np.empty((0,3),dtype=MY_DTYPE)
         ptype = np.empty(0,dtype=np.int32)
@@ -83,6 +97,14 @@ class fof6d:
             haloid = np.append(haloid,datasel,axis=0)
         self.haloid = np.asarray(self.haloid)
         self.obj.data_manager.haloid = haloid
+        if haloid_file is not None:
+            memlog('Writing 3D FOF Halo IDs to %s' % haloid_file)
+            with h5py.File(haloid_file,'w') as hf:  
+                hf.create_dataset('all_haloids',data=haloid, compression=1)
+                for ip,p in enumerate(self.obj.data_manager.ptypes):  # write haloid arrays for each ptype
+                    haloid_out = self.haloid[ip]
+                    hf.create_dataset('haloids_%s'%p,data=haloid_out, compression=1)
+                hf.close()
 
     def plist_init(self,parent=None):
 

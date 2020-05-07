@@ -19,7 +19,9 @@ particle_data_aliases = {
     'pid':'particle_index',
     'fh2':'FractionH2',
     'metallicity':'metallicity',
+    'met_TNG':'GFM_Metallicity',  # for Illustris/TNG
     'aform':'StellarFormationTime',
+    'aform_TNG':'GFM_StellarFormationTime',  # for Illustris/TNG
     'bhmdot':'BH_Mdot',
     'bhmass':'BH_Mass',
     'haloid':'HaloID',
