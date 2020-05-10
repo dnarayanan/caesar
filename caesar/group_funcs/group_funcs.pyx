@@ -597,6 +597,7 @@ def get_group_overall_properties(group,grp_list):
         double[:] Densities = group.obj.simulation.Densities.in_units(group.obj.units['mass']+'/'+group.obj.units['length']+'**3')
         int nDens = len(Densities)
         float Lbox = group.obj.simulation.boxsize.d
+        bint use_pot = group.obj.load_pot
         int gtflag,minpotpart
         int i,j,ig,ip,ir,istart,iend,binary
         float[3] dx
@@ -646,7 +647,7 @@ def get_group_overall_properties(group,grp_list):
         nogil_CoM_quants(ig, pos, vel, mass, pot, grp_mtot, istart, iend, ndim, Lbox, grp_pos, grp_vel, grp_minpotpos, grp_minpotvel)
 
         # get radius of each particle, sort by radii
-        if gtflag == 1: # if halo, use min potential for halo center
+        if gtflag == 1 and use_pot: # if halo, use min potential for halo center
             nogil_load_partinfo(mass, pos, vel, ptype, grp_minpotpos[ig], grp_minpotvel[ig], grp_partinfo, Lbox, istart, iend, ndim)
         else:
             nogil_load_partinfo(mass, pos, vel, ptype, grp_pos[ig], grp_vel[ig], grp_partinfo, Lbox, istart, iend, ndim)
@@ -687,6 +688,8 @@ def get_group_overall_properties(group,grp_list):
     r200_fact = (200*group.obj.simulation.Om_z*1.3333333*np.pi*group.obj.simulation.critical_density.in_units('Msun/kpccm**3'))**(-1./3.)  
     G_in_simunits = group.obj.simulation.G.to('(km**2 * kpc)/(Msun * s**2)')  # so we get vcirc in km/s
     ds = group.obj.yt_dataset
+    if not group.obj.load_pot:
+        mylog.warning('Potential not found in snapshot: minpotpos/vel not computed, halo radial quantities taken around CoM')
     for ig in range(ng):
         mygroup = grp_list[ig]
         mygroup.masses['total'] = group.obj.yt_dataset.quan(grp_mtot[ig], group.obj.units['mass'])
@@ -699,8 +702,9 @@ def get_group_overall_properties(group,grp_list):
         mygroup.masses['baryon'] = group.obj.yt_dataset.quan(mbaryon, group.obj.units['mass'])
         mygroup.pos = group.obj.yt_dataset.arr(grp_pos[ig], group.obj.units['length'])
         mygroup.vel = group.obj.yt_dataset.arr(grp_vel[ig], group.obj.units['velocity'])
-        mygroup.minpotpos = group.obj.yt_dataset.arr(grp_minpotpos[ig], group.obj.units['length'])
-        mygroup.minpotvel = group.obj.yt_dataset.arr(grp_minpotvel[ig], group.obj.units['velocity'])
+        if group.obj.load_pot:
+            mygroup.minpotpos = group.obj.yt_dataset.arr(grp_minpotpos[ig], group.obj.units['length'])
+            mygroup.minpotvel = group.obj.yt_dataset.arr(grp_minpotvel[ig], group.obj.units['velocity'])
         for ip in range(nptypes+2):
             if ip == nptypes+1:
                 mygroup.radii['total_m20'] = group.obj.yt_dataset.quan(grp_R20[ig,ip], group.obj.units['length'])
