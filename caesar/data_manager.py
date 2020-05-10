@@ -78,7 +78,7 @@ class DataManager(object):
         self.mass  = pdata['mass']
         self.ptype = pdata['ptype']
         self.indexes = pdata['indexes']
-        if hasattr(self.obj,'_kwargs') and ('haloid' in self.obj._kwargs and 'snap' in self.obj._kwargs['haloid']):
+        if self.obj.load_haloid:
             self.haloid = pdata['haloid']
         pdata      = None
 
@@ -168,11 +168,13 @@ class DataManager(object):
 
         if has_property(self.obj, 'gas', 'nh'):            
             gfHI  = get_property(self.obj, 'nh', 'gas')[flag]
+        else:
+            mylog.warning('HI fractions not found in snapshot, will compute later')
 
         if has_property(self.obj, 'gas', 'fh2'):            
             gfH2  = get_property(self.obj, 'fh2', 'gas')[flag]
         else:
-            mylog.warning('H2 fractions not found in snapshot -- will compute later')
+            mylog.warning('H2 fractions not found in snapshot, will compute later')
 
         if has_property(self.obj, 'gas', 'temperature'):
             gT  = get_property(self.obj, 'temperature', 'gas')[flag].to(self.obj.units['temperature'])
@@ -185,7 +187,7 @@ class DataManager(object):
             from yt import YTQuantity
             redshift = self.obj.simulation.redshift
             m_p = YTQuantity.from_astropy(const.m_p)
-            gnh  = get_property(self.obj, 'rho', 'gas')[flag].in_cgs() *0.76*(1+redshift)**3/m_p.in_cgs()
+            gnh  = get_property(self.obj, 'rho', 'gas')[flag].in_cgs() *0.76/m_p.in_cgs()
  
         if has_property(self.obj, 'gas', 'dustmass'):
             dustmass = get_property(self.obj,'dustmass','gas')[flag]

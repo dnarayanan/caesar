@@ -1,4 +1,5 @@
 import numpy as np
+from yt.funcs import mylog
 
 MY_DTYPE = np.float32
 
@@ -409,6 +410,16 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
         Dictionary containing the keys 'pos','vel','mass','ptype','indexes'.
 
     """    
+    # check if potential exists in snapshot for all particle types
+    obj.load_pot = True
+    for ip,p in enumerate(ptypes):
+        if not has_ptype(obj, p):
+            continue
+        if not has_property(obj, p, 'pot'):
+            obj.load_pot = False
+    #if not obj.load_pot:
+    #    mylog.warning('Potential not found in snapshot!')
+
     pos  = np.empty((0,3),dtype=MY_DTYPE)
     vel  = np.empty((0,3),dtype=MY_DTYPE)
     mass = np.empty(0,dtype=MY_DTYPE)
@@ -438,8 +449,11 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
         data = get_property(obj, 'mass', p).to(obj.units['mass'])[flag]
         mass = np.append(mass, data.d, axis=0)
 
-        data = get_property(obj, 'pot', p)[flag]
-        pot = np.append(pot, data.d, axis=0)
+        if obj.load_pot:
+            data = get_property(obj, 'pot', p)[flag]
+            pot = np.append(pot, data.d, axis=0)
+        else:
+            pot = np.append(pot, np.zeros(count,dtype=MY_DTYPE), axis=0)
 
         if obj.load_haloid:
             data = get_property(obj, 'haloid', p)[flag]

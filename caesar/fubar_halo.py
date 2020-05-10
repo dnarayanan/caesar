@@ -78,8 +78,9 @@ def fubar_halo(obj):
         return
     fof6d_flag = True
     if 'fof6d' in obj._kwargs and not obj._kwargs['fof6d']:  # fof6d for galaxies/clouds not requested
+        mylog.warning('fof6d not requested, and no other galaxy finder available! Aborting member search')
         return 
-    if ('fof6d_file' in obj._kwargs and obj._kwargs['fof6d_file'] is not None):
+    if 'fof6d_file' in obj._kwargs and obj._kwargs['fof6d_file'] is not None:
         fof6d_flag = halos.load_fof6dfile()  # load galaxy ID's from fof6d_file
     if fof6d_flag:
         halos.run_fof6d('galaxy')  # run fof6d on halos to find galaxies

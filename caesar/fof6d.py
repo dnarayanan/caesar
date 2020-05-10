@@ -80,7 +80,7 @@ class fof6d:
         ptype = np.empty(0,dtype=np.int32)
         for ip,p in enumerate(self.obj.data_manager.ptypes):  # get positions
             if not has_ptype(self.obj, p): continue
-            data = get_property(self.obj, 'pos', p)
+            data = get_property(self.obj, 'pos', p).to(obj.units['length'])
             pos = np.append(pos, data.d, axis=0)
             ptype = np.append(ptype, np.full(len(data), ptype_ints[p], dtype=np.int32), axis=0)
         haloid_all = fof(self.obj, pos, LL, group_type='halo')  # run FOF
@@ -107,9 +107,8 @@ class fof6d:
                 hf.close()
 
     def plist_init(self,parent=None):
-
+        # set up particle lists 
         from caesar.group import MINIMUM_DM_PER_HALO,MINIMUM_STARS_PER_GALAXY
-        # set up particle lists
         if self.obj_type == 'halo' or parent is None:
             grpid = self.obj.data_manager.haloid - 1
             if len(grpid[grpid>=0]) < MINIMUM_DM_PER_HALO:
@@ -155,7 +154,7 @@ class fof6d:
             self.dense_crit = lambda gnh, gtemp, gsfr: (gnh>self.nHlim)&(gtemp<self.Tlim)
 
         # collect indices for eligible particles
-        memlog('Running fof6d on %d halos using %d proc(s)'%(len(self.obj.halo_list),self.nproc))
+        memlog('Running fof6d on %d halos w/%d proc(s), LL=%g'%(len(self.obj.halo_list),self.nproc,self.fof_LL))
         g_inds = []  # indexes of particle eligible for being in a group
         len_hi = len_gi = 0
         for ih in range(len(self.obj.halo_list)):
@@ -176,7 +175,7 @@ class fof6d:
         ngrp = 0
         self.group_parents = np.zeros(len(grp_tags),dtype=np.int32)
         for ih in range(len(grp_tags)):
-            grp_tags[ih] = np.where(grp_tags[ih]>=0, grp_tags[ih]+ngrp, grp_tags[ih])
+            grp_tags[ih] = np.where(grp_tags[ih]>=0, grp_tags[ih]+ngrp, -1)
             mygals = np.unique(grp_tags[ih])
             mygals = mygals[mygals>=0]
             self.group_parents[mygals] = ih
@@ -197,12 +196,17 @@ class fof6d:
         if parent is not None:
             for ihalo in range(len(parent.obj.halo_list)):
                 parent.obj.halo_list[ihalo].galaxy_index_list = []
+        ngrp = 0
+        zero_marker = 0
         for igrp in range(len(self.grouplist)):
-            if self.grouplist[igrp] < 0: continue
+            if self.grouplist[igrp] < 0: 
+                zero_marker = 1  # if there are particles with tag=-1, these will be in igrp=0 within hid_bins. In this case, group_parents should start their numbering at 1, since igrp=0 is not a valid object.  This should only happen for galaxies/clouds, not halos
+                continue
             mygrp = create_new_group(self.obj, self.obj_type)
             my_indexes = self.pid_sorted[self.hid_bins[igrp]:self.hid_bins[igrp+1]]  # indexes for parts in this group
             # load indexes into lists for a given group, globally and for each particle type
             my_ptype = self.obj.data_manager.ptype[my_indexes]
+            my_pos = self.obj.data_manager.pos[my_indexes]
             mygrp.global_indexes = my_indexes
             offset = 0
             for ip,p in enumerate(self.obj.data_manager.ptypes):
@@ -229,9 +233,10 @@ class fof6d:
             if mygrp._valid:
                 mygrp.obj_type = self.obj_type
                 if parent is not None: 
-                    ihalo = parent.group_parents[igrp]
+                    ihalo = parent.group_parents[igrp-zero_marker]
                     mygrp.parent_halo_index = ihalo
-                    parent.obj.halo_list[ihalo].galaxy_index_list.append(igrp)
+                    parent.obj.halo_list[ihalo].galaxy_index_list.append(ngrp)
+                    ngrp += 1
                 grp_list.append(mygrp)
 
         if self.obj_type == 'halo': 
