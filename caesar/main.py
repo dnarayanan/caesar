@@ -323,6 +323,9 @@ class CAESAR(object):
         >>> obj.member_search(blackholes=False)
 
         """
+        import caesar.assignment as assign
+        import caesar.linking as link
+
         self._args   = args
         self._kwargs = kwargs
 
@@ -335,13 +338,10 @@ class CAESAR(object):
         else:
             from caesar.fubar_halo import fubar_halo
             fubar_halo(self)
+            assign.assign_galaxies_to_halos(self)
+            assign.assign_clouds_to_galaxies(self)
 
-
-        import caesar.assignment as assign
-        import caesar.linking as link
-        assign.assign_galaxies_to_halos(self)
         link.link_galaxies_and_halos(self)
-        assign.assign_clouds_to_galaxies(self)
         link.link_clouds_and_galaxies(self)
         assign.assign_central_galaxies(self)
         link.create_sublists(self)

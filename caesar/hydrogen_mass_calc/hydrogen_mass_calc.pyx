@@ -363,11 +363,13 @@ def get_HIH2_masses(galaxies,aperture=30,rho_thresh=0.13):
     # set up mass computation
     galpos = np.asarray([i.pos for i in galaxies.obj.galaxy_list], dtype=np.float64)
     galmass = np.asarray([i.masses['total'] for i in galaxies.obj.galaxy_list], dtype=np.float64)
+
     cdef:
         ## global quantities
         int         nhalo = len(galaxies.obj.halo_list)
         int         ngal = len(galaxies.obj.galaxy_list)
         int         npart = len(grpids)
+        int         my_nproc = galaxies.nproc
         double      XH = galaxies.obj.simulation.XH
         long int[:] hid_bins = gid_bins   # starting indexes of particle IDs in each halo
         double[:,:] galaxy_pos = galpos
@@ -397,14 +399,16 @@ def get_HIH2_masses(galaxies,aperture=30,rho_thresh=0.13):
     # set up list of galaxies to process, associated to halos
     ngal = 0
     for ih in range(nhalo):
+        #if ih<1: print(ih,galaxies.obj.halo_list[ih].galaxy_index_list)
         for ig in range(len(galaxies.obj.halo_list[ih].galaxy_index_list)):
             galaxy_indexes[ngal+ig] = galaxies.obj.halo_list[ih].galaxy_index_list[ig]
+            #if ih<1: print(ig,ngal+ig,galaxies.obj.halo_list[ih].pos,galaxies.obj.galaxy_list[galaxy_indexes[ngal+ig]].pos)
         ngal += len(galaxies.obj.halo_list[ih].galaxy_index_list)
         galind_bins[ih+1] = ngal
     assert ngal==len(galaxies.obj.galaxy_list),"Assertion failed in galaxy counts: %d != %d"%(ngal,len(galaxies.obj.galaxy_list))
 
     # compile HI and H2 masses for galaxies in halos
-    for ih in prange(npart,nogil=True):
+    for ih in prange(npart,nogil=True,num_threads=my_nproc):
         if gas_nh[ih] < rho_th:  # sometimes wind particles (incorrectly) carry H2 mass into halo gas
             H2mass[ih] = 0.
         if H2mass[ih] + HImass[ih] > 1.:
@@ -412,7 +416,7 @@ def get_HIH2_masses(galaxies,aperture=30,rho_thresh=0.13):
         HImass[ih] *= XH * gas_mass[ih]
         H2mass[ih] *= XH * gas_mass[ih]
 
-    for ih in prange(nhalo,nogil=True):
+    for ih in prange(nhalo,nogil=True,schedule='dynamic',num_threads=my_nproc):
     #for ih in range(nhalo):
         istart = hid_bins[ih]
         iend = hid_bins[ih+1]
@@ -475,6 +479,8 @@ cdef void _get_galaxy_hydrogen_masses(int igstart, int igend, int istart, int ie
             if d2 < apert2:
                 apert_HImass[j] += HImass[i]
                 apert_H2mass[j] += H2mass[i]
+            #if c_sqrt(d2) > 5000:
+                #printf("TROUBLE? %d %d %g %g %g %g %g %g\n",j,i,gpos[i,0],galaxy_pos[j,0],c_sqrt(d2),c_sqrt(apert2),HImass[i],H2mass[i])
         galaxy_HImass[max_index] += HImass[i]
         galaxy_H2mass[max_index] += H2mass[i]
 
@@ -484,23 +490,28 @@ cdef void _get_galaxy_hydrogen_masses(int igstart, int igend, int istart, int ie
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-def compute_selfshield(caesar_obj,grpids,rho_thresh):
+def compute_selfshield(caesar_obj,grpids,rho_thresh,uvb_model='FG11'):
     # Use Rahmati+13 to get self-shielded HI fractions, and Leroy+08 to get H2 fractions
     from caesar.property_manager import get_property
 
     cdef double gamma_HI
     from .treecool_data import UVB
-    uvb = UVB['FG11']
+    uvb = UVB[uvb_model]
 
     if np.log10(caesar_obj.simulation.redshift + 1.0) > uvb['logz'][len(uvb['logz'])-1]:
         gamma_HI = 0.0
     else:
         gamma_HI = np.interp(np.log10(caesar_obj.simulation.redshift + 1.0),
                              uvb['logz'],uvb['gH0'])
+    if uvb_model == 'FG11' or uvb_model== 'FG19' : sigmaHI = 2.63e-18 * (caesar_obj.simulation.scale_factor**0.158)
+    elif uvb_model == 'HM12': sigmaHI = 2.67e-18 * (caesar_obj.simulation.scale_factor**0.018)
+    if uvb_model == 'HM01': sigmaHI = 3.16e-18 * (caesar_obj.simulation.scale_factor**0.164)
+
+    memlog('Computing HI (Rahmati+13) and H2 (Leroy+08) fracs w/%s bkgnd (GammaHI=%g)'%(uvb_model,gamma_HI))
 
     cdef:
         ## density thresholds in atoms/cm^3
-        double    low_rho_thresh = 0.001       # atoms/cm^3
+        double    low_rho_thresh = 0.0001       # atoms/cm^3
         double    rho_th      = rho_thresh
         double    XH          = caesar_obj.simulation.XH
         double    FSHIELD     = 0.99
@@ -515,35 +526,37 @@ def compute_selfshield(caesar_obj,grpids,rho_thresh):
         double b  = 0.7480
         double T0 = 3.148                      # K
         double T1 = 7.036e5                    # K
-        double sigHI     = 3.27e-18 * (1.0+redshift)**(-0.2)
+        double sigHI     = sigmaHI
         double fbaryon   = caesar_obj.simulation.omega_baryon / caesar_obj.simulation.omega_matter
         double nHss_part = 6.73e-3 * (sigHI/2.49e-18)**(-2./3.) * (fbaryon / 0.17)**(-1./3.)
         ## gas quantities
         float[:]   gmass = caesar_obj.data_manager.mass[grpids]
         float[:]   gnh = caesar_obj.data_manager.gnh[grpids]
         float[:]   gtemp = caesar_obj.data_manager.gT[grpids]
-        int         npart = len(gmass)
+        int        npart = len(gmass)
+        int        my_nproc = caesar_obj.nproc
         # things to compute
         float[:]   gfHI = caesar_obj.data_manager.gfHI[grpids]
         float[:]   gfH2 = np.zeros(npart,dtype=MY_DTYPE)
 
     # determine HI, H2 fractions for all particles
-    for i in prange(npart,nogil=True):
+    for i in prange(npart,nogil=True,schedule='dynamic',num_threads=my_nproc):
         fHI = gfHI[i]
         fH2 = 0.0
-        ## low density non-self shielded gas
-        if gnh[i] < rho_th:
+        ## low density cool gas self-shields following Rahmati+13
+        if gnh[i] < rho_th and gnh[i] > low_rho_thresh and gtemp[i] < 1.e5:
             ## Rahmati+13 equations 2, 1
             nHss      = nHss_part * (gtemp[i] * 1.0e-4)**0.17 * (gamma_HI * 1.0e12)**(2./3.)
-            if nHss-1. < 1.e-4: continue  # no significant self-shielding adjustment needed; skip
             fgamma_HI = 0.98 * (1.0 + (gnh[i] / nHss)**(1.64))**(-2.28) + 0.02 * (1.0 + gnh[i] / nHss)**(-0.84)
-            ### Popping+09 equations 3, 7, 4
+            if 1.-fgamma_HI < 1.e-2 and gfHI[i]>0: continue  # no significant self-shielding adjustment needed; skip
+            ### Popping+09 equation 7
             beta     = a / (c_sqrt(gtemp[i]/T0) *
                             (1.0 + c_sqrt(gtemp[i]/T0))**(1.0-b) *
                             (1.0 + c_sqrt(gtemp[i]/T1))**(1.0+b))   # cm^3/s
             ## Popping+09 equations 6, 5
             C = gnh[i] * beta / (gamma_HI * fgamma_HI)
             fHI = (2.0 * C + 1.0 - c_sqrt((2.0*C+1.0)*(2.0*C+1.0) - 4.0 * C * C)) / (2.0*C)
+            #printf("=== %g %g %g %g %g %g\n",gnh[i],gtemp[i],gfHI[i],fHI,fgamma_HI,nHss)
 
         if gnh[i] >= rho_th:  # dense gas
             cold_phase_massfrac = (1.0e8 - gtemp[i])/1.0e8
@@ -552,12 +565,11 @@ def compute_selfshield(caesar_obj,grpids,rho_thresh):
             fH2  = FSHIELD - fHI
 
         gfHI[i]    = fHI 
-        gfH2[i]    = fH2 * XH * gmass[i]
+        gfH2[i]    = fH2
 
     caesar_obj.data_manager.gfHI[grpids] = caesar_obj.yt_dataset.arr(gfHI, '')
     caesar_obj.data_manager.gfH2[grpids] = caesar_obj.yt_dataset.arr(gfH2, '')
 
-    memlog('Done assigning HI and H2 masses to particles')
     return 
 
 @cython.cdivision(True)
@@ -585,11 +597,12 @@ def get_aperture_masses(galaxies,aperture=30):
         int         nhalo = len(galaxies.obj.halo_list)
         int         ngal = len(galaxies.obj.galaxy_list)
         int         npart = len(grpids)
+        int         my_nproc = galaxies.nproc
         long int[:] hid_bins = gid_bins   # starting indexes of particle IDs in each halo
         double[:,:] galaxy_pos = galpos
         double[:]   galaxy_mass = galmass
-        float[:,:] ppos = galaxies.obj.data_manager.pos[grpids]
-        float[:]   pmass = galaxies.obj.data_manager.mass[grpids]
+        float[:,:]  ppos = galaxies.obj.data_manager.pos[grpids]
+        float[:]    pmass = galaxies.obj.data_manager.mass[grpids]
         int[:]      ptype = galaxies.obj.data_manager.ptype[grpids]
         int[:]      galaxy_indexes = np.zeros(ngal,dtype=np.int32)
         int[:]      galind_bins = np.zeros(nhalo+1,dtype=np.int32)
@@ -604,7 +617,7 @@ def get_aperture_masses(galaxies,aperture=30):
         double[:]   galaxy_smass = np.zeros(ngal)
         double[:]   galaxy_dmmass = np.zeros(ngal)
 
-    memlog('Doing aperture mass calculation for %d galaxies in %d halos'%(ngal,nhalo))
+    memlog('Doing aperture mass calculation R=%g kpc'%aperture)
     # set up list of galaxies to process, associated to halos
     ngal = 0
     for ih in range(nhalo):
@@ -612,7 +625,6 @@ def get_aperture_masses(galaxies,aperture=30):
             galaxy_indexes[ngal+ig] = galaxies.obj.halo_list[ih].galaxy_index_list[ig]
         ngal += len(galaxies.obj.halo_list[ih].galaxy_index_list)
         galind_bins[ih+1] = ngal
-    assert ngal==len(galaxies.obj.galaxy_list),"Assertion failed in galaxy counts: %d != %d"%(ngal,len(galaxies.obj.galaxy_list))
 
     # associate gas indexes to overall indexes, so we can properly index HImass and H2mass
     ih = 0
@@ -621,8 +633,7 @@ def get_aperture_masses(galaxies,aperture=30):
             gas_index[ig] = ih
             ih += 1
 
-    #for ih in prange(nhalo,nogil=True):
-    for ih in range(nhalo):
+    for ih in prange(nhalo,nogil=True,schedule='dynamic',num_threads=my_nproc):
         istart = hid_bins[ih]
         iend = hid_bins[ih+1]
         igstart = galind_bins[ih]
@@ -631,7 +642,7 @@ def get_aperture_masses(galaxies,aperture=30):
             get_galaxy_aperture_masses(igstart, igend, istart, iend, galaxy_pos, pmass, ppos, ptype, Lbox, galaxy_gmass, galaxy_smass, galaxy_dmmass, ptypes, apert2, gas_index)
 
     # fill galaxy and halo lists
-    apert_str = '%dkpc'%aperture
+    apert_str = '%dkpc'%int(aperture)
     for ig in range(ngal):
         galaxies.obj.galaxy_list[ig].masses['gas_%s'%(apert_str)] = galaxies.obj.yt_dataset.quan(galaxy_gmass[ig], galaxies.obj.units['mass'])
         galaxies.obj.galaxy_list[ig].masses['stellar_%s'%(apert_str)] = galaxies.obj.yt_dataset.quan(galaxy_smass[ig], galaxies.obj.units['mass'])

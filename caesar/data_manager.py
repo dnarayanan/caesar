@@ -42,21 +42,22 @@ class DataManager(object):
         """Determines what particle/field types to collect."""
         self.ptypes = ['gas','star']
         #if 'blackholes' in self.obj._kwargs and self.obj._kwargs['blackholes']:
-        if True:
+        self.blackholes = self.dust = self.dm2 = False
+        if hasattr(self.obj,'_ds_type'):
             if 'PartType5' in self.obj._ds_type.ds.particle_fields_by_type:
                 if 'BH_Mdot' in self.obj._ds_type.ds.particle_fields_by_type['PartType5'] or 'StellarFormationTime' in self.obj._ds_type.ds.particle_fields_by_type['PartType5']:
                     self.ptypes.append('bh')
                     self.blackholes = True
             else:
-                self.blackholes = False
                 memlog('No black holes found')
-        if 'dust' in self.obj._kwargs and self.obj._kwargs['dust']:
+        if hasattr(self.obj,'_kwargs') and 'dust' in self.obj._kwargs and self.obj._kwargs['dust']:
             mylog.warning('Enabling active dust particles')
             self.ptypes.append('dust')
             self.dust = True
         self.ptypes.append('dm')
-        if 'dm2' in self.obj._kwargs and self.obj._kwargs['dm2']:
+        if hasattr(self.obj,'_kwargs') and 'dm2' in self.obj._kwargs and self.obj._kwargs['dm2']:
             self.ptypes.append('dm2')
+            self.dm2 = True
 
         #if self.obj._ds_type.grid:
         #    self.ptypes.remove('gas')
@@ -77,7 +78,7 @@ class DataManager(object):
         self.mass  = pdata['mass']
         self.ptype = pdata['ptype']
         self.indexes = pdata['indexes']
-        if ('haloid' in self.obj._kwargs and 'snap' in self.obj._kwargs['haloid']):
+        if self.obj.load_haloid:
             self.haloid = pdata['haloid']
         pdata      = None
 
@@ -139,13 +140,14 @@ class DataManager(object):
         dustmass_unit = '%s' % (self.obj.units['mass'])
         gnh_unit = '1/%s**3' % (self.obj.units['length'])
 
-        sfr = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), sfr_unit)
-        gZ  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')        
-        gT  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), self.obj.units['temperature'])
-        gnh  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), gnh_unit)
-        dustmass = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas),'')
-        gfHI  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')        
-        gfH2  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')        
+        sfr = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), sfr_unit)
+        gZ  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), '')        
+        gT  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), self.obj.units['temperature'])
+        gnh  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), gnh_unit)
+        dustmass = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE),'')
+        gfHI  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), '')        
+        gfH2  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), '')        
+        ghsml  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), self.obj.units['length'])        
         #dustmass = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')#dustmass_unit)
             
         if select is 'all': 
@@ -158,26 +160,39 @@ class DataManager(object):
 
         if has_property(self.obj, 'gas', 'metallicity'):            
             gZ  = get_property(self.obj, 'metallicity', 'gas')[flag]
+        elif has_property(self.obj, 'gas', 'met_tng'):
+            gZ  = get_property(self.obj, 'met_tng', 'gas')[flag]  # for Illustris, array of mets
+        else:
+            mylog.warning('Metallicity not found: setting all gas to solar=0.0134')
+            gZ = 0.0134*np.ones(self.obj.simulation.nstar,dtype=MY_DTYPE)
 
         if has_property(self.obj, 'gas', 'nh'):            
             gfHI  = get_property(self.obj, 'nh', 'gas')[flag]
+        else:
+            mylog.warning('HI fractions not found in snapshot, will compute later')
 
         if has_property(self.obj, 'gas', 'fh2'):            
             gfH2  = get_property(self.obj, 'fh2', 'gas')[flag]
+        else:
+            mylog.warning('H2 fractions not found in snapshot, will compute later')
 
         if has_property(self.obj, 'gas', 'temperature'):
             gT  = get_property(self.obj, 'temperature', 'gas')[flag].to(self.obj.units['temperature'])
+
+        if has_property(self.obj, 'gas', 'hsml'):
+            ghsml  = get_property(self.obj, 'hsml', 'gas')[flag].to(self.obj.units['length'])
 
         if has_property(self.obj, 'gas', 'rho'):
             from astropy import constants as const
             from yt import YTQuantity
             redshift = self.obj.simulation.redshift
             m_p = YTQuantity.from_astropy(const.m_p)
-            gnh  = get_property(self.obj, 'rho', 'gas')[flag].in_cgs() *0.76*(1+redshift)**3/m_p.in_cgs()
+            gnh  = get_property(self.obj, 'rho', 'gas')[flag].in_cgs() *0.76/m_p.in_cgs()
  
         if has_property(self.obj, 'gas', 'dustmass'):
             dustmass = get_property(self.obj,'dustmass','gas')[flag]
-            #dustmass = get_property(self.obj,'dustmass','gas'))#.to(dustmass_unit)
+        else:
+            mylog.warning('Dust masses not found in snapshot')
 
 
         self.gsfr = sfr
@@ -186,6 +201,7 @@ class DataManager(object):
         self.gnh   = gnh
         self.gfHI   = gfHI
         self.gfH2   = gfH2
+        self.hsml   = ghsml
         self.dustmass = self.obj.yt_dataset.arr(dustmass,'code_mass').in_units('Msun')
         self.dustmass.dtype = MY_DTYPE
 
@@ -201,9 +217,23 @@ class DataManager(object):
 
         if has_property(self.obj, 'star', 'metallicity'):
             self.sZ  = get_property(self.obj, 'metallicity', 'star')[flag]
+        elif has_property(self.obj, 'star', 'met_tng'):  # try Illustris/TNG alias
+            self.sZ  = get_property(self.obj, 'met_tng', 'star')[flag]  
+            #self.sZ  = np.sum(self.sZ.T[2:],axis=0)  # first two are H,He; the rest sum to give metallicity
+            #self.sZ[self.sZ<0] = 0.  # some (very small) negative values, set to 0
+        else:
+            mylog.warning('Metallicity not found: setting all stars to solar=0.0134')
+            self.sZ = 0.0134*np.ones(self.obj.simulation.nstar,dtype=MY_DTYPE)
 
         ds = self.obj.yt_dataset
-        self.age  = get_property(self.obj, 'aform', 'star')[flag]  # a_exp at time of formation
+        if has_property(self.obj, 'star', 'aform'):
+            self.age  = get_property(self.obj, 'aform', 'star')[flag]  # a_exp at time of formation
+        elif has_property(self.obj, 'star', 'aform_tng'):  # try Illustris/TNG alias
+            self.age  = get_property(self.obj, 'aform_tng', 'star')[flag]  
+            self.age  = abs(self.age)  # some negative values here too; not sure what to do?
+        else:
+            self.age = np.zeros(self.obj.simulation.nstar,dtype=MY_DTYPE)
+            mylog.warning('Stellar age not found -- photometry will be incorrect!')
         if ds.cosmological_simulation:
             from yt.utilities.cosmology import Cosmology
             co = Cosmology(hubble_constant=ds.hubble_constant, omega_matter=ds.omega_matter, omega_lambda=ds.omega_lambda)
@@ -238,5 +268,32 @@ class DataManager(object):
             if self.use_bhmass: 
                 mylog.warning('Black holes are there, but BH_Mdot not available!')
 
+    def _photometry_init(self):
+        """Collect particle information for photometry"""
+        from caesar.property_manager import get_property, ptype_ints
+
+        memlog('Loading gas and star particles for photometry')
+        self._determine_ptypes()
+
+        self.pos  = np.empty((0,3),dtype=MY_DTYPE)
+        self.vel  = np.empty((0,3),dtype=MY_DTYPE)
+        self.mass = np.empty(0,dtype=MY_DTYPE)
+        self.ptype   = np.empty(0,dtype=np.int32)
+        for ip,p in enumerate(['gas','star']):
+            data = get_property(self.obj, 'pos', p).to(self.obj.units['length'])
+            self.pos  = np.append(self.pos, data.d, axis=0)
+            data = get_property(self.obj, 'vel', p).to(self.obj.units['velocity'])
+            self.vel  = np.append(self.vel, data.d, axis=0)
+            data = get_property(self.obj, 'mass', p).to(self.obj.units['mass'])
+            self.mass = np.append(self.mass, data.d, axis=0)
+            self.ptype   = np.append(self.ptype, np.full(len(data), ptype_ints[p], dtype=np.int32), axis=0)
+        self._assign_local_lists()
+        self._assign_particle_counts()
+        memlog('Loaded particle data')
+
+        self._load_gas_data()
+        self._load_star_data()
+        memlog('Loaded gas and star data')
+        
 
 

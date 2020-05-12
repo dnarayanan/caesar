@@ -14,6 +14,7 @@ import time
 import sys
 import os
 import h5py
+from yt.funcs import mylog
 from caesar.utils import memlog
 from caesar.property_manager import MY_DTYPE
 
@@ -28,15 +29,7 @@ class fof6d:
         self.counts = {}
 
         # set up number of processors
-        self.nproc = -5
-        if 'nproc' in self.obj._kwargs:
-            self.nproc = int(self.obj._kwargs['nproc'])
-        if self.nproc != 1:
-            import joblib 
-            if self.nproc < 0:
-                self.nproc += joblib.cpu_count()+1
-            if self.nproc == 0:
-                self.nproc = joblib.cpu_count()
+        self.nproc = obj.nproc
 
         # turn off unbinding; no need since fof6d already accounts for kinematics
         from caesar.group import group_types
@@ -47,7 +40,7 @@ class fof6d:
     def load_haloid(self):
         # Get Halo IDs, either from snapshot or else run fof.
         # This will be a list of numpy arrays for each ptype
-        if 'haloid' in self.obj._kwargs and 'snap' in self.obj._kwargs['haloid']:
+        if self.obj.load_haloid:
             from caesar.property_manager import get_haloid
             memlog('Using FOF Halo ID from snapshots')
             self.haloid = get_haloid(self.obj, self.obj.data_manager.ptypes, offset=-1)
@@ -68,12 +61,26 @@ class fof6d:
         from caesar.fubar import get_mean_interparticle_separation,get_b,fof
         from caesar.property_manager import get_property,has_ptype,ptype_ints
         LL = get_mean_interparticle_separation(self.obj) * get_b(self.obj, 'halo')
+        if 'haloid_file' in self.obj._kwargs and self.obj._kwargs['haloid'] is not None:
+            haloid_file = self.obj._kwargs['haloid_file']
+            if os.path.isfile(haloid_file):
+                memlog('Reading 3D FOF Halo IDs from %s'%haloid_file)
+                hf = h5py.File(haloid_file,'r')
+                self.obj.data_manager.haloid = np.asarray(hf['all_haloids'])
+                self.haloid = []
+                for p in self.obj.data_manager.ptypes:  # read haloid arrays for each ptype
+                    self.haloid.append(np.asarray(hf['haloids_%s'%p]))
+                self.haloid = np.array(self.haloid)
+                hf.close()
+                return
+        else:
+            haloid_file = None
         memlog('Running 3D FOF to get Halo IDs, LL=%g'%LL)
         pos = np.empty((0,3),dtype=MY_DTYPE)
         ptype = np.empty(0,dtype=np.int32)
         for ip,p in enumerate(self.obj.data_manager.ptypes):  # get positions
             if not has_ptype(self.obj, p): continue
-            data = get_property(self.obj, 'pos', p)
+            data = get_property(self.obj, 'pos', p).to(obj.units['length'])
             pos = np.append(pos, data.d, axis=0)
             ptype = np.append(ptype, np.full(len(data), ptype_ints[p], dtype=np.int32), axis=0)
         haloid_all = fof(self.obj, pos, LL, group_type='halo')  # run FOF
@@ -90,20 +97,28 @@ class fof6d:
             haloid = np.append(haloid,datasel,axis=0)
         self.haloid = np.asarray(self.haloid)
         self.obj.data_manager.haloid = haloid
+        if haloid_file is not None:
+            memlog('Writing 3D FOF Halo IDs to %s' % haloid_file)
+            with h5py.File(haloid_file,'w') as hf:  
+                hf.create_dataset('all_haloids',data=haloid, compression=1)
+                for ip,p in enumerate(self.obj.data_manager.ptypes):  # write haloid arrays for each ptype
+                    haloid_out = self.haloid[ip]
+                    hf.create_dataset('haloids_%s'%p,data=haloid_out, compression=1)
+                hf.close()
 
     def plist_init(self,parent=None):
-
+        # set up particle lists 
         from caesar.group import MINIMUM_DM_PER_HALO,MINIMUM_STARS_PER_GALAXY
-        # set up particle lists
         if self.obj_type == 'halo' or parent is None:
             grpid = self.obj.data_manager.haloid - 1
             if len(grpid[grpid>=0]) < MINIMUM_DM_PER_HALO:
-                sys.exit('Not enough halo particles for a single valid halo (%d < %d); exiting'%(len(grpid[grpid>=0]),MINIMUM_DM_PER_HALO))
+                mylog.warning('Not enough halo particles for a single valid halo (%d < %d)'%(len(grpid[grpid>=0]),MINIMUM_DM_PER_HALO))
+                return False
         else:
             grpid = parent.tags_fof6d
             if len(grpid[grpid>=0]) < MINIMUM_STARS_PER_GALAXY:
                 self.nparttot = 0
-                return
+                return False
 
         # sort by grpid
         from caesar.property_manager import ptype_ints
@@ -116,6 +131,7 @@ class fof6d:
         self.grouplist = np.unique(grpid)  # list of objects (halo/galaxy/cloud) to process
         hid_sorted = grpid[sort_grpid]
         self.hid_bins = find_bins(hid_sorted,self.nparttot)
+        return True
 
     def run_fof6d(self, target_type, nHlim=0.13, Tlim=1.e5, sfflag=True, minstars=24):
 
@@ -138,7 +154,7 @@ class fof6d:
             self.dense_crit = lambda gnh, gtemp, gsfr: (gnh>self.nHlim)&(gtemp<self.Tlim)
 
         # collect indices for eligible particles
-        memlog('Running fof6d on %d halos using %d proc(s)'%(len(self.obj.halo_list),self.nproc))
+        memlog('Running fof6d on %d halos w/%d proc(s), LL=%g'%(len(self.obj.halo_list),self.nproc,self.fof_LL))
         g_inds = []  # indexes of particle eligible for being in a group
         len_hi = len_gi = 0
         for ih in range(len(self.obj.halo_list)):
@@ -159,7 +175,7 @@ class fof6d:
         ngrp = 0
         self.group_parents = np.zeros(len(grp_tags),dtype=np.int32)
         for ih in range(len(grp_tags)):
-            grp_tags[ih] = np.where(grp_tags[ih]>=0, grp_tags[ih]+ngrp, grp_tags[ih])
+            grp_tags[ih] = np.where(grp_tags[ih]>=0, grp_tags[ih]+ngrp, -1)
             mygals = np.unique(grp_tags[ih])
             mygals = mygals[mygals>=0]
             self.group_parents[mygals] = ih
@@ -180,12 +196,17 @@ class fof6d:
         if parent is not None:
             for ihalo in range(len(parent.obj.halo_list)):
                 parent.obj.halo_list[ihalo].galaxy_index_list = []
+        ngrp = 0
+        zero_marker = 0
         for igrp in range(len(self.grouplist)):
-            if self.grouplist[igrp] < 0: continue
+            if self.grouplist[igrp] < 0: 
+                zero_marker = 1  # if there are particles with tag=-1, these will be in igrp=0 within hid_bins. In this case, group_parents should start their numbering at 1, since igrp=0 is not a valid object.  This should only happen for galaxies/clouds, not halos
+                continue
             mygrp = create_new_group(self.obj, self.obj_type)
             my_indexes = self.pid_sorted[self.hid_bins[igrp]:self.hid_bins[igrp+1]]  # indexes for parts in this group
             # load indexes into lists for a given group, globally and for each particle type
             my_ptype = self.obj.data_manager.ptype[my_indexes]
+            my_pos = self.obj.data_manager.pos[my_indexes]
             mygrp.global_indexes = my_indexes
             offset = 0
             for ip,p in enumerate(self.obj.data_manager.ptypes):
@@ -212,9 +233,10 @@ class fof6d:
             if mygrp._valid:
                 mygrp.obj_type = self.obj_type
                 if parent is not None: 
-                    ihalo = parent.group_parents[igrp]
+                    ihalo = parent.group_parents[igrp-zero_marker]
                     mygrp.parent_halo_index = ihalo
-                    parent.obj.halo_list[ihalo].galaxy_index_list.append(igrp)
+                    parent.obj.halo_list[ihalo].galaxy_index_list.append(ngrp)
+                    ngrp += 1
                 grp_list.append(mygrp)
 
         if self.obj_type == 'halo': 

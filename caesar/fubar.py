@@ -59,9 +59,9 @@ def fof(obj, positions, LL, group_type=None):
     #positions = positions[obj.data_manager.dmlist]
     ##################
     
-    if group_type is not None:
-        mylog.info('Performing 3D FOF on %d positions for %s identification' %
-                   (len(positions), group_type))
+    #if group_type is not None:
+    #    mylog.info('Performing 3D FOF on %d positions for %s identification' %
+    #               (len(positions), group_type))
                                                                              
     pct = ParticleContourTree(LL)
 
