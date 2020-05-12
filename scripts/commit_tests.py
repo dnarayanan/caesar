@@ -22,7 +22,7 @@ for snap in snaps:
     obj = caesar.load('caesar_snap.hdf5')
 
     # This indirectly tests a fair few fields
-    print(obj.galinfo())
+    obj.galinfo()
 
     # get the masses, radii and metallicities
     masses = [gal.masses['total'] for gal in obj.galaxies]

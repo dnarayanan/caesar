@@ -25,11 +25,11 @@ jobs:
           cd /home/runner/work/caesar/caesar
           python3 -m pip install --user .
 
-      - name: Download gizmo_64
+      - name: Download FIRE snapshot
         run: |
-          curl -LO http://yt-project.org/data/gizmo_64.tar.gz
-          tar xvf gizmo_64.tar.gz
-          rm gizmo_64.tar.gz
+          curl -LO http://yt-project.org/data/FIRE_M12i_ref11.tar.gz
+          tar xvf FIRE_M12i_ref11.tar.gz
+          rm FIRE_M12i_ref11.tar.gz
 
-      - name: Test gizmo_64
-        run: python3 scripts/commit_tests.py gizmo_64/output/snap_N64L16_135.hdf5
+      - name: Test FIRE snapshot
+        run: python3 scripts/commit_tests.py FIRE_M12i_ref11/snapshot_600.hdf5
