@@ -143,7 +143,7 @@ def info_printer(obj, group_type, top):
             output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e\t|  %0.2e \n' % \
                       (o.GroupID, o.masses['dm'], o.masses['stellar'],
                        o.masses['gas'],o.radii['total_half_mass'],
-                       o.local_number_density, cgsm)
+                       o.local_number_density['1000'], cgsm)
             cnt += 1
             if cnt > top: break
     elif group_type == 'galaxy':
@@ -156,7 +156,7 @@ def info_printer(obj, group_type, top):
             output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %s\t|  %0.2e  %d \n' % \
                       (o.GroupID, o.masses['stellar'], o.masses['gas'],
                        o.sfr, o.radii['total_half_mass'], 
-                       o.local_number_density, o.central,
+                       o.local_number_density['1000'], o.central,
                        phm, phid)
             cnt += 1
             if cnt > top: break
@@ -169,7 +169,7 @@ def info_printer(obj, group_type, top):
             output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e   %0.2e  %s\t|  %0.2e  %d \n' % \
                       (o.GroupID, o.masses['stellar'], o.masses['gas'],
                        o.sfr, o.radii['total_half_mass'],
-                       o.local_number_density, o.central,
+                       o.local_number_density['1000'], o.central,
                        halo.masses['dm'], halo.GroupID)
             cnt += 1
             if cnt > top: break
