@@ -1,4 +1,5 @@
 import numpy as np
+from yt.funcs import mylog
 
 MY_DTYPE = np.float32
 
@@ -19,7 +20,9 @@ particle_data_aliases = {
     'pid':'particle_index',
     'fh2':'FractionH2',
     'metallicity':'metallicity',
+    'met_tng':'GFM_Metallicity',  # for Illustris/TNG
     'aform':'StellarFormationTime',
+    'aform_tng':'GFM_StellarFormationTime',  # for Illustris/TNG
     'bhmdot':'BH_Mdot',
     'bhmass':'BH_Mass',
     'haloid':'HaloID',
@@ -237,7 +240,7 @@ class DatasetType(object):
             if self.ds_type == 'GizmoDataset':  # assumes this has Simba units, which is fairly standard
                 data = self._get_simba_property(requested_ptype,requested_prop)
             else:
-                data = self.dd[ptype, prop]
+                data = self.dd[ptype, prop].astype(MY_DTYPE)
 
         #if not isinstance(self.indexes, str):
         #    data = data[self.indexes]
@@ -248,7 +251,7 @@ class DatasetType(object):
         from readgadget import readsnap
         snapfile = ('%s/%s'%(self.ds.fullpath,self.ds.basename))
         # set up units coming out of pygr
-        prop_unit = {'mass':'Msun', 'pos':'kpccm', 'vel':'km/s', 'pot':'Msun * kpccm**2 / s**2', 'rho':'g / cm**3', 'sfr':'Msun / yr', 'u':'K', 'Dust_Masses':'Msun', 'bhmass':'Msun', 'bhmdot':'Msun / yr'}
+        prop_unit = {'mass':'Msun', 'pos':'kpccm', 'vel':'km/s', 'pot':'Msun * kpccm**2 / s**2', 'rho':'g / cm**3', 'sfr':'Msun / yr', 'u':'K', 'Dust_Masses':'Msun', 'bhmass':'Msun', 'bhmdot':'Msun / yr', 'hsml':'kpccm'}
 
         # damn you little h!
         if prop is 'mass' or prop is 'pos':
@@ -407,11 +410,21 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
         Dictionary containing the keys 'pos','vel','mass','ptype','indexes'.
 
     """    
+    # check if potential exists in snapshot for all particle types
+    obj.load_pot = True
+    for ip,p in enumerate(ptypes):
+        if not has_ptype(obj, p):
+            continue
+        if not has_property(obj, p, 'pot'):
+            obj.load_pot = False
+    #if not obj.load_pot:
+    #    mylog.warning('Potential not found in snapshot!')
+
     pos  = np.empty((0,3),dtype=MY_DTYPE)
     vel  = np.empty((0,3),dtype=MY_DTYPE)
     mass = np.empty(0,dtype=MY_DTYPE)
     pot = np.empty(0,dtype=MY_DTYPE)
-    if 'haloid' in obj._kwargs and 'snap' in obj._kwargs['haloid']:
+    if obj.load_haloid:
         haloid  = np.empty(0, dtype=np.int64)
 
     ptype   = np.empty(0,dtype=np.int32)
@@ -436,10 +449,13 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
         data = get_property(obj, 'mass', p).to(obj.units['mass'])[flag]
         mass = np.append(mass, data.d, axis=0)
 
-        data = get_property(obj, 'pot', p)[flag]
-        pot = np.append(pot, data.d, axis=0)
+        if obj.load_pot:
+            data = get_property(obj, 'pot', p)[flag]
+            pot = np.append(pot, data.d, axis=0)
+        else:
+            pot = np.append(pot, np.zeros(count,dtype=MY_DTYPE), axis=0)
 
-        if 'haloid' in obj._kwargs and 'snap' in obj._kwargs['haloid']:
+        if obj.load_haloid:
             data = get_property(obj, 'haloid', p)[flag]
             haloid = np.append(haloid, data.d.astype(np.int64), axis=0)
 
@@ -449,7 +465,7 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
         indexes = np.append(indexes, np.arange(0, count, dtype=np.int64)[flag])
         #indexes = np.append(indexes, np.arange(0, nparts, dtype=np.int64))
 
-    if 'haloid' in obj._kwargs and 'snap' in obj._kwargs['haloid']:
+    if obj.load_haloid:
         return dict(pos=pos,vel=vel,pot=pot,mass=mass,haloid=haloid,ptype=ptype,indexes=indexes)
     else: return dict(pos=pos,vel=vel,pot=pot,mass=mass,ptype=ptype,indexes=indexes)
 
