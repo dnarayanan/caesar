@@ -58,7 +58,7 @@ setup(
     version=VERSION,
     description='CAESAR is a python library for analyzing the outputs from cosmological simulations.',
     url='https://github.com/dnarayanan/caesar',
-    author='Desika Narayanan',
+    author='Robert Thompson, Desika Narayanan, Romeel Davé, Benjamin Kimock',
     author_email='desika.narayanan@gmail.com',
     license='not sure',
     classifiers=[],
@@ -68,8 +68,8 @@ setup(
     setup_requires=['numpy', 'cython>=0.22'],
     install_requires=[
         'numpy', 'h5py', 'cython', 'psutil', 'scipy', 'joblib', 'scikit-learn',
-        'pygadgetreader @ git+https://github.com/dnarayanan/pygadgetreader',
-        'yt @ git+https://github.com/yt-project/yt@yt-4.0', 'astropy'
+        'yt', 'astropy',
+        'pygadgetreader @ git+https://github.com/dnarayanan/pygadgetreader'
     ],
     cmdclass={
         'sdist': sdist,
