@@ -6,13 +6,15 @@ from setuptools.command.build_ext import build_ext as _build_ext
 import os
 import sys
 
-sys.path.insert(0,'caesar')
+sys.path.insert(0, 'caesar')
 from __version__ import VERSION
+
 
 class build_py(_build_py):
     def run(self):
-        _build_py.run(self)        
-        
+        _build_py.run(self)
+
+
 class build_ext(_build_ext):
     # subclass setuptools extension builder to avoid importing numpy
     # at top level in setup.py. See http://stackoverflow.com/a/21621689/1382869
@@ -24,6 +26,7 @@ class build_ext(_build_ext):
         import numpy
         self.include_dirs.append(numpy.get_include())
 
+
 class sdist(_sdist):
     # subclass setuptools source distribution builder to ensure cython
     # generated C files are included in source distribution.
@@ -32,8 +35,9 @@ class sdist(_sdist):
         # Make sure the compiled Cython files in the distribution are up-to-date
         from Cython.Build import cythonize
         cythonize(cython_extensions)
-        _sdist.run(self)        
-            
+        _sdist.run(self)
+
+
 cython_extensions = [
     Extension('caesar.group_funcs',
               sources=['caesar/group_funcs/group_funcs.pyx'],
@@ -54,18 +58,24 @@ setup(
     version=VERSION,
     description='CAESAR is a python library for analyzing the outputs from cosmological simulations.',
     url='https://github.com/dnarayanan/caesar',
-    author='Robert Thompson',
-    author_email='rthompsonj@gmail.com',
+    author='Robert Thompson, Desika Narayanan, Romeel Davé, Benjamin Kimock',
+    author_email='desika.narayanan@gmail.com',
     license='not sure',
     classifiers=[],
     keywords='',
-    entry_points={
-        'console_scripts':['caesar = caesar.command_line:run']
-    },
+    entry_points={'console_scripts': ['caesar = caesar.command_line:run']},
     packages=find_packages(),
-    setup_requires=['numpy','cython>=0.22'],
-    install_requires=['numpy','h5py','cython','psutil'],
-    cmdclass={'sdist':sdist, 'build_ext':build_ext, 'build_py':build_py},
+    setup_requires=['numpy', 'cython>=0.22'],
+    install_requires=[
+        'numpy', 'h5py', 'cython', 'psutil', 'scipy', 'joblib', 'scikit-learn',
+        'yt', 'astropy',
+        'pygadgetreader @ git+https://github.com/dnarayanan/pygadgetreader'
+    ],
+    cmdclass={
+        'sdist': sdist,
+        'build_ext': build_ext,
+        'build_py': build_py
+    },
     ext_modules=cython_extensions,
 )
 
