@@ -56,10 +56,6 @@ class GroupList(object):
     def __init__(self, name):
         self.name = name
     def __get__(self, instance, owner):
-        if not hasattr(instance, '_%s' % self.name) or \
-           isinstance(getattr(instance, '_%s' % self.name), int):
-            from caesar.loader import restore_single_list
-            restore_single_list(instance.obj, instance, self.name)
         return getattr(instance, '_%s' % self.name)
     def __set__(self, instance, value):
         setattr(instance, '_%s' % self.name, value)
@@ -777,7 +773,8 @@ def get_group_properties(self,grp_list):
 
     get_group_overall_properties(self,grp_list)
     get_group_gas_properties(self,grp_list)
-    get_group_star_properties(self,grp_list)
+    if self.nparttype['star'] > 0:  # there must be stars to compute these properties
+        get_group_star_properties(self,grp_list)
     if self.obj.data_manager.blackholes:
         get_group_bh_properties(self,grp_list)
 
