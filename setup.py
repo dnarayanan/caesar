@@ -37,21 +37,29 @@ class sdist(_sdist):
         cythonize(cython_extensions)
         _sdist.run(self)
 
+if sys.platform == 'darwin':
+    compile_arg = ""
+    link_arg = ""
+else:
+    compile_arg = "-fopenmp"
+    link_arg = '-fopenmp'
 
+        
 cython_extensions = [
     Extension('caesar.group_funcs',
               sources=['caesar/group_funcs/group_funcs.pyx'],
-              extra_compile_args=[""],
-              extra_link_args=[""]),
+              extra_compile_args=[compile_arg],
+              extra_link_args=[link_arg]),
     Extension('caesar.hydrogen_mass_calc',
               sources=['caesar/hydrogen_mass_calc/hydrogen_mass_calc.pyx'],
-              extra_compile_args=[""],
-              extra_link_args=[""]),
+              extra_compile_args=[compile_arg],
+              extra_link_args=[link_arg]),
     Extension('caesar.cyloser',
               sources=['caesar/pyloser/cyloser.pyx'],
-              extra_compile_args=[""],
-              extra_link_args=[""])
+              extra_compile_args=[compile_arg],
+              extra_link_args=[link_arg])
 ]
+
 
 setup(
     name='caesar',
