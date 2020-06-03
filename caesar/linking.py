@@ -91,20 +91,20 @@ def create_sublists(obj):
     
     # assign halo sub lists
     for halo in obj.halos:
-        halo.satellite_galaxies = []
+        halo.central_galaxy = -1
         for galaxy in halo.galaxies:
             if galaxy.central:
-                halo.central_galaxy = galaxy
-            else:
-                halo.satellite_galaxies.append(galaxy)
+                halo.central_galaxy = galaxy.GroupID
+#             else:
+#                 halo.satellite_galaxies.append(galaxy)
 
     # assign galaxy sub lists
     for galaxy in obj.galaxies:
         if galaxy.central and galaxy.halo is not None:
-            galaxy.satellites = galaxy.halo.satellite_galaxies
+#             galaxy.satellites = galaxy.halo.satellite_galaxies
             obj.central_galaxies.append(galaxy)
         elif galaxy.halo is not None:
-            galaxy.satellites = []
+#             galaxy.satellites = []
             obj.satellite_galaxies.append(galaxy)
         else:
             if not hasattr(obj, 'unassigned_galaxies'):
