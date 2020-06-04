@@ -13,10 +13,13 @@ Welcome to CAESAR's documentation!
 cosmological simulations.  It aims to provide a simple and intuitive
 interface for exploring data within your outputs.  It starts by
 identifying objects (halos and galaxies), calculates a number of
-properties for each individual object, and finally links objects to
-each other via simple relationships.  The resulting output is a
-portable ``HDF5`` file that can be read in and explored without the
-original simulation binary.
+properties for each individual object, and finally links objects
+to each other via simple relationships.  It can also do photometry
+for each galaxy or halo using python-FSPS, with extinction calculated
+to each star particle based on the line-of-sight dust or metal
+column density.  The resulting output is a portable ``HDF5`` file
+that can be read in and explored without the original simulation
+binary.
 
 ``CAESAR`` builds upon the `yt <http://yt-project.org>`_ project,
 which provides support for a number of `simulation codes
