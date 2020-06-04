@@ -11,9 +11,8 @@ Getting Started
 Requirements
 ============
 
-* `python >= 2.7.x <https://www.python.org/>`_
+* `python >= 3.x <https://www.python.org/>`_
 
-  * `mercurial <https://www.mercurial-scm.org/>`_
   * `numpy >= 1.13.x <http://www.numpy.org/>`_
   * `scipy <https://www.scipy.org/>`_
   * `cython <http://cython.org/>`_
@@ -32,12 +31,11 @@ Python and friends
 
 Since this is a python package, you must have python installed!
 ``CAESAR`` should be py2 and py3 compatible so feel free to pick
-whichever you are most comforatable with.  If you are new to python
-you might as well pick py3, as support for py2 will begin to diminish
-over the next few years.
+whichever you are most comforatable with.  This said, the developers
+do not support issues related to py2 anymore.
 
 If you do not have a pre-existing python installation (other than your
-system's native python, of which I do **not** recommend using) I
+system's native python, of which we do **not** recommend using) we
 *strongly* encourage you to consider a pre-packaged distribution such
 as `Anaconda <https://www.continuum.io/downloads>`_.  Anaconda for
 instance, will install an isolated python environment in your home
@@ -46,7 +44,7 @@ without fear of screwing up your system's default python install.
 Another advantage is that it comes with nearly everything you need to
 get started working with python (numpy/scipy/matplotlib/etc).
 
-If you are like me and want full control over what gets installed, a
+A more
 minimalist option is `Miniconda
 <http://conda.pydata.org/miniconda.html>`_.  This package gives you
 the functionality of Anaconda without all of the default packages.
@@ -117,7 +115,7 @@ and install ``CAESAR``:
 
 .. code-block:: bash
 
-   $> hg clone https://bitbucket.org/rthompson/caesar
+   $> git clone https://github.com/dnarayanan/caesar.git
    $> cd caesar
    $> python setup.py install
 
@@ -133,10 +131,7 @@ To update the code you simply need to pull down changes and reinstall:
 .. code-block:: bash
 
    $> cd caesar
-   $> hg pull
-   $> hg update
+   $> git pull
    $> python setup.py install
 
-The same procedure applies to yt-dev if you would like to keep that up
-to date.  The difference of course is that you execute the ``hg``
-commands in the ``yt`` directory.
+
