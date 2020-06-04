@@ -90,21 +90,6 @@ version via:
 
     $> yt version
 
-
-To install a fresh copy of ``yt`` we must first clone it:
-
-.. code-block:: bash
-
-   $> hg clone https://bitbucket.org/yt_analysis/yt
-
-Finally, we build ``yt`` which may take a little while for everything to
-compile:
-
-.. code-block:: bash
-
-   $> cd yt
-   $> python setup.py install
-
 ----
    
 CAESAR
