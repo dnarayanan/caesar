@@ -43,7 +43,9 @@ or to physical *kpc/h* (using ``obj.simulation.hubble_constant=0.7``):
    In [3]: obj.galaxies[0].radii['total'].to('kpc/h')
    Out[3]: 5.19577490116 kpc/h
 
-That was easy!
+When adding and subtracting quantities, they will be all be converted 
+to the units of the first quantity.  You don't have to worry about
+homegenizing the units yourself!
 
 Working with units
 ******************
@@ -63,8 +65,16 @@ To assign a unit, you can use the yt functions ``YTQuantity`` and ``YTArray``:
    Out[6]: 10000.0 kpc
 
 Similarly, use ``YTArray`` for arrays.  
+
 If you need to get rid of the units and return a value for any reason,
-simply append ``.d`` to the quantity.
+simply append ``.d`` to the quantity:
+
+.. code-block:: python
+
+   In [7]: print(x.d)
+   Out[7]: 10
+   In [8]: print(x.to('kpc').d)
+   Out[8]: 10000.0
 
 For further information and tutorials regarding yt's units
 please visit the `symbolic unit
