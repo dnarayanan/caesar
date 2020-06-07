@@ -9,29 +9,60 @@
 Welcome to CAESAR's documentation!
 ==================================
 
-``CAESAR`` is a python framework for analyzing the outputs from
-cosmological simulations.  It aims to provide a simple and intuitive
-interface for exploring data within your outputs.  It starts by
-identifying objects (halos and galaxies), calculates a number of
-properties for each individual object, and finally links objects
-to each other via simple relationships.  It can also do photometry
-for each galaxy or halo using python-FSPS, with extinction calculated
-to each star particle based on the line-of-sight dust or metal
-column density.  The resulting output is a portable ``HDF5`` file
+``CAESAR`` is a python-based ``yt`` extension package for analyzing
+the outputs from cosmological simulations.  ``CAESAR`` takes as
+input a single snapshot from a simulation, and outputs a portable
+and compact ``HDF5`` catalog containing a host of galaxy and halo properties
 that can be read in and explored without the original simulation
-binary.
+binary.  ``CAESAR`` thus provides a simple and intuitive interface
+for exploring object data within your outputs.
+
+``CAESAR`` generates a catalog as follows:
+
+1. Identify halos (or import a halo membership list)
+
+2. Compute halo physical properties
+
+3. Within each halo, identify galaxies using 6-D friends-of-friends
+
+4. Compute galaxy physical properties
+
+5. Optionally, compute galaxy photometry including line-of-sight extinction
+
+6. Create particle lists for each galaxy and halo
+
+7. Link galaxies and halos, identify centrals+satellites, quantify environment
+
+8. Output all information into a stand-alone ``hdf5`` file
+
+``CAESAR`` is OpenMP-parallelized using ``cython`` and ``joblib``,
+and has reasonably good scaling with the (user-specifiable) number
+of cores.  It does, however, have somewhat stringent memory
+requirements -- e.g. a run with two billion particles requires a
+machine with 512 GB to generate the catalog, and this scales with
+the number of particles.  The resulting ``CAESAR`` catalog typically has
+a filesize of 1% of the original snapshot, as a ballpark figure.
+
+Once the ``CAESAR`` catalog has been generated, it can be loaded
+and the data easily accessed using simple python commands.  ``CAESAR``
+also provides additional functionality such as identifying most
+massive progenitors/descendants across snapshots, generating `FSPS
+<http://dfm.io/python-fsps/current/>`_ spectra for objects, and
+checking for contamination in zoom simulations.  Finally, since the
+``CAESAR`` catalog contains particle lists for each galaxy and halo,
+it enables you to quickly grab the relevant particle data in the original
+snapshot in order to compute any other quantity you want.
 
 ``CAESAR`` builds upon the `yt <http://yt-project.org>`_ project,
 which provides support for a number of `simulation codes
 <http://yt-project.org/doc/reference/code_support.html>`_ and
-`symbolic units
-<http://yt-project.org/doc/analyzing/units/index.html>`_.  All
-meaningful quantities stored within a ``CAESAR`` output have these
-units attached removing a lot of ambiguity when working with your
-data.  No more will you forget if you properly accounted for little
-*h* or if you are working in comoving/physical coordinates.  Currently
-``CAESAR`` supports the following codes/formats, with more coming
-online in the near future:
+`symbolic units <http://yt-project.org/doc/analyzing/units/index.html>`_.
+All meaningful quantities stored within a ``CAESAR`` catalog have
+units attached, reducing ambiguity when working with your data.
+This tight connection enables you to use both ``yt`` and ``CAESAR``
+functionality straightforwardly within a single analysis.
+
+``CAESAR`` currently supports the following codes/formats:
 
 1. `GADGET <http://wwwmpa.mpa-garching.mpg.de/~volker/gadget/>`_
 2. `GIZMO <http://www.tapir.caltech.edu/~phopkins/Site/GIZMO.html>`_
@@ -39,6 +70,11 @@ online in the near future:
 4. `ENZO <http://enzo-project.org/>`_
 5. `ART <http://adsabs.harvard.edu/abs/1999PhDT........25K>`_
 6. `RAMSES <http://www.ics.uzh.ch/~teyssier/ramses/RAMSES.html>`_
+
+In principle, any ``yt``-supported simulation snapshot could be 
+supported by ``CAESAR``, but it may not work out-of-the-box.
+We accept pull requests for further functionality, and bug fixes
+of course.
 
 To get started, follow the Getting Started link below!
 

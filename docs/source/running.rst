@@ -29,7 +29,7 @@ The command line interface (CLI) allows you to quickly execute
 
 This will run the code, an output a catalog file named ``caesar_snapshot.hdf5``.
 
-CLI OPTIONS
+CLI Options
 -----------
 
 * LIST OPTIONS HERE [TODO]
@@ -69,19 +69,19 @@ the CLI command above; it also details what the CLI command does:
 member_search() options
 ----------------------- 
 
-* **nproc**:  Number of cores for OpenMP parallelization.  This follows the ``joblib`` convention that negative numbers correspond to using all except ``nproc+1`` cores, e.g. ``nproc=-2`` uses all but 1 core. *Default:* 1
+* **nproc**:  Number of cores for OpenMP parallelization.  This follows the ``joblib`` convention that negative numbers correspond to using all except ``nproc+1`` cores, e.g. ``nproc=-2`` uses all but 1 cores. *Default:* 1
 
 * **haloid**:  Source for halo ID's.  *Default:* 'fof'
 
   * ``haloid='fof'`` uses a 3D Friends-of-Friends (3DFOF) with b=0.2 to identify halos.  
 
-  * ``haloid='snap'`` instead reads halo membership info for each particle from the snapshot variable ``HaloID``.  
+  * ``haloid='snap'`` reads halo membership info for each particle from the snapshot variable ``HaloID``.  
 
 * **fof6d_file**:  Stores results of 6DFOF galaxy finder in a file for future retrieval.  If file does not exist, it is created; if it exists, the galaxy membership information is read from this file instead of running the 6DFOF.  *Default:* *None*
 
-* **fsps_bands**:  Triggers optional photometry computation, in specified bands. The ``fsps.list_filters()`` command under ``python-fsps`` lists the available bands.  One can also specify a string that will be matched to all available bands, e.g. ``fsps_bands=['sdss']`` will compute all bands that include the phrase ``sdss``. *Default:* *None*
+* **fsps_bands**:  Triggers optional photometry computation, in specified list of bands. The ``fsps.list_filters()`` command under ``python-fsps`` lists the available bands.  One can also specify a string (minimum 4 characters) that will be matched to all available bands, e.g. ``fsps_bands=['sdss','jwst']`` will compute all bands that include the phrase ``sdss`` or ``jwst``. *Default:* *None*
 
-* **ssp_table_file**: Path to lookup table for FSPS photometry.  If this file does not exist or this keyword is unspecified, it will be generated (this takes some time).  If it exists, ``CAESAR`` will read it in. *Default:* *None*
+* **ssp_table_file**: Path to lookup table for FSPS photometry.  If this file does not exist or this keyword is unspecified, it will be generated; this takes some time.  If it exists, ``CAESAR`` will read it in. *Default:* *None*
 
 
 
