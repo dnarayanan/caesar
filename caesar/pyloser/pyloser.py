@@ -7,7 +7,7 @@
 import caesar
 from readgadget import *
 import sys
-import pylab as plt
+#import pylab as plt #cannot import matplotlib on hpg without 'Agg' option
 import os
 os.environ["OMP_NUM_THREADS"] = "24"
 import numpy as np
@@ -105,9 +105,14 @@ class photometry:
         from caesar.cyloser import compute_AV, compute_mags
 
         self.init_pyloser()
+        #computes AV for all stars in snapshot
         self.obj.AV_star = compute_AV(self)
+        #find the AV for stars belonging to the groups that were asked for
+        self.Av_per_group()
         spect_dust, spect_nodust = compute_mags(self)
+        
         return spect_dust, spect_nodust
+
 
     def init_pyloser(self):
         from caesar.cyloser import init_kerntab
@@ -116,6 +121,19 @@ class photometry:
         self.init_bands()
         init_kerntab(self)
         self.init_stars_to_process()
+
+    def Av_per_group(self):
+        #separate AV_all_stars by group
+        memlog('Finding LOS A_V values for %d objects'%(len(self.groups)))
+        for obj_ in self.groups:
+            current_id = obj_.GroupID
+            start = np.sum([len(x.slist) for x in self.obj.galaxies[:current_id]])
+            end = start + len(obj_.slist)
+            print('[pyloser/Av_per_star]: Found object %d Av values'%(current_id))
+            print('[pyloser/Av_per_star]: Starting index: %d\n[pyloser/Av_per_star]: Star count: %d'%(start, len(obj_.slist)))
+            Av_per_star = self.obj.AV_star[start:end]
+            obj_.group_Av = Av_per_star
+
 
     # initialize extinction curves. last one is cosmic IGM attenution from Madau
     def init_extinction(self):
@@ -236,7 +254,7 @@ class photometry:
         if read_flag:
             self.generate_ssp_table(self.ssp_table_file)
 
-    def generate_ssp_table(self,ssp_lookup_file,Zsol=Solar['total'],fsps_imf_type=1,fsps_nebular=True,fsps_sfh=0,fsps_zcontinuous=1,oversample=[2,2]):
+    def generate_ssp_table(self,ssp_lookup_file,Zsol=Solar['total'],fsps_imf_type=2,fsps_nebular=True,fsps_sfh=0,fsps_zcontinuous=1,oversample=[2,2]):
         '''
         Generates an SPS lookup table, oversampling in [age,metallicity] by oversample
         '''
