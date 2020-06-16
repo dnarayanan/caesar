@@ -7,7 +7,7 @@
 import caesar
 from readgadget import *
 import sys
-#import pylab as plt #cannot import matplotlib on hpg without 'Agg' option
+import pylab as plt 
 import os
 os.environ["OMP_NUM_THREADS"] = "24"
 import numpy as np
@@ -254,7 +254,7 @@ class photometry:
         if read_flag:
             self.generate_ssp_table(self.ssp_table_file)
 
-    def generate_ssp_table(self,ssp_lookup_file,Zsol=Solar['total'],fsps_imf_type=2,fsps_nebular=True,fsps_sfh=0,fsps_zcontinuous=1,oversample=[2,2]):
+    def generate_ssp_table(self,ssp_lookup_file,Zsol=Solar['total'],fsps_imf_type=1,fsps_nebular=True,fsps_sfh=0,fsps_zcontinuous=1,oversample=[2,2]):
         '''
         Generates an SPS lookup table, oversampling in [age,metallicity] by oversample
         '''
