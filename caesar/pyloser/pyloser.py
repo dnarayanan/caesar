@@ -127,11 +127,9 @@ class photometry:
         memlog('Finding LOS A_V values for %d objects'%(len(self.groups)))
         for obj_ in self.groups:
             current_id = obj_.GroupID
-            start = np.sum([len(x.slist) for x in self.obj.galaxies[:current_id]])
-            end = start + len(obj_.slist)
             print('[pyloser/Av_per_star]: Found object %d Av values'%(current_id))
-            print('[pyloser/Av_per_star]: Starting index: %d\n[pyloser/Av_per_star]: Star count: %d'%(start, len(obj_.slist)))
-            Av_per_star = self.obj.AV_star[start:end]
+            print('[pyloser/Av_per_star]: Star count: %d'%(len(obj_.slist)))
+            Av_per_star = self.obj.AV_star[obj_.slist]
             obj_.group_Av = Av_per_star
 
 
