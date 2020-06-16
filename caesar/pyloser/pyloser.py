@@ -122,15 +122,20 @@ class photometry:
         init_kerntab(self)
         self.init_stars_to_process()
 
+
+    #separate AV_all_stars by group
     def Av_per_group(self):
-        #separate AV_all_stars by group
         memlog('Finding LOS A_V values for %d objects'%(len(self.groups)))
-        for obj_ in self.groups:
-            current_id = obj_.GroupID
-            print('[pyloser/Av_per_star]: Found object %d Av values'%(current_id))
-            print('[pyloser/Av_per_star]: Star count: %d'%(len(obj_.slist)))
-            Av_per_star = self.obj.AV_star[obj_.slist]
-            obj_.group_Av = Av_per_star
+        try:
+            import tqdm
+            for obj_ in tqdm.tqdm(self.groups):
+                Av_per_star = self.obj.AV_star[obj_.slist]
+                obj_.group_Av = Av_per_star
+        
+        except: 
+            for obj_ in self.groups:
+                Av_per_star = self.obj.AV_star[obj_.slist]
+                obj_.group_Av = Av_per_star
 
 
     # initialize extinction curves. last one is cosmic IGM attenution from Madau
