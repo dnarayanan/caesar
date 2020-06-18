@@ -12,20 +12,20 @@ Photometry
 available `FSPS band <http://dfm.io/python-fsps/current/>`_.  This is done
 by computing the line-of-sight dust extinction to each star, attenuating
 its spectrum with a user-selectable attenuation law, summing the spectra
-of all stars in the object, and applying the desired bandpasses.
+of all stars in the object, and applying the desired bandpasses,
+as in `Pyloser <https://pyloser.readthedocs.io/en/latest/>`_.
 
-NOTE: ``CAESAR`` does *not* do true dust radiative transfer!
-To e.g. model the far-IR spectrum or predict extinction laws, you
-should use `Powderday <https://powderday.readthedocs.io/en/latest/>`_.
-``CAESAR``'s main advantage is that it is much faster (thanks to being
-cython parallelized), so adds only modest compute time over the main
-``member_search()`` routine.  It also gives the user more direct control
-over the attenuation law used, which may be desirable in some instances.
+NOTE: ``CAESAR`` does *not* do true dust radiative transfer!  To
+e.g. model the far-IR spectrum or predict extinction laws, you can
+use `Powderday <https://powderday.readthedocs.io/en/latest/>`_.
+The main advantage of ``CAESAR`` is that it is much faster and
+gives the user more direct control over the attenuation law used,
+which may be desirable in some instances.
 
 Installation
 ============
 
-Computing photometry requires two additional packages to be installed:
+To compute photometry, two additional packages must be installed:
 
 1. `python-fsps <http://dfm.io/python-fsps/current/installation/>`_: Follow
    the instructions, which requires installing and compiling ``FSPS``.
@@ -36,10 +36,9 @@ Computing photometry requires two additional packages to be installed:
 Running in member_search
 ========================
 
-The photometry computation for galaxies can be activated in
-``member_search()``.  This is done by specifying the ``band_names``
-option, which both invokes photometry and tells ``CAESAR`` which bands
-to compute.
+The photometry computation for galaxies can be conveniently done as part
+of ``member_search()``.  This is invoked by specifying the ``band_names``
+option in ``member_search()``.
 
 ``CAESAR`` will compute 4 magnitudes for each galaxy, corresponding
 to apparent and absolute magnitudes, with and without dust.  These are
@@ -50,7 +49,45 @@ stored in dictionaries ``absmag``, ``absmag_nodust``, ``appmag``, and
 computes photometry for *galaxies*.  For doing halos/clouds/subset of
 galaxies, see *Running stand-alone* below.
 
-Options:
+For example, this will invoke ``member_search`` for a ``CAESAR``
+object ``obj``, which will do everything as before, but at the end
+will additionally compute galaxy photometry for all SDSS and
+Hubble/WFC3 filters using an LMC extinction law in the ``z``
+direction.
+
+.. code-block:: python
+
+   In [1]: obj.member_search(band_names='[sdss,wfc3]',ssp_table_file='SSP_Chab_EL.hdf5',ext_law='lmc',view_dir='z')
+
+Running stand-alone
+===================
+
+The photometry module can also be run stand-alone for specified objects.
+Any object with stars and gas (stored in ``slist`` and ``glist``) can
+have its photometry computed.  The steps are to first create a photometry object,
+and then invoke the photometry computation on it.
+
+For example, to run photometry for all halos in a pre-existing ``CAESAR`` catalog:
+
+.. code-block:: python
+
+   In [1]: from caesar.pyloser.pyloser import photometry
+   In [2]: ds  = yt.load(SNAP)
+   In [3]: sim = caesar.load('my_caesar_file.hdf5')
+   In [4]: galphot = photometry(sim,sim.halos,ds=ds,band_names='sdss',nproc=16)
+   In [5]: galphot.run_pyloser()
+
+All options as listed above are passable to ``photometry()``.  The
+computed SDSS photometry will be available in the usual dictionaries
+``absmag``, ``absmag_nodust``, ``appmag``, and ``appmag_nodust``,
+for each halo.
+
+
+Photometry Options
+==================
+
+The following options can be passed to ``member_search()`` or when 
+instantiating the ``photometry`` class:
 
 1. ``band_names``: (REQUIRED): The list of band(s) to compute, selected
    from `python-fsps <http://dfm.io/python-fsps/current/installation/>`_
@@ -90,55 +127,11 @@ Options:
 7. ``nproc``: Number of cores to use.  If -1, it tries to use the ``CAESAR`` object's
    value, or else defaults to 1.  *Default*: -1
 
-For example, this will invoke ``member_search`` for a ``CAESAR``
-object ``obj``, which will do everything as before, but at the end
-will additionally compute galaxy photometry for all SDSS and
-Hubble/WFC3 filters using an LMC extinction law in the ``z``
-direction.
 
-.. code-block:: python
+Generating a lookup table
+=========================
 
-   In [1]: obj.member_search(band_names='[sdss,wfc3]',ssp_table_file='SSP_Chab_EL.hdf5',ext_law='lmc',view_dir='z')
-
-
-
-Running stand-alone
-===================
-
-The photometry module can also be run stand-alone for specified objects, or
-to get individual magnitudes for stars.
-
-Sets of objects
----------------
-
-Any object with stars and gas (stored in ``slist`` and ``glist``) can
-have its photometry computed.  The steps are to first create a photometry object,
-and then invoke the photometry computation on it.
-
-For example, to run photometry for all halos in a pre-existing ``CAESAR`` catalog:
-
-.. code-block:: python
-
-   In [1]: from caesar.pyloser.pyloser import photometry
-   In [2]: ds  = yt.load(SNAP)
-   In [3]: sim = caesar.load('my_caesar_file.hdf5')
-   In [4]: galphot = photometry(sim,sim.halos,ds=ds,band_names='sdss',nproc=16)
-   In [5]: galphot.run_pyloser()
-
-All options as listed above are passable to ``photometry()``.  The
-computed SDSS photometry will be available in the usual dictionaries
-``absmag``, ``absmag_nodust``, ``appmag``, and ``appmag_nodust``,
-for each halo.
-
-Individual star magnitudes
---------------------------
-
-Not available yet.
-
-Generating an SSP lookup table
-------------------------------
-
-To create a new table, run ``generate_ssp_table`` with the
+To create a new SSP lookup table, run ``generate_ssp_table`` with the
 desired ``FSPS`` options:
 
 .. code-block:: python
@@ -150,5 +143,7 @@ desired ``FSPS`` options:
 The ``oversample`` option oversamples in [age,metallicity] by the specified factors
 from the native ``FSPS`` ranges, in order to get more accurate interpolation.  Note
 that this creates a larger output file, by the product of those values.
+
+The other options are passed to ``python-FSPS``.
 
 
