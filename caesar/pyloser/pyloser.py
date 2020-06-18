@@ -12,13 +12,13 @@ import os
 os.environ["OMP_NUM_THREADS"] = "24"
 import numpy as np
 import fsps
-import extinction
 import h5py
 from scipy import interpolate
 from astropy import constants as const
 from astropy.cosmology import FlatLambdaCDM
 from caesar.utils import memlog
 from caesar.property_manager import MY_DTYPE
+from yt.funcs import mylog
 
 #from pygas import *
 #from auxloser import t_elapsed,parse_args,progress_bar,hubble_z
@@ -50,7 +50,7 @@ class photometry:
         self.ssp_table_file = os.path.expanduser('~/caesar/%s'%ssp_table_file)
         if hasattr(self.obj,'_kwargs') and 'ssp_table_file' in self.obj._kwargs:
             self.ssp_table_file = self.obj._kwargs['ssp_table_file']
-        self.ext_law = 'mix_calz_mw'
+        self.ext_law = 'mw'
         if hasattr(self.obj,'_kwargs') and 'ext_law' in self.obj._kwargs:
             self.ext_law = self.obj._kwargs['ext_law'].lower()
         if hasattr(self.obj,'_kwargs') and 'view_dir' in self.obj._kwargs:
@@ -117,13 +117,32 @@ class photometry:
         init_kerntab(self)
         self.init_stars_to_process()
 
-    # initialize extinction curves. last one is cosmic IGM attenution from Madau
+    # initialize extinction curves.  order: 0=Calzetti, 1=Chevallard, 2=Conroy, 3=Cardelli(MW), 4=SMC, 5=LMC, 6=Mix Calz/MW, 7=Composite Calz/MW/SMC; see atten_laws.py for details (these return optical depths)
     def init_extinction(self):
+        from caesar.pyloser.atten_laws import calzetti,chevallard,conroy,cardelli,smc,lmc
         wave = self.ssp_wavelengths.astype(np.float64)
         self.ext_curves = []
-        self.ext_curves.append(extinction.calzetti00(wave, 1.0, 4.05))  # atten_laws[0]
-        self.ext_curves.append(extinction.fm07(wave, 1.0))  # atten_laws[1]
+        self.ext_curves.append(calzetti(wave))
+        self.ext_curves.append(chevallard(wave))
+        self.ext_curves.append(conroy(wave))
+        self.ext_curves.append(cardelli(wave))
+        self.ext_curves.append(smc(wave))
+        self.ext_curves.append(lmc(wave))
         self.ext_curves = np.asarray(self.ext_curves)
+
+        memlog('Starting photometry using %s extinction law'%self.ext_law)
+        if 'calzetti' in self.ext_law: self.ext_law = 0
+        elif 'chevallard' in self.ext_law: self.ext_law = 1
+        elif 'conroy' in self.ext_law: self.ext_law = 2
+        elif self.ext_law == 'mw' or self.ext_law == 'cardelli' or 'CCM' in self.ext_law: self.ext_law = 3
+        elif 'smc' in self.ext_law: self.ext_law = 4
+        elif 'lmc' in self.ext_law: self.ext_law = 5
+        elif self.ext_law == 'mix_calz_MW': self.ext_law = 6
+        elif self.ext_law == 'composite': self.ext_law = 7
+        else:
+            mylog.warning('Extinction law %s not recognized, assuming composite'%self.ext_law)
+            self.ext_law = 7
+
 
     # set up star and gas lists in each object
     def init_stars_to_process(self):
@@ -234,9 +253,10 @@ class photometry:
                 memlog('Error reading SSP table %s, will generate...'%self.ssp_table_file)
                 read_flag = True
         if read_flag:
-            self.generate_ssp_table(self.ssp_table_file)
+            generate_ssp_table(self.ssp_table_file)
 
-    def generate_ssp_table(self,ssp_lookup_file,Zsol=Solar['total'],fsps_imf_type=1,fsps_nebular=True,fsps_sfh=0,fsps_zcontinuous=1,oversample=[2,2]):
+
+def generate_ssp_table(ssp_lookup_file,Zsol=Solar['total'],fsps_imf_type=1,fsps_nebular=True,fsps_sfh=0,fsps_zcontinuous=1,oversample=[2,2]):
         '''
         Generates an SPS lookup table, oversampling in [age,metallicity] by oversample
         '''
