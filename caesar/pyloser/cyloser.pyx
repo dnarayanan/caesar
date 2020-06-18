@@ -16,7 +16,7 @@ CLIGHT_AA = const.c.to('AA/s').value
 
 from libc.stdlib cimport malloc, free
 from libc.stdio cimport printf, fflush, stderr, stdout
-from libc.math cimport sqrt as c_sqrt, fabs as c_fabs, log10 as c_log10, copysign, fabs
+from libc.math cimport sqrt as c_sqrt, fabs as c_fabs, log10 as c_log10, exp as c_exp, copysign, fabs
 
 
 """ ============================================================ """
@@ -40,14 +40,10 @@ def compute_mags(phot):
     vlos = np.where(vlos<0, vlos+vbox, vlos)  # periodic wrapping 
     vlos = np.where(vlos>vbox, vlos-vbox, vlos)
 
-    # need ssfr for choosing extinction law
-    ssfr_gal = np.array([np.log10((g.sfr*1.e9/g.masses['stellar']).d+1.e-20) for g in phot.groups],dtype=MY_DTYPE)
-    if phot.ext_law is 'calzetti' or phot.ext_law is 'calzetti00': ext_law = 0
-    elif phot.ext_law is 'mw' or phot.ext_law is 'fm07': ext_law = 1
-    elif phot.ext_law is 'mix_calz_mw': ext_law = 2
-    else: 
-        memlog('Extinction law %s not recognized, assuming mix_calz_mw'%phot.ext_law)
-        ext_law = 2
+    # perhaps need ssfr and Z for choosing extinction law
+    from caesar.pyloser.pyloser import Solar
+    logssfr_gal = np.array([np.log10((g.sfr*1.e9/g.masses['stellar']).d+1.e-20) for g in phot.groups],dtype=MY_DTYPE)  # in Gyr^-1
+    logZ_gal = np.array([np.log10(g.metallicities['sfr_weighted']/Solar['total']+1.e-20) for g in phot.groups],dtype=MY_DTYPE)
 
     cdef:
         ## input quantities
@@ -69,8 +65,9 @@ def compute_mags(phot):
         int[:] jtrans = phot.band_indz  # starting index for blueshifted band transmission
         int[:] iwz0 = phot.band_iwz0  # starting index covering blueshifted band in ssp_wavelengths
         int[:] iwz1 = phot.band_iwz1  # ending index 
-        float[:,:] extinctions = phot.ext_curves.astype(MY_DTYPE) # extinction curves; last one is cosmic (Madau)
-        float[:] ssfr = ssfr_gal   # specific SFR, used to choose extinction law
+        float[:,:] extinctions = phot.ext_curves.astype(MY_DTYPE) # extinction curves
+        float[:] ssfr = logssfr_gal   # specific SFR, used to choose extinction law
+        float[:] Zgal = logZ_gal   # SFR-weighted metallicity scaled to solar, used to choose extinction law
         # general variables
         int ng = phot.ngroup
         int npart = len(sm)
@@ -78,7 +75,7 @@ def compute_mags(phot):
         int nage = len(phot.ssp_ages)
         int nZ = len(phot.ssp_logZ)
         int nbands = len(phot.band_names)
-        int nextinct = ext_law
+        int nextinct = phot.ext_law
         int my_nproc = phot.nproc
         float redshift = phot.obj.simulation.redshift
         float lumtoflux = phot.lumtoflux
@@ -100,7 +97,7 @@ def compute_mags(phot):
         istart = starid_bins[ig]
         iend = starid_bins[ig+1]
         # compute spectrum of galaxy with and without dust
-        get_galaxy_spectrum(istart,iend,sm,sage,sZ,svz,AV_star,extinctions,nextinct,ssfr[ig],nlam,nage,nZ,ssp_wavelengths,ssp_ages,ssp_logZ,ssp_spectra,spect_dust[ig],spect_nodust[ig])
+        get_galaxy_spectrum(istart,iend,sm,sage,sZ,svz,AV_star,extinctions,nextinct,ssfr[ig],Zgal[ig],nlam,nage,nZ,ssp_wavelengths,ssp_ages,ssp_logZ,ssp_spectra,spect_dust[ig],spect_nodust[ig])
         get_magnitudes(nbands,nlam,itrans,ftrans,jtrans,ztrans,iwave0,iwave1,iwz0,iwz1,lumtoflux,lumtoflux_abs,spect_dust[ig],spect_nodust[ig],absmags[ig],absmags_nd[ig],appmags[ig],appmags_nd[ig])
         for ip in range(nlam-1):
             L_FIR[ig] += (spect_nodust[ig][ip]-spect_dust[ig][ip])*dnu[ip]
@@ -159,33 +156,40 @@ cdef float apply_bands(int iband, float[:] spectrum, float[:] ftrans, int iwave0
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void extinction(float sAV, float[:,:] extinct, int nextinct, float ssfr, int nlam, float *dust_ext) nogil:
+cdef void extinction(float sAV, float[:,:] extinct, int nextinct, float ssfr, float Zgal, int nlam, float *dust_ext) nogil:
 
     cdef int i=0
+    cdef double sfact,zfact
 
     for i in range(nlam):
         dust_ext[i] = 1.0
     if sAV < 0.001: return 
 
-    if nextinct == 0:
-        dust_ext[i] = sAV * extinct[0][i]  # Calzetti+2000
-    elif nextinct == 1:
-        dust_ext[i] = sAV * extinct[1][i]  # Fitzpatrick & Massa 2007 Milky Way
-    elif nextinct == 2:
-        if ssfr > 1.: ssfr = 1.
-        if ssfr < 0.: ssfr = 0.
+    if nextinct <= 5:
+        dust_ext[i] = sAV * extinct[nextinct][i]  # use single attenuation/extinction law
+    elif nextinct == 6 or nextinct == 7:  # composite extinction curves
+        # Calzetti for log sSFR>0 Gyr^-1, MW for log sSFR<-1, linear mix in between
+        sfact = ssfr + 1
+        if sfact > 1.: sfact = 1.
+        if sfact < 0.: sfact = 0.
         for i in range(nlam):
-            dust_ext[i] = sAV * (extinct[0][i]*ssfr+ extinct[1][i]*(1.-ssfr)) # Calzetti for high-sSFR, FM07 for low, linear mix in between
+            dust_ext[i] = sAV * (extinct[0][i]*sfact+ extinct[3][i]*(1.-sfact)) 
+        if nextinct == 7: # mix in SMC at low metallicities; ramp up SMC frac from logZ=0 to -1.
+            zfact = Zgal + 1
+            if zfact > 1.: zfact = 1.
+            if zfact < 0.: zfact = 0.
+            for i in range(nlam):
+                dust_ext[i] *= (dust_ext[i]*zfact+ extinct[4][i]*(1.-zfact)) 
 
     for i in range(nlam):
-        dust_ext[i] = 10**(-0.4*dust_ext[i])
+        dust_ext[i] = c_exp(-dust_ext[i])  # turn optical depths into attenuation factor
 
     return
 
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void get_galaxy_spectrum(int istart, int iend, float[:] sm, float[:] sage, float[:] sZ, float[:] svz, float[:] sAV, float[:,:] extinct, int nextinct, float ssfr, int nlam, int nage, int nZ, float[:] ssp_wavelengths, float[:] ssp_ages, float[:] ssp_logZ, float[:,:] ssp_spectra, float[:] spec, float[:] spec_nd) nogil:
+cdef void get_galaxy_spectrum(int istart, int iend, float[:] sm, float[:] sage, float[:] sZ, float[:] svz, float[:] sAV, float[:,:] extinct, int nextinct, float ssfr, float Zgal, int nlam, int nage, int nZ, float[:] ssp_wavelengths, float[:] ssp_ages, float[:] ssp_logZ, float[:,:] ssp_spectra, float[:] spec, float[:] spec_nd) nogil:
 
     cdef int i,j,zsign
     cdef float *dust_ext
@@ -204,7 +208,7 @@ cdef void get_galaxy_spectrum(int istart, int iend, float[:] sm, float[:] sage, 
         zsign = interp_tab(sage[ip],sZ[ip],nlam,nage,nZ,ssp_wavelengths,ssp_ages,ssp_logZ,ssp_spectra,spec_star)
         j = <int>(zsign / nage)  # this is iZ
         zsign -= j*nage  # this is iage
-        extinction(sAV[ip],extinct,nextinct,ssfr,nlam,dust_ext)
+        extinction(sAV[ip],extinct,nextinct,ssfr,Zgal,nlam,dust_ext)
         zfact = svz[ip]/3.e10
         if zfact >= 0: zsign = 1
         else: zsign = -1
