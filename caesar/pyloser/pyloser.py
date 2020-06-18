@@ -7,7 +7,7 @@
 import caesar
 from readgadget import *
 import sys
-import pylab as plt
+import pylab as plt 
 import os
 os.environ["OMP_NUM_THREADS"] = "24"
 import numpy as np
@@ -105,9 +105,14 @@ class photometry:
         from caesar.cyloser import compute_AV, compute_mags
 
         self.init_pyloser()
+        #computes AV for all stars in snapshot
         self.obj.AV_star = compute_AV(self)
+        #find the AV for stars belonging to the groups that were asked for
+        self.Av_per_group()
         spect_dust, spect_nodust = compute_mags(self)
+        
         return spect_dust, spect_nodust
+
 
     def init_pyloser(self):
         from caesar.cyloser import init_kerntab
@@ -116,6 +121,21 @@ class photometry:
         self.init_bands()
         init_kerntab(self)
         self.init_stars_to_process()
+
+    #separate AV_all_stars by group
+    def Av_per_group(self):
+        memlog('Finding LOS A_V values for %d objects'%(len(self.groups)))
+        try:
+            import tqdm
+            for obj_ in tqdm.tqdm(self.groups):
+                Av_per_star = self.obj.AV_star[obj_.slist]
+                obj_.group_Av = Av_per_star
+        
+        except: 
+            for obj_ in self.groups:
+                Av_per_star = self.obj.AV_star[obj_.slist]
+                obj_.group_Av = Av_per_star
+
 
     # initialize extinction curves.  order: 0=Calzetti, 1=Chevallard, 2=Conroy, 3=Cardelli(MW), 4=SMC, 5=LMC, 6=Mix Calz/MW, 7=Composite Calz/MW/SMC; see atten_laws.py for details (these return optical depths)
     def init_extinction(self):
