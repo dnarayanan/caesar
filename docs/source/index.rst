@@ -90,6 +90,7 @@ Contents
    running
    loading
    usage
+   photometry
    units
 
 ----
