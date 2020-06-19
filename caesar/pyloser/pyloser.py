@@ -263,27 +263,49 @@ class photometry:
     # initialize SSP table, by either generating it if it doesn't exist or reading it in
     def init_ssp_table(self):
         import os
-        read_flag = True
+        read_flag = False
         if os.path.exists(self.ssp_table_file):
-            read_flag = False
             try:
                 self.read_ssp_table(self.ssp_table_file)
                 memlog('Read SSP table %s'%self.ssp_table_file)
+                read_flag = True
             except:
                 memlog('Error reading SSP table %s, will generate...'%self.ssp_table_file)
-                read_flag = True
-        if read_flag:
-            generate_ssp_table(self.ssp_table_file)
+        if not read_flag:  # generate table with Caesar default options
+            ssp_ages, ssp_logZ, mass_remaining, wavelengths, ssp_spectra = generate_ssp_table(self.ssp_table_file, return_table=True, imf_type=1,add_neb_emission=True,sfh=0,zcontinuous=1)  # note Caesar default FSPS options; run generate_ssp_table() separately to set desired FSPS options
+            self.ssp_ages = np.array(ssp_ages,dtype=MY_DTYPE)
+            self.ssp_logZ = np.array(ssp_logZ,dtype=MY_DTYPE)
+            self.ssp_mass = np.array(mass_remaining,dtype=MY_DTYPE)
+            self.ssp_wavelengths = np.array(wavelengths,dtype=MY_DTYPE)
+            self.ssp_spectra = np.array(ssp_spectra,dtype=MY_DTYPE)
+
+    def read_ssp_table(self,ssp_lookup_file):
+        hf = h5py.File(ssp_lookup_file,'r')
+        for i in hf.keys():
+            if i=='wavelengths': wavelengths = list(hf[i])
+            if i=='mass_remaining': mass_remaining = list(hf[i])
+            if i=='ages': ssp_ages = list(hf[i])
+            if i=='logZ': ssp_logZ = list(hf[i])
+            if i=='spectra': ssp_spectra = list(hf[i])
+        self.ssp_ages = np.array(ssp_ages,dtype=MY_DTYPE)
+        self.ssp_logZ = np.array(ssp_logZ,dtype=MY_DTYPE)
+        self.ssp_mass = np.array(mass_remaining,dtype=MY_DTYPE)
+        self.ssp_wavelengths = np.array(wavelengths,dtype=MY_DTYPE)
+        self.ssp_spectra = np.array(ssp_spectra,dtype=MY_DTYPE)
 
 
-def generate_ssp_table(ssp_lookup_file,Zsol=Solar['total'],fsps_imf_type=1,fsps_nebular=True,fsps_sfh=0,fsps_zcontinuous=1,oversample=[2,2]):
+def generate_ssp_table(ssp_lookup_file,Zsol=Solar['total'],oversample=[2,2],return_table=False,**fsps_options):
         '''
         Generates an SPS lookup table, oversampling in [age,metallicity] by oversample
         '''
         import fsps
-        memlog('Generating SSP lookup table %s'%(ssp_lookup_file))
-        fsps_ssp = fsps.StellarPopulation(sfh=fsps_sfh, zcontinuous=fsps_zcontinuous, dust_type=2, imf_type=fsps_imf_type, add_neb_emission=fsps_nebular)
-        fsps_options = np.array([fsps_imf_type,int(fsps_nebular),fsps_sfh,fsps_zcontinuous,oversample[0],oversample[1]],dtype=np.int32)
+        mylog.info('Generating SSP lookup table %s'%(ssp_lookup_file))
+        mylog.info('with FSPS options: %s'%(fsps_options))
+        fsps_opts = ''
+        for key, value in fsps_options.items():
+            fsps_opts = fsps_opts + ("{0} = {1}, ".format(key, value))
+        fsps_opts = np.string_(fsps_opts)
+        fsps_ssp = fsps.StellarPopulation(**fsps_options)
         wavelengths = fsps_ssp.wavelengths
         ssp_ages = []
         mass_remaining = []
@@ -309,31 +331,14 @@ def generate_ssp_table(ssp_lookup_file,Zsol=Solar['total'],fsps_imf_type=1,fsps_
                 spectrum = fsps_ssp.get_spectrum(tage=10**(age-9))[1]
                 ssp_spectra.append(spectrum)
         with h5py.File(ssp_lookup_file, 'w') as hf:
-            hf.create_dataset('fsps_options',data=fsps_options)
+            hf.create_dataset('fsps_options',data=fsps_opts)
             hf.create_dataset('ages',data=ssp_ages)
             hf.create_dataset('logZ',data=ssp_logZ)
             hf.create_dataset('mass_remaining',data=mass_remaining)
             hf.create_dataset('wavelengths',data=wavelengths)
             hf.create_dataset('spectra',data=ssp_spectra)
         memlog('Generated lookup table with %d ages and %d metallicities'%(len(ssp_ages),len(ssp_logZ)))
-        self.ssp_ages = np.array(ssp_ages,dtype=MY_DTYPE)
-        self.ssp_logZ = np.array(ssp_logZ,dtype=MY_DTYPE)
-        self.ssp_mass = np.array(mass_remaining,dtype=MY_DTYPE)
-        self.ssp_wavelengths = np.array(wavelengths,dtype=MY_DTYPE)
-        self.ssp_spectra = np.array(ssp_spectra,dtype=MY_DTYPE)
 
-    def read_ssp_table(self,ssp_lookup_file):
-        hf = h5py.File(ssp_lookup_file,'r')
-        for i in hf.keys():
-            if i=='fsps_options': fsps_options = list(hf[i])
-            if i=='wavelengths': wavelengths = list(hf[i])
-            if i=='mass_remaining': mass_remaining = list(hf[i])
-            if i=='ages': ssp_ages = list(hf[i])
-            if i=='logZ': ssp_logZ = list(hf[i])
-            if i=='spectra': ssp_spectra = list(hf[i])
-        self.ssp_ages = np.array(ssp_ages,dtype=MY_DTYPE)
-        self.ssp_logZ = np.array(ssp_logZ,dtype=MY_DTYPE)
-        self.ssp_mass = np.array(mass_remaining,dtype=MY_DTYPE)
-        self.ssp_wavelengths = np.array(wavelengths,dtype=MY_DTYPE)
-        self.ssp_spectra = np.array(ssp_spectra,dtype=MY_DTYPE)
+        if return_table:
+            return ssp_ages, ssp_logZ, mass_remaining, wavelengths, ssp_spectra
 
