@@ -15,6 +15,9 @@ advantages this provides is that you no longer have to keep track of
 little *h* or remembering if you are dealing with comoving or physical
 coordinates.
 
+Working with units
+==================
+
 Let's take a look at some quick examples of what the units look like,
 and how we might take advantage of the easy conversion methods.
 Say we have a ``CAESAR`` object with ``obj.simulation.redshift=2`` .
@@ -45,10 +48,10 @@ or to physical *kpc/h* (using ``obj.simulation.hubble_constant=0.7``):
 
 When adding and subtracting quantities, they will be all be converted 
 to the units of the first quantity.  You don't have to worry about
-homegenizing the units yourself!
+homogenizing the units yourself!
 
-Working with units
-******************
+Assigning units
+===============
 
 Quantities that are added or subtracted must have convertible units.
 This means you cannot add a simple number to a quantity with
