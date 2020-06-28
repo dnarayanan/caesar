@@ -6,7 +6,7 @@ from yt.funcs import mylog
 
 import caesar
 from caesar.progen import progen_finder
-from caesar.progen_rad import run_progen_rad
+
 class Snapshot(object):
     """Class for tracking paths and data for simulation snapshots.
 
@@ -33,10 +33,9 @@ class Snapshot(object):
         self.snapdir  = snapdir
         self.snapname = snapname
         self.snapnum  = snapnum
-        self.snap     = '%s/%s%03d.%s' % (snapdir, snapname,
-                                           snapnum, extension)
+        self.snap     = '%s/%s%03d.%s' % (snapdir, snapname, snapnum, extension)
 
-    def set_output_information(self, ds):
+    def set_output_information(self, ds, prefix='caesar_', suffix='hdf5'):
         """Set the name of the CAESAR output file."""
         if ds.cosmological_simulation == 0:
             time = 't%0.3f' % ds.current_time
@@ -44,9 +43,7 @@ class Snapshot(object):
             time = 'z%0.3f' % ds.current_redshift
                 
         self.outdir   = '%s/Groups' % ds.fullpath
-        self.outfile  = '%s/caesar_%04d_%s.hdf5' % (self.outdir,
-                                                    self.snapnum,
-                                                    time)
+        self.outfile  = '%s/%s%s%03d.%s' % (self.outdir, prefix, self.snapname.replace('snap_',''), self.snapnum,suffix)
 
     def _make_output_dir(self):
         """If output directory is not present, create it."""
@@ -96,8 +93,8 @@ def print_art():
     print('\n%s\n%s\n%s\n' % (art, copywrite, version))
 
         
-def drive(snapdirs, snapname, snapnums, progen=False, progen_rad = False, skipran=False,
-          member_search=True, extension='hdf5', **kwargs):
+def drive(snapdirs, snapname, snapnums, progen=False, skipran=False,
+          member_search=True, extension='hdf5', caesar_prefix='caesar_', **kwargs):
     """Driver function for running ``CAESAR`` on multiple snapshots.
 
     Can utilize mpi4py to run analysis in parallel given that ``MPI`` 
@@ -129,6 +126,8 @@ def drive(snapdirs, snapname, snapnums, progen=False, progen_rad = False, skipra
         perform progen for instance.
     extension : str, optional
         Specify your snapshot file extension.  Defaults to `hdf5`
+    prefix : str, optional
+        Specify prefix for caesar filename (replaces 'snap_')
     unbind_halos : boolean, optional
         Unbind halos?  Defaults to False
     unbind_galaxies : boolean, optional
@@ -157,7 +156,7 @@ def drive(snapdirs, snapname, snapnums, progen=False, progen_rad = False, skipra
     fof6d_velLL: float, optional
         Sets linking length for velocity in fof6d
     nproc: int, optional
-        Sets number of processors for fof6d and progen_rad
+        Sets number of processors for fof6d 
     blackholes : boolean, optional
         Indicate if blackholes are present in your simulation.  
         This must be toggled on manually as there is no clear 
@@ -212,56 +211,8 @@ def drive(snapdirs, snapname, snapnums, progen=False, progen_rad = False, skipra
         for snap in rank_snaps:
             snap.member_search(skipran, **kwargs)
 
-    if (progen == True) and (progen_rad == True):
-        sys.exit('You can only set progen or progen_rad as True; exiting')
+    if progen:
+        caesar.progen.run_progen(snapdirs, snapname, snapnums, prefix=caesar_prefix, suffix=extension, **kwargs)
 
-    if progen or progen_rad:
-        if using_mpi:
-            comm.Barrier()
-
-        verified_snaps = []
-        missing_snaps  = []
-        for snap in snaps:
-            if not hasattr(snap, 'outfile'):
-                ds = yt.load(snap.snap)
-                snap.set_output_information(ds)
-            if os.path.isfile(snap.outfile):
-                verified_snaps.append(snap)
-            else:
-                missing_snaps.append(snap)
-
-        if len(missing_snaps) > 0:
-            mylog.warning('Missing the following CAESAR files:')
-            for snap in missing_snaps:
-                mylog.warning(snap.outfile)
-
-        progen_pairs = []
-        for i in reversed(range(1,len(verified_snaps))):
-            progen_pairs.append((verified_snaps[i],verified_snaps[i-1]))
-
-        rank_progen_pairs = progen_pairs[rank::nprocs]
-        for progen_pair in rank_progen_pairs:
-            snap_current = progen_pair[0]
-            snap_progens = progen_pair[1]
-
-            ds_current = yt.load(snap_current.snap)
-            ds_progens = yt.load(snap_progens.snap)
-
-            snap_current.set_output_information(ds_current)
-            snap_progens.set_output_information(ds_progens)
-
-            obj_current = caesar.load(snap_current.outfile)
-            obj_progens = caesar.load(snap_progens.outfile)
-
-            if progen:
-                progen_finder(obj_current, obj_progens,
-                              snap_current, snap_progens)
-                
-            if progen_rad == True:
-                #temporary catch to kill off any sims trying to do progen_Rad with clouds till we fix that
-                if 'fofclouds' in kwargs:
-                    raise Exception('Cannot call fofclouds and progen_rad - exiting now')
-                else:
-                    run_progen_rad(obj_current,obj_progens,snap_current,snap_progens)
 if __name__ == '__main__':
     print_art()

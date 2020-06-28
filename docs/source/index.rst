@@ -91,6 +91,7 @@ Contents
    loading
    usage
    photometry
+   progen
    units
 
 ----
