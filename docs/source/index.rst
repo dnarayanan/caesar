@@ -35,23 +35,25 @@ for exploring object data within your outputs.
 
 8. Output all information into a stand-alone ``hdf5`` file
 
-``CAESAR`` is OpenMP-parallelized using ``cython`` and ``joblib``,
-and has reasonably good scaling with the (user-specifiable) number
-of cores.  It does, however, have somewhat stringent memory
+Once the ``CAESAR`` catalog has been generated, it can be loaded
+and the data easily accessed using simple python commands.
+
+``CAESAR`` further provides functionality such as identifying the
+most massive progenitors or descendants across snapshots (see
+``Progenitors``), and generating `FSPS
+<http://dfm.io/python-fsps/current/>`_ photometry and spectra for
+galaxies (see ``Photometry``).  Finally, since the ``CAESAR`` catalog
+contains particle lists for each galaxy and halo, it enables you
+to quickly grab the relevant particle data in the original snapshot
+in order to compute any other quantity you want.
+
+``CAESAR`` is OpenMP-parallelized using ``cython-parallel`` and
+``joblib``.  It enjoys decent scaling with the (user-specifiable)
+number of cores.  It does, however, have somewhat stringent memory
 requirements -- e.g. a run with two billion particles requires a
 machine with 512 GB to generate the catalog, and this scales with
-the number of particles.  The resulting ``CAESAR`` catalog typically has
-a filesize of 1% of the original snapshot, as a ballpark figure.
-
-Once the ``CAESAR`` catalog has been generated, it can be loaded
-and the data easily accessed using simple python commands.  ``CAESAR``
-also provides additional functionality such as identifying most
-massive progenitors/descendants across snapshots (see ``Progen``), generating `FSPS
-<http://dfm.io/python-fsps/current/>`_ spectra for objects (see ``Photometry``), and
-checking for contamination in zoom simulations.  Finally, since the
-``CAESAR`` catalog contains particle lists for each galaxy and halo,
-it enables you to quickly grab the relevant particle data in the original
-snapshot in order to compute any other quantity you want.
+the number of particles.  The resulting ``CAESAR`` catalog typically
+has a filesize of 1% of the original snapshot, as a ballpark figure.
 
 ``CAESAR`` builds upon the `yt <http://yt-project.org>`_ project,
 which provides support for a number of `simulation codes
@@ -60,7 +62,7 @@ which provides support for a number of `simulation codes
 All meaningful quantities stored within a ``CAESAR`` catalog have
 units attached, reducing ambiguity when working with your data.
 This tight connection enables you to use both ``yt`` and ``CAESAR``
-functionality straightforwardly within a single analysis.
+functionality straightforwardly within a single analysis package.
 
 ``CAESAR`` currently supports the following codes/formats:
 

@@ -37,6 +37,34 @@ Solar = {'total':0.0134, 'He':0.2485, 'C':2.38e-3, 'N':0.70e-3, 'O':5.79e-3, 'Ne
 # photometry class
 class photometry:
 
+    """Parent class for photometry objects.  Instantiate this to use the (pyloser) photometry module.
+    Note: The heavy lifting for photometry is done in the cython file cyloser.pyx.
+
+    Parameters
+    ----------
+    obj : CAESAR object
+        CAESAR object 
+    group_list : array of Group objects
+        Groups for which to find photometry
+    ds : yt object
+        yt object associated with CAESAR object, only needed if running interactively
+    band_names : str or list of str
+        List of FSPS bands to compute photometry for
+    ssp_table_file : str
+        Filename (including path) of SSP table to generate or read in
+    view_dir : str
+        Lines of sight are along this axis: 'x', 'y', or 'z'
+    use_dust : bool
+        If true, tries to use dust mass in snapshot, otherwise uses metal mass converted 
+        into dust assuming a dust-t-metal ratio
+    use_cosmic_ext : bool
+        If true, applies Madau (1995) cosmic extinction to spectrum
+    kernel_type : str
+        Smoothing kernel type: 'cubic' or 'quintic'
+    nproc : int
+        Number of OpenMP cores, negative means use all but (nproc+1) cores.
+    """
+
     def __init__(self, obj, group_list, ds=None, band_names='v', ssp_table_file='SSP_Chab_EL.hdf5', view_dir='x', use_dust=True, use_cosmic_ext=True, kernel_type='cubic', nproc=-1):
 
         from caesar.property_manager import ptype_ints
@@ -102,6 +130,8 @@ class photometry:
 
     def run_pyloser(self):
 
+        """Main driver routine for pyloser photometry"""
+
         from caesar.cyloser import compute_AV, compute_mags
 
         self.init_pyloser()
@@ -115,6 +145,8 @@ class photometry:
 
 
     def init_pyloser(self):
+        """Initialization routine for pyloser photometry"""
+
         from caesar.cyloser import init_kerntab
         self.init_ssp_table()
         self.init_extinction()
@@ -139,6 +171,8 @@ class photometry:
 
     # initialize extinction curves.  order: 0=Calzetti, 1=Chevallard, 2=Conroy, 3=Cardelli(MW), 4=SMC, 5=LMC, 6=Mix Calz/MW, 7=Composite Calz/MW/SMC; see atten_laws.py for details (these return optical depths)
     def init_extinction(self):
+        """Initialization attenuation laws"""
+
         from caesar.pyloser.atten_laws import calzetti,chevallard,conroy,cardelli,smc,lmc
         wave = self.ssp_wavelengths.astype(np.float64)
         self.ext_curves = []
@@ -166,6 +200,8 @@ class photometry:
 
     # set up star and gas lists in each object
     def init_stars_to_process(self):
+        """Initialization star and gas particle lists."""
+
         from caesar.group import Group, collate_group_ids
         from caesar.property_manager import ptype_ints
         from caesar.cyloser import smass_at_formation
@@ -187,6 +223,8 @@ class photometry:
 
     # initialize band transmission data interpolated to FSPS wavelengths
     def init_bands(self):
+        """Initialization bands to compute."""
+
         import fsps
         if isinstance(self.band_names,str):
             self.band_names = [self.band_names]
@@ -262,6 +300,8 @@ class photometry:
 
     # initialize SSP table, by either generating it if it doesn't exist or reading it in
     def init_ssp_table(self):
+        """Initialization SSP table, either reading it in or creating (and storing) it."""
+
         import os
         read_flag = False
         if os.path.exists(self.ssp_table_file):

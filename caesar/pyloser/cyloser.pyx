@@ -28,6 +28,8 @@ from libc.math cimport sqrt as c_sqrt, fabs as c_fabs, log10 as c_log10, exp as 
 @cython.boundscheck(False)
 def compute_mags(phot):
 
+    """Computes magnitudes for photometry object phot """
+
     from caesar.property_manager import ptype_ints
 
     memlog('Computing magnitudes for %d bands (nproc=%d)'%(len(phot.band_names),phot.nproc))

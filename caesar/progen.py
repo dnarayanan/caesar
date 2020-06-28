@@ -124,7 +124,8 @@ def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type
         True = (over)write existing progen data in Caesar object; False = don't recompute, 
         or if not already computed, return computed progens without modifying Caesar file
     n_most : int 
-        Find n_most most massive progenitors/descendants.  Stored as an array for each galaxy
+        Find n_most most massive progenitors/descendants.  Stored as an array for each galaxy.
+        Options are 1 or 2.
     min_in_common : float 
         Require >this fraction of parts in common between object and progenitor to 
         be a valid progenitor.
@@ -248,7 +249,7 @@ def collect_group_IDs(obj, data_type, part_type, snap_dir):
     data_type : str
         'halo', 'galaxy', or 'cloud'
     part_type : str
-        Particle type in ptype_ints.  
+        Particle type
     snap_dir : str
         Path where snapshot files are located; if None, uses obj.simulation.fullpath
 
@@ -316,7 +317,15 @@ def write_progens(obj, data, caesar_file, index_name, redshift):
     return    
 
 def check_if_progen_is_present(caesar_file, index_name):
-    """Check CAESAR file for progen indexes."""
+    """Check CAESAR file for progen indexes.
+
+    Parameters
+    ----------
+    caesar_file : str
+        Name (including path) of Caesar file with tree_data
+    index_name : str
+        Name of progen index to get redshift for (e.g. 'progen_galaxy_star')
+    """
     f = h5py.File(caesar_file,'r')
     present = False
     if 'tree_data/%s' % (index_name) in f: present = True
