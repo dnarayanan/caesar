@@ -46,8 +46,8 @@ a filesize of 1% of the original snapshot, as a ballpark figure.
 Once the ``CAESAR`` catalog has been generated, it can be loaded
 and the data easily accessed using simple python commands.  ``CAESAR``
 also provides additional functionality such as identifying most
-massive progenitors/descendants across snapshots, generating `FSPS
-<http://dfm.io/python-fsps/current/>`_ spectra for objects, and
+massive progenitors/descendants across snapshots (see ``Progen``), generating `FSPS
+<http://dfm.io/python-fsps/current/>`_ spectra for objects (see ``Photometry``), and
 checking for contamination in zoom simulations.  Finally, since the
 ``CAESAR`` catalog contains particle lists for each galaxy and halo,
 it enables you to quickly grab the relevant particle data in the original
@@ -90,8 +90,8 @@ Contents
    running
    loading
    usage
-   photometry
    progen
+   photometry
    units
 
 ----
