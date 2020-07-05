@@ -2,7 +2,7 @@ import six
 import numpy as np
 
 from caesar.property_manager import ptype_ints
-from caesar.group_funcs import get_periodic_r,get_virial_mr
+#from caesar.group_funcs import get_periodic_r,get_virial_mr
 
 MINIMUM_STARS_PER_GALAXY = 24  # set a bit below 32 so we capture all galaxies above a given Mstar, rather than a given Nstar.
 MINIMUM_DM_PER_HALO      = 64

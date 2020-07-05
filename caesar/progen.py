@@ -354,25 +354,70 @@ def get_progen_redshift(caesar_file, index_name):
     z = tree.attrs['z_'+index_name]
     return z
 
-def wipe_progen_info(caesar_file):
+def wipe_progen_info(caesar_file,index_name=None):
     """Remove all progenitor/descendant info from Caesar file.
 
     Parameters
     ----------
     caesar_file : str
         Name (including path) of Caesar file with tree_data
-    index_name : str
-        Name of progen index to get redshift for (e.g. 'progen_galaxy_star')
+    index_name : str (optional)
+        Name (or substring) of progen index to remove (e.g. 'progen_galaxy_star').
+        If not provided, removes *all* progen/descend info
     """
 
     f = h5py.File(caesar_file,'r+')
     for dataset in f.keys():
         for name in f[dataset].keys():
-            if 'progen' in name or 'descend' in name:
-                mylog.info('Deleting %s from %s in %s'%(name,dataset,caesar_file))
-                del f[dataset][name]
+            if index_name is None:
+                if 'progen' in name or 'descend' in name:
+                    mylog.info('Deleting %s from %s in %s'%(name,dataset,caesar_file))
+                    del f[dataset][name]
+            else:
+                if index_name in name:
+                    mylog.info('Deleting %s from %s in %s'%(name,dataset,caesar_file))
+                    del f[dataset][name]
 
-def caesar_filename(snap,prefix,suffix): # return Caesar filename for given Snapshot object
-    return snap.snapdir + '/Groups/' + prefix + snap.snapname.replace('snap_','') + '%.03d'%snap.snapnum + '.' + suffix
+def caesar_filename(snap,prefix,extension): 
+    """return full Caesar filename including filetype extension for given Snapshot object."""
+    return snap.snapdir + '/Groups/' + prefix + snap.snapname.replace('snap_','') + '%.03d'%snap.snapnum + '.' + extension
+
+def z_to_snap(redshift, snaplist_file='Simba', mode='closest'):
+    """Finds snapshot number and snapshot redshift close to input redshift.
+
+    Parameters
+    ----------
+    redshift : float
+        Redshift you want to find snapshot for
+    snaplist_file : str
+        Name (including path) of Caesar file with a list of expansion factors (in 
+        ascending order) at which snapshots are output.  This is the same file as 
+        used when running a Gizmo/Gadget simulation.  
+        'Simba' returns the value for the default Simba simulation snapshot list.
+    mode : str
+        'closest' finds closest one in redshift 
+        'higher'/'upper'/'above' finds the closest output >= redshift
+        'lower'/'below' finds the closest output <= redshift.
+    """
+
+    if snaplist_file.lower() == 'simba':
+         aex_output = np.array([0.010000,0.048194,0.050227,0.052301,0.054418,0.056576,0.058776,0.061018,0.063301,0.065627,0.067994,0.070403,0.072854,0.075347,0.077882,0.080459,0.083077,0.085738,0.088440,0.091185,0.093971,0.096800,0.099670,0.102583,0.105538,0.108535,0.111574,0.114656,0.117780,0.120946,0.124155,0.127406,0.130700,0.134036,0.137415,0.140836,0.144301,0.147808,0.151359,0.154952,0.158589,0.162268,0.165992,0.169758,0.173569,0.177423,0.181321,0.185263,0.189249,0.193280,0.197355,0.201475,0.205640,0.209850,0.214105,0.218406,0.222753,0.227145,0.231584,0.236070,0.240602,0.245181,0.249808,0.254483,0.259206,0.263977,0.268797,0.273667,0.278586,0.283556,0.288576,0.293647,0.298769,0.303944,0.309172,0.314452,0.319787,0.325176,0.330620,0.336120,0.341676,0.347290,0.352962,0.358692,0.364482,0.370333,0.376246,0.382220,0.388259,0.394361,0.400530,0.406765,0.413068,0.419440,0.425883,0.432397,0.438985,0.445648,0.452386,0.459203,0.466098,0.473075,0.480135,0.487280,0.494511,0.501832,0.509243,0.516748,0.524347,0.532045,0.539843,0.547744,0.555751,0.563867,0.572094,0.580435,0.588895,0.597476,0.606181,0.615015,0.623981,0.633084,0.642327,0.651715,0.661253,0.670945,0.680796,0.690812,0.700998,0.711360,0.721904,0.732636,0.743563,0.754692,0.766030,0.777585,0.789364,0.801377,0.813632,0.826138,0.838906,0.851945,0.865267,0.878883,0.892806,0.907047,0.921620,0.936540,0.951821,0.967481,0.983534,1.000000])
+
+    else:
+        aex_output = np.loadtxt(snaplist_file,usecols=[0])
+
+    #mylog.info('Imported %d aex values from %s'%(len(aex_output),snaplist_file))
+
+    z_output = 1./aex_output - 1.
+    idx = (np.abs(z_output-redshift)).argmin() # index of closest redshift
+
+    if mode == 'higher' or mode == 'upper' or mode == 'above':
+        if z_output[idx] < redshift: 
+            idx = max(idx-1,0)
+    elif mode == 'lower' or mode == 'below':
+        if z_output[idx] > redshift: 
+            idx = min(idx+1,len(z_output)-1)
+
+    return idx,z_output[idx]
 
 

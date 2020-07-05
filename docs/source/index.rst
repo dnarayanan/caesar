@@ -17,6 +17,24 @@ that can be read in and explored without the original simulation
 binary.  ``CAESAR`` thus provides a simple and intuitive interface
 for exploring object data within your outputs.
 
+``CAESAR`` provides further functionality such as identifying the
+most massive progenitors or descendants across snapshots (see
+``Progenitors``), and generating `FSPS
+<http://dfm.io/python-fsps/current/>`_ photometry and spectra for
+galaxies (see ``Photometry``).  Also, the ``CAESAR`` catalog
+contains particle ID lists for each galaxy/halo, enabling you
+to quickly grab the relevant particle data in the original snapshot
+in order to compute any other galaxy/halo quantity you want.
+
+``CAESAR`` is OpenMP-parallelized using ``cython-parallel`` and
+``joblib``.  It enjoys decent scaling with the (user-specifiable)
+number of cores.  Catalog generation does, however, have substantial
+memory requirements -- e.g. a run with two billion particles requires a
+machine with 512 GB to generate the catalog, and this scales with the
+number of particles.  The resulting ``CAESAR`` catalog typically has
+a filesize of less than 1% of the original snapshot, so once this is
+generated, using it is not memory-intensive.
+
 ``CAESAR`` generates a catalog as follows:
 
 1. Identify halos (or import a halo membership list)
@@ -37,23 +55,6 @@ for exploring object data within your outputs.
 
 Once the ``CAESAR`` catalog has been generated, it can be loaded
 and the data easily accessed using simple python commands.
-
-``CAESAR`` further provides functionality such as identifying the
-most massive progenitors or descendants across snapshots (see
-``Progenitors``), and generating `FSPS
-<http://dfm.io/python-fsps/current/>`_ photometry and spectra for
-galaxies (see ``Photometry``).  Finally, since the ``CAESAR`` catalog
-contains particle lists for each galaxy and halo, it enables you
-to quickly grab the relevant particle data in the original snapshot
-in order to compute any other quantity you want.
-
-``CAESAR`` is OpenMP-parallelized using ``cython-parallel`` and
-``joblib``.  It enjoys decent scaling with the (user-specifiable)
-number of cores.  It does, however, have somewhat stringent memory
-requirements -- e.g. a run with two billion particles requires a
-machine with 512 GB to generate the catalog, and this scales with
-the number of particles.  The resulting ``CAESAR`` catalog typically
-has a filesize of 1% of the original snapshot, as a ballpark figure.
 
 ``CAESAR`` builds upon the `yt <http://yt-project.org>`_ project,
 which provides support for a number of `simulation codes
@@ -78,7 +79,7 @@ supported by ``CAESAR``, but it may not work out-of-the-box.
 We accept pull requests for further functionality, and bug fixes
 of course.
 
-To get started, follow the Getting Started link below!
+To get started, follow the ``Getting Started`` link below!
 
 ----
 

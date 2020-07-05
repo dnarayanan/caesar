@@ -1,7 +1,7 @@
 from caesar.loader import load
 from caesar.main import CAESAR
 from caesar.driver import drive
-from caesar.group_funcs import get_periodic_r
+#from caesar.group_funcs import get_periodic_r
 
 from caesar.old_loader import load as old_load
 

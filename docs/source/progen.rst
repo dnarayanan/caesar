@@ -10,7 +10,7 @@ Progenitors
 
 The ``progen`` module in ``CAESAR`` links groups across snapshots, by computing the most massive progenitor(s) or descendant(s) for each group in a different snapshot.  
 Groups (i.e. ``galaxy``/``halo``/``cloud``) are linked by finding the most particles in common of a specified particle type (e.g. ``star``).  
-If snapshot numbers are specified in rising order, then descendants are computed; if in falling order, then progenitors are computed.  
+If snapshot numbers are specified in falling order, then progenitors are computed; if in rising order, then descendants are computed.  
 The information is appended into the ``CAESAR`` file within the hdf5 dataset ``tree_data``, and are stored separately for progenitors and descendants, as well as separately for each group type and particle type.
 
 Progen over many snapshots
@@ -23,7 +23,7 @@ Progen over many snapshots
    In [1]: caesar.progen.run_progen('/path/to/snapshots/for/m25n256', 'snap_m25n256_', list(range(151,0,-1), prefix='caesar_')
 
 This will find progenitors (since the snapshots are specified in falling order) in snaphots 0-151 for the snapshots in the directory provided as the first argument, with the snapshot basename provided as the second argument.  
-Any snapshots for which a snapshot file and/or a Caesar file are not found, or for which there is no ``halo_data``, are ignored (with a warning).
+Any snapshots for which a snapshot file or Caesar file are not found, or for which there is no ``halo_data``, are ignored (with a warning).
 
 The snapshot are linked via daisychaining.  That is, in the example above, 151 is linked to 150, 150 to 149, and so on (assuming they all exist).  
 If you want to link two particular snapshots, see "Linking two specific snapshots".
@@ -34,7 +34,7 @@ The example above uses default options for linking progenitors/descendants; othe
 Linking two specific snapshots
 ==============================
 
-``progen_finder()`` links the groups in two specified ``CAESAR`` objects, and then writes it to the specified ``CAESAR`` file.  While normally called from ``run_progen()``, it can be run stand-alone as well.  This is useful if e.g. your locations for snapshots and Caesar files are not as assumed in ``run_progen()``.  Here is an example for using ``progen_finder()``:
+``progen_finder()`` links the groups in two specified ``CAESAR`` objects, and then writes it to the specified ``CAESAR`` file.  While normally called from ``run_progen()``, it can be run stand-alone as well.  This is useful if e.g. your locations for snapshots and Caesar files are not as assumed in ``run_progen()``.  Here is an example using ``progen_finder()``:
 
 .. code-block:: python
 
@@ -45,8 +45,8 @@ Linking two specific snapshots
 
 plus any options you desire as listed in "Progen options".  
 
-``progen_finder()`` returns the progenitor or descendant list, in addition to (optionally) writing to the ``CAESAR`` file.  
-If you set ``overwrite=False``, the progenitor/descendant list is returned without actually writing anything to the Caesar file. This is useful if you don't have write permission, or if you need to link two particular snapshots but don't want to save that for posterity.
+``progen_finder()`` returns the progenitor or descendant list, as well as (by default) writing to the ``CAESAR`` file.  
+If you specify ``overwrite=False``, the progenitor/descendant list is returned without actually writing anything to the Caesar file. This is useful if you want to link two particular snapshots but don't want to save that for posterity.
 
 Progen options
 ==============
@@ -66,9 +66,9 @@ Where is the info stored?
 
 By default, the progenitor/descendant info is stored in the ``tree_data`` dataset within the ``CAESAR`` file.  This is a separate dataset from ``galaxy_data``, ``halo_data``, etc.  Within this, the information is stored as numpy arrays of integers, where each integer corresponds to the index of the group in the other snapshot that is its progenitor/descendant info.
 
-The identifier for each array is created by concatenating three pieces of information: Whether it is a progenitor or descendant; the group type; and the particle type.  An example might be ``progen_galaxy_star``, meaning that the indexes in that array are progenitors of galaxies linked via most numbers of stars in common.  This array will have exactly as many entries as there are galaxies in ``galaxy_data``.  
+The index name for each array is created by concatenating three pieces of information: Whether it is a progenitor or descendant; the group type; and the particle type.  So an example might be ``progen_galaxy_star``, meaning that the indexes in that array are progenitors of galaxies linked via most numbers of stars in common.  This array will have exactly as many entries as there are galaxies in ``galaxy_data``.  
 
-Each of 3 group types can be linked in two ways (``progen``/``descend``) via each of 6 particle types, making for 36 potential arrays being stored in ``tree_data``. In detail, galaxies and clouds do not include dark matter particles so e.g. ``descend_galaxy_dm`` or ``progen_cloud_dm2`` cannot exist, so there are actually 28 potential arrays.
+Each of 3 group types can be linked in two ways (``progen``/``descend``) via each of 6 particle types, making for 36 potential index names being stored in ``tree_data``. In detail, galaxies and clouds do not include dark matter particles so e.g. ``descend_galaxy_dm`` or ``progen_cloud_dm2`` cannot exist, so there are actually 28 potential index names.
 
 Additionally, ``tree_data`` hold the redshift for which the progenitors and/or descendants have been identified.  You can retrieve this info using the ``get_progen_redshift()`` command:
 
@@ -76,15 +76,15 @@ Additionally, ``tree_data`` hold the redshift for which the progenitors and/or d
 
    In [1]: redshift = caesar.progen.get_progen_redshift(my_caesar_file,'descend_galaxy_star')
 
-or similarly for any other choice of ``progen_XXX_YYY`` or ``descend_XXX_YYY`` info.  
+or similarly for any other choice of ``index_name``.
 
 Auxiliary routines
 ==================
 
 Some other potentially useful routines are available in ``progen``:
 
-* ``wipe_progen_info(caesar_file)`` removes all traces of progen'ing in ``caesar_file``.  This should return the ``CAESAR`` file to the state before any progen was run, by removing all datasets containing the word ``progen`` or ``descend``.
+* ``z_to_snap(redshift, snaplist_file, mode)`` finds the closest snapshot in redshift to the provided redshift, from the list specified in ``snaplist_file``.  Specifying ``snaplist_file=Simba`` uses the snapshot values in the Simba simulation suite.  Returns the snapshot number and its redshift.
+* ``wipe_progen_info(caesar_file, [index_name])`` removes ``index_name`` info from ``caesar_file``.  With no ``index_name`` (default), it wipes all datasets containing the word ``progen`` or ``descend``; this should return the ``CAESAR`` file to the state before any progen was run.
 * ``check_if_progen_is_present(caesar_file, index_name)`` checks if the dataset ``index_name`` is in the ``CAESAR`` file ``caesar_file``
 * ``collect_group_IDs(obj, data_type, part_type, snap_dir)`` collects all groups IDs for a given ``data_type`` and ``part_type`` into a single array, and returns the particle and group IDs along with a hash array of length ``ngroups`` which marks the locations of the start of each group.
-
 
