@@ -297,8 +297,8 @@ cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] gro
     L[5] = <float>(2.*m_counterrot / m_tot)
     # if L[5] > 1.: L[5] = 1.
     L[6] = <float>(krot / ktot)  # kappa_rot
-    if L[5] > 1 and ip == 0:
-        printf("TROUBLE? npart=%d BoverT=%g  kappa_rot=%g L=%g\n",npt,L[5],L[6],Lmag)
+    #if L[5] > 1 and ip == 0:
+    #    printf("TROUBLE? npart=%d BoverT=%g  kappa_rot=%g L=%g\n",npt,L[5],L[6],Lmag)
 
     return
 
