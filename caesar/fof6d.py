@@ -274,7 +274,7 @@ class fof6d:
         return False
 
     def save_fof6dfile(self):
-        if 'fof6d_file' not in self.obj._kwargs:
+        if 'fof6d_file' not in self.obj._kwargs or self.obj._kwargs['fof6d_file'] is None:
             return
         fof6d_file = self.obj._kwargs['fof6d_file']
         memlog('Writing fof6d info to %s' % fof6d_file)
