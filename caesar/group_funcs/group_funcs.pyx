@@ -247,7 +247,6 @@ cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] gro
             for idim in range(3):
                 p[idim] = pinfo[i].m * pinfo[i].v[idim]  # Note: pinfo.x and .v are w.r.t. group center
                 x[idim] = pinfo[i].x[idim]
-                v[idim] = pinfo[i].v[idim]
             # compute angular momentum vector
             L[0] += x[1]*p[2] - x[2]*p[1]
             L[1] += x[2]*p[0] - x[0]*p[2]
@@ -260,9 +259,9 @@ cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] gro
     e[0] = c_sin(theta) * c_cos(phi)
     e[1] = c_sin(theta) * c_sin(phi)
     e[2] = c_cos(theta)
-    L[3] = c_atan2(L[1],L[2])  # this is ALPHA
+    L[3] = c_atan2(L[1],L[2])  # this is ALPHA (yaw)
     nogil_rotator(e, L[3], 0.0)
-    L[4] = c_atan2(e[0],e[2])  # this is BETA
+    L[4] = c_atan2(e[0],e[2])  # this is BETA (pitch)
 
     # compute bulge-to-total ratio based on kinematic decomposition
     for i in range(npart):
@@ -288,7 +287,7 @@ cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] gro
 
     # bulge_to_total is defined as twice the fraction of counter-rotating mass
     L[5] = <float>(2.*m_counterrot / m_tot)
-    if L[5] > 1.: L[5] = 1.
+    # if L[5] > 1.: L[5] = 1.
     L[6] = <float>(krot / ktot)  # kappa_rot
 
     return
@@ -328,15 +327,10 @@ cdef void nogil_virial_quants(part_struct *pinfo, double[:] Densities, int npart
 @cython.wraparound(False)
 @cython.boundscheck(False)
 cdef void nogil_rotator(float *vector, float ALPHA, float BETA) nogil:
-    """Rotate a vector through rotator angles ALPHA, BETA.
+    """Rotate a vector through rotator angles ALPHA, BETA, which are the yaw and pitch angles.  
+    See https://en.wikipedia.org/wiki/Rotation_matrix
 
-    vectors : Nx3 array of values you want to rotate (usually pos's or vel's)
-    Rx : 3x3 array used for the first rotation about ALPHA.
-        The dot product is taken against each value:
-        vals[i] = np.dot(Rx, vals[i])
-    Ry : 3x3 array used for the second rotation about BETA
-        The dot product is taken against each value:
-        vals[i] = np.dot(Ry, vals[i])
+    vector : 3-dim vector you want to rotate (usually pos's or vel's)
     ALPHA : Angle to rotate around first.
     BETA : Angle to rotate around second.
     """
@@ -351,14 +345,14 @@ cdef void nogil_rotator(float *vector, float ALPHA, float BETA) nogil:
     c = c_cos(ALPHA)
     s = c_sin(ALPHA)
     
-    if ALPHA != 0:  # this rotates around x-axis, so x doesn't change
+    if ALPHA != 0:  # this rotates around x-axis ("yaw"), so x doesn't change
         vector[1] = c*vcopy[1] - s*vcopy[2]
         vector[2] = s*vcopy[1] + c*vcopy[2]
 
     c = c_cos(BETA)
     s = c_sin(BETA)
 
-    if BETA != 0:
+    if BETA != 0:  # now rotate around y-axis ("pitch")
         vector[0] = c*vcopy[0] - s*vcopy[2]
         vector[2] = s*vcopy[0] + c*vcopy[2]
 

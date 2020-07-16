@@ -99,7 +99,12 @@ def run_caesar(infile, args):
         outfile = 'caesar_%s.hdf5' % (infile[:-4])
 
     else:
-        outfile = 'caesar_%s' % (infile) 
+        if 'snapshot_' in infile:
+            outfile = infile.replace('snapshot_','caesar_')
+        elif 'snap_' in infile:
+            outfile = infile.replace('snap_','caesar_')
+        else:
+            outfile = 'caesar_%s' % (infile) 
 
     from .main import CAESAR
     ds = yt.load(infile)
