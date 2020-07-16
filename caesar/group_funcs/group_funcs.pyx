@@ -221,9 +221,9 @@ cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] gro
     cdef float x[3]
     cdef float v[3]
     cdef float e[3]
-    cdef double Lmag,phi,theta,jz,rz,v2
+    cdef double Lmag,phi,theta,jx,jy,jz,rx,ry,rz,v2,vphi
     cdef double krot=0., ktot=0.
-    cdef double m_tot=0., m_counterrot=0.
+    cdef double m_tot=0., m_counterrot=0., jtot=0.
 
     # first find center-of-mass velocity for this particle type
     ngp = len(group_ptypes)
@@ -270,25 +270,35 @@ cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] gro
             # load info for desired particle type
             v2 = 0.
             for idim in range(3):
+                p[idim] = pinfo[i].m * pinfo[i].v[idim]  # Note: pinfo.x and .v are w.r.t. group center
                 x[idim] = pinfo[i].x[idim]
-                v[idim] = pinfo[i].v[idim]
-                v2 += v[idim]*v[idim]
-            nogil_rotator(x,L[3],L[4])  # rotate positions and velocities to align with L
-            nogil_rotator(v,L[3],L[4])
-            rz = c_sqrt(x[0]*x[0] + x[1]*x[1])  # distance to axis of rotation
-            jz = x[0]*v[1] - x[1]*v[0]  # specific angular momentum of this particle
+                v2 += pinfo[i].v[idim]*pinfo[i].v[idim]
+            #nogil_rotator(x,L[3],L[4])  # rotate positions and momenta to align with L
+            #nogil_rotator(p,L[3],L[4])
+            jx = x[1]*p[2] - x[2]*p[1]
+            jy = x[2]*p[0] - x[0]*p[2]
+            jz = x[0]*p[1] - x[1]*p[0]
             # for bulge-to-total, add up mass of particle rotating against L
-            if jz < 0:
+            if jx*L[0] + jy*L[1] + jz*L[2] < 0:
                 m_counterrot += pinfo[i].m
             m_tot += pinfo[i].m
+            # to compute kappa_rot, need j along L direction = j dot L / |L|
+            jz = (jx*L[0] + jy*L[1] + jz*L[2]) / Lmag
+            # also need distance of particle to L vector rz = r X L / |L|
+            rx = x[1]*L[2] - x[2]*L[1]
+            ry = x[2]*L[0] - x[0]*L[2]
+            rz = x[0]*L[1] - x[1]*L[0]
+            rz = c_sqrt(rx*rx+ry*ry+rz*rz)/Lmag
             # compute kappa_rot, which is fraction of KE in ordered rotation (Sales+11 eq 1)
-            if rz > 0: krot += 0.5*pinfo[i].m*(jz/rz)**2   # this is 0.5*m*vphi^2
+            if rz>0: krot += 0.5*(jz/rz)**2/pinfo[i].m
             ktot += 0.5*pinfo[i].m*v2
 
     # bulge_to_total is defined as twice the fraction of counter-rotating mass
     L[5] = <float>(2.*m_counterrot / m_tot)
     # if L[5] > 1.: L[5] = 1.
     L[6] = <float>(krot / ktot)  # kappa_rot
+    if L[5] > 1 and ip == 0:
+        printf("TROUBLE? npart=%d BoverT=%g  kappa_rot=%g L=%g\n",npt,L[5],L[6],Lmag)
 
     return
 
