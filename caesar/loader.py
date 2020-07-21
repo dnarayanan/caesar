@@ -243,6 +243,10 @@ class CAESAR:
                     self._cloud_index_list = LazyDataset(
                         self, 'galaxy_data/lists/cloud_index_list')
 
+                if 'tree_data/progen_galaxy_star' in hd:
+                    self._galaxy_data['progen_galaxy_star'] = self._progen_galaxy_star = LazyDataset(
+                        self, 'tree_data/progen_galaxy_star')
+
                 for k, v in hd['galaxy_data'].items():
                     if type(v) is h5py.Dataset:
                         self._galaxy_data[k] = LazyDataset(
