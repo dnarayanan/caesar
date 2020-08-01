@@ -654,7 +654,7 @@ class Group(object):
         pprint(pdict)
         pdict = None
 
-    def contamination_check(self, lowres=[2,3,5], search_factor=2.5,
+    def contamination_check(self, lowres=[2,3,5], search_factor=1.0,
                             printer=True):
         """Check for low resolution particle contamination.
 
@@ -694,13 +694,13 @@ class Group(object):
             halo = self.halo
             ID   = "Galaxy %d's halo (ID %d)" % (self.GroupID, halo.GroupID)
         
-        r = halo.radii['virial'].d * search_factor
+        r = halo.virial_quantities['r200c'].d * search_factor
 
         result  = self.obj._lowres['TREE'].query_ball_point(halo.pos.d, r)
         ncontam = len(result)
         lrmass  = np.sum(self.obj._lowres['MASS'][result])
 
-        self.contamination = lrmass / halo.masses['total'].d
+        self.contamination = lrmass / halo.virial_quantities['m200c'].d
         
         if not printer:
             return
