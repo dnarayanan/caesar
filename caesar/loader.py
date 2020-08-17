@@ -246,6 +246,10 @@ class CAESAR:
                 if 'tree_data/progen_galaxy_star' in hd:
                     self._galaxy_data['progen_galaxy_star'] = self._progen_galaxy_star = LazyDataset(
                         self, 'tree_data/progen_galaxy_star')
+                    
+                if 'tree_data/descend_galaxy_star' in hd:
+                    self._galaxy_data['descend_galaxy_star'] = self._descend_galaxy_star = LazyDataset(
+                        self, 'tree_data/descend_galaxy_star')
 
                 for k, v in hd['galaxy_data'].items():
                     if type(v) is h5py.Dataset:
