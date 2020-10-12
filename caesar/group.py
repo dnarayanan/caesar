@@ -788,7 +788,7 @@ def get_group_properties(self,grp_list):
         sort_groups(grp_list,'total')
         self.obj.halos = self.obj.halo_list
         self.obj.nhalos = len(self.obj.halo_list)
-    if self.obj_type == 'galaxy':
+    if (self.obj_type == 'galaxy') and (len(grp_list) > 0):
         # compute some extra quantities for galaxies 
         from caesar.hydrogen_mass_calc import get_HIH2_masses,get_aperture_masses
         if 'aperture' in self.obj._kwargs: aperture = float(self.obj._kwargs['aperture'])
