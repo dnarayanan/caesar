@@ -237,7 +237,8 @@ class DatasetType(object):
             (requested_prop == 'pos' or requested_prop == 'vel')):
             data = self._get_gas_grid_posvel(requested_prop)
         else:
-            if self.ds_type == 'GizmoDataset':  # assumes this has Simba units, which is fairly standard
+            if self.ds_type == 'GizmoDataset' or self.ds_type == None:  # assumes this has Simba units, which is fairly standard
+            #if self.ds_type == None:  # assumes this has Simba units, which is fairly standard
                 data = self._get_simba_property(requested_ptype,requested_prop)
             else:
                 data = self.dd[ptype, prop].astype(MY_DTYPE)

@@ -66,7 +66,7 @@ setup(
     version=VERSION,
     description='CAESAR is a python library for analyzing the outputs from cosmological simulations.',
     url='https://github.com/dnarayanan/caesar',
-    author='Robert Thompson, Desika Narayanan, Romeel Davé, Benjamin Kimock',
+    author='Robert Thompson, Desika Narayanan, Romeel Dave, Benjamin Kimock',
     author_email='desika.narayanan@gmail.com',
     license='not sure',
     classifiers=[],

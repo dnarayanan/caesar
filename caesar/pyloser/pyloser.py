@@ -50,6 +50,8 @@ class photometry:
         yt object associated with CAESAR object, only needed if running interactively
     band_names : str or list of str
         List of FSPS bands to compute photometry for
+    ssp_model : str
+        Currently 'FSPS' or 'BPASS' (only needed if generating a new SSP table)
     ssp_table_file : str
         Filename (including path) of SSP table to generate or read in
     view_dir : str
@@ -65,7 +67,7 @@ class photometry:
         Number of OpenMP cores, negative means use all but (nproc+1) cores.
     """
 
-    def __init__(self, obj, group_list, ds=None, band_names='v', ssp_table_file='SSP_Chab_EL.hdf5', view_dir='x', use_dust=True, use_cosmic_ext=True, kernel_type='cubic', nproc=-1):
+    def __init__(self, obj, group_list, ds=None, band_names='v', ssp_model='FSPS', ssp_table_file='SSP_Chab_EL.hdf5', view_dir='x', use_dust=True, use_cosmic_ext=True, kernel_type='cubic', nproc=-1):
 
         from caesar.property_manager import ptype_ints
         self.obj = obj  # caesar object
@@ -76,6 +78,9 @@ class photometry:
         if hasattr(self.obj,'_kwargs') and 'fsps_bands' in self.obj._kwargs:
             self.band_names = self.obj._kwargs['fsps_bands']
         self.ssp_table_file = os.path.expanduser('~/caesar/%s'%ssp_table_file)
+        self.ssp_model = ssp_model
+        if hasattr(self.obj,'_kwargs') and 'ssp_model' in self.obj._kwargs:
+            self.ssp_model = self.obj._kwargs['ssp_model']
         if hasattr(self.obj,'_kwargs') and 'ssp_table_file' in self.obj._kwargs:
             self.ssp_table_file = self.obj._kwargs['ssp_table_file']
         self.ext_law = 'mw'
@@ -216,7 +221,7 @@ class photometry:
         self.Nobjs = len(self.groups)
 
         # get original stellar mass at time of formation
-        self.obj.smass_orig = smass_at_formation(self.obj,self.groups,self.ssp_mass,self.ssp_ages,nproc=self.nproc)
+        self.obj.smass_orig = smass_at_formation(self.obj,self.groups,self.ssp_mass,self.ssp_ages,self.ssp_logZ,nproc=self.nproc)
 
         memlog('Loaded %d stars and %d gas in %d objects to process'%(self.scount,self.gcount,self.Nobjs))
         return
@@ -284,6 +289,7 @@ class photometry:
             self.band_iwave1[ib] = ind[-1]+1
             ftrans = np.interp(self.ssp_wavelengths[ind],band_wave,band_trans)  # transmission at those wavelengths
             dnu = CLIGHT_AA/self.ssp_wavelengths[ind[0]:ind[-1]+1] - CLIGHT_AA/self.ssp_wavelengths[ind[0]+1:ind[-1]+2]  # convert to delta-nu
+            #dnu = self.ssp_wavelengths[ind[0]+1:ind[-1]+2] - self.ssp_wavelengths[ind[0]:ind[-1]+1]  # delta-lambda
             self.band_ftrans = np.append(self.band_ftrans, ftrans*dnu)
             self.band_indexes[ib+1] = len(self.band_ftrans)
             # Now set up band for apparent mag computation
@@ -293,6 +299,7 @@ class photometry:
             self.band_iwz1[ib] = ind[-1]+1
             ftrans = np.interp(self.ssp_wavelengths[ind],band_wave*self.obj.simulation.scale_factor,band_trans)  # transmission at those wavelengths
             dnu = CLIGHT_AA/self.ssp_wavelengths[ind[0]:ind[-1]+1] - CLIGHT_AA/self.ssp_wavelengths[ind[0]+1:ind[-1]+2]  # convert to delta-nu
+            #dnu = self.ssp_wavelengths[ind[0]+1:ind[-1]+2] - self.ssp_wavelengths[ind[0]:ind[-1]+1]  # delta-lambda
             self.band_ztrans = np.append(self.band_ztrans, np.array(ftrans*dnu*cosmic_ext[ind]))
             self.band_indz[ib+1] = len(self.band_ztrans)
 
@@ -312,7 +319,15 @@ class photometry:
             except:
                 memlog('Error reading SSP table %s, will generate...'%self.ssp_table_file)
         if not read_flag:  # generate table with Caesar default options
-            ssp_ages, ssp_logZ, mass_remaining, wavelengths, ssp_spectra = generate_ssp_table(self.ssp_table_file, return_table=True, imf_type=1,add_neb_emission=True,sfh=0,zcontinuous=1)  # note Caesar default FSPS options; run generate_ssp_table() separately to set desired FSPS options
+            if self.ssp_model == 'FSPS':
+                ssp_ages, ssp_logZ, mass_remaining, wavelengths, ssp_spectra = generate_ssp_table_fsps(self.ssp_table_file, return_table=True, imf_type=1,add_neb_emission=True,sfh=0,zcontinuous=1)  # note Caesar default FSPS options; run generate_ssp_table() separately to set desired FSPS options
+            elif self.ssp_model == 'BPASS':
+                ssp_ages, ssp_logZ, mass_remaining, wavelengths, ssp_spectra = generate_ssp_table_bpass(self.ssp_table_file, return_table=True)
+            elif self.ssp_model == 'BC03':
+                ssp_ages, ssp_logZ, mass_remaining, wavelengths, ssp_spectra = generate_ssp_table_bc03(self.ssp_table_file, return_table=True)
+            else:
+                print('ssp_model=%s not recognized in generate_ssp_table()')
+                sys.exit(-1)
             self.ssp_ages = np.array(ssp_ages,dtype=MY_DTYPE)
             self.ssp_logZ = np.array(ssp_logZ,dtype=MY_DTYPE)
             self.ssp_mass = np.array(mass_remaining,dtype=MY_DTYPE)
@@ -334,12 +349,12 @@ class photometry:
         self.ssp_spectra = np.array(ssp_spectra,dtype=MY_DTYPE)
 
 
-def generate_ssp_table(ssp_lookup_file,Zsol=Solar['total'],oversample=[2,2],return_table=False,**fsps_options):
+def generate_ssp_table_fsps(ssp_lookup_file,Zsol=Solar['total'],oversample=[2,2],return_table=False,**fsps_options):
         '''
         Generates an SPS lookup table, oversampling in [age,metallicity] by oversample
         '''
         import fsps
-        mylog.info('Generating SSP lookup table %s'%(ssp_lookup_file))
+        mylog.info('Generating FSPS SSP lookup table %s'%(ssp_lookup_file))
         mylog.info('with FSPS options: %s'%(fsps_options))
         fsps_opts = ''
         for key, value in fsps_options.items():
@@ -348,15 +363,11 @@ def generate_ssp_table(ssp_lookup_file,Zsol=Solar['total'],oversample=[2,2],retu
         fsps_ssp = fsps.StellarPopulation(**fsps_options)
         wavelengths = fsps_ssp.wavelengths
         ssp_ages = []
-        mass_remaining = []
         ssp_ages.append(fsps_ssp.ssp_ages[0])
-        mass_remaining.append(fsps_ssp.stellar_mass[0])
         for i in range(len(fsps_ssp.ssp_ages)-1):
             for j in range(i+1,i+oversample[0]):
                 ssp_ages.append((fsps_ssp.ssp_ages[j]-fsps_ssp.ssp_ages[j-1])*(j-i)/oversample[0]+fsps_ssp.ssp_ages[j-1])
-                mass_remaining.append((fsps_ssp.stellar_mass[j]-fsps_ssp.stellar_mass[j-1])*(j-i)/oversample[0]+fsps_ssp.stellar_mass[j-1])
             ssp_ages.append(fsps_ssp.ssp_ages[j])
-            mass_remaining.append(fsps_ssp.stellar_mass[j])
         ssp_logZ = []
         ssp_logZ.append(fsps_ssp.zlegend[0])
         for i in range(len(fsps_ssp.zlegend)-1):
@@ -365,11 +376,13 @@ def generate_ssp_table(ssp_lookup_file,Zsol=Solar['total'],oversample=[2,2],retu
             ssp_logZ.append(fsps_ssp.zlegend[j])
         ssp_logZ = np.log10(ssp_logZ)
         ssp_spectra = []
-        for age in ssp_ages:
-            for Zmet in ssp_logZ:
+        mass_remaining = []
+        for Zmet in ssp_logZ:
+            for age in ssp_ages:
                 fsps_ssp.params["logzsol"] = Zmet-np.log10(Zsol)
                 spectrum = fsps_ssp.get_spectrum(tage=10**(age-9))[1]
                 ssp_spectra.append(spectrum)
+                mass_remaining.append(fsps_ssp.stellar_mass)
         with h5py.File(ssp_lookup_file, 'w') as hf:
             hf.create_dataset('fsps_options',data=fsps_opts)
             hf.create_dataset('ages',data=ssp_ages)
@@ -377,8 +390,168 @@ def generate_ssp_table(ssp_lookup_file,Zsol=Solar['total'],oversample=[2,2],retu
             hf.create_dataset('mass_remaining',data=mass_remaining)
             hf.create_dataset('wavelengths',data=wavelengths)
             hf.create_dataset('spectra',data=ssp_spectra)
-        memlog('Generated lookup table with %d ages and %d metallicities'%(len(ssp_ages),len(ssp_logZ)))
+        memlog('Generated FSPS lookup table with %d ages and %d metallicities'%(len(ssp_ages),len(ssp_logZ)))
 
         if return_table:
             return ssp_ages, ssp_logZ, mass_remaining, wavelengths, ssp_spectra
+
+def generate_ssp_table_bpass(ssp_lookup_file,Zsol=Solar['total'],return_table=False,model_dir = '/home/rad/caesar/BPASSv2.2.1_bin-imf_chab100'):
+        '''
+        Generates an SPS lookup table from BPASS.
+        '''
+        from hoki import load
+        from glob import glob
+
+        mylog.info('Generating BPASS SSP lookup table %s'%(ssp_lookup_file))
+        mylog.info('Using BPASS files in: %s'%(model_dir))
+
+        specfiles = glob(model_dir+'/spectra*')  # these must be gunzipped
+        smfiles = glob(model_dir+'/starmass*')  # these must be gunzipped
+        output_temp = load.model_output(specfiles[0])
+        #output_temp = output_temp[(output_temp.WL>LAMBDA_LO)&(output_temp.WL<LAMBDA_HI)]  # restrict wavelength range for faster calculations
+        #print(specfiles[0],output_temp)
+
+        ages = np.array([float(a) for a in output_temp.columns[1:]])
+        age_mask = (10**ages / 1e9) < 18 # Gyr
+        ages = ages[age_mask]
+
+        wavelengths = output_temp['WL'].values
+        metallicities = np.array([None] * len(specfiles))
+
+        for i,mod in enumerate(specfiles):  # parse metallicities from filenames
+            try:
+                metallicities[i] = float('0.'+mod[-7:-4])
+            except: # ...handle em5=1e-5 and em4=1e-4 cases
+                metallicities[i] = 10**-float(mod[-5])
+
+        # sort by increasing metallicity
+        Z_idx = np.argsort(metallicities)
+        metallicities = metallicities[Z_idx].astype(float)
+
+        ssp_spectra = np.zeros((len(ages)*len(metallicities),len(wavelengths)))
+        for iZ,mod in enumerate(np.array(specfiles)[Z_idx]):
+            output = load.model_output(mod)
+            #output = output[(output.WL>LAMBDA_LO)&(output.WL<LAMBDA_HI)]  # restrict wavelength range for faster calculations
+            for iage,a in enumerate(ages):
+                j = iZ * len(ages) + iage
+                ssp_spectra[j] = output[str(a)].values
+                ssp_spectra[j] *= wavelengths**2 / CLIGHT_AA  # convert from per AA to per Hz
+
+        mass_remaining = []
+        for i,mod in enumerate(np.array(smfiles)[Z_idx]):
+            output = load.model_output(mod)
+            mass_remaining.append(output['stellar_mass'].values)
+        mass_remaining = np.asarray(mass_remaining).flatten()/1.e6  # to Mo
+
+        # convert units
+        ssp_ages = ages # log yr
+        ssp_logZ = np.log10(metallicities)  
+        ssp_spectra /= 1e6 # to Msol
+        #print(np.shape(mass_remaining),mass_remaining)
+
+        with h5py.File(ssp_lookup_file, 'w') as hf:
+            hf.create_dataset('fsps_options',data=model_dir)
+            hf.create_dataset('ages',data=ssp_ages)
+            hf.create_dataset('logZ',data=ssp_logZ)
+            hf.create_dataset('mass_remaining',data=mass_remaining)
+            hf.create_dataset('wavelengths',data=wavelengths)
+            hf.create_dataset('spectra',data=ssp_spectra)
+        memlog('Generated BPASS lookup table with %d ages and %d metallicities'%(len(ssp_ages),len(ssp_logZ)))
+
+        if return_table:
+            return ssp_ages, ssp_logZ, mass_remaining, wavelengths, ssp_spectra
+
+def generate_ssp_table_bc03(ssp_lookup_file,Zsol=Solar['total'],return_table=False,model_dir='/home/rad/caesar/bc03/models/Padova1994/chabrier'):
+        '''
+        Generates an SPS lookup table from BC03 data.
+        '''
+        import pandas as pd
+
+        mylog.info('Generating BC03 SSP lookup table %s'%(ssp_lookup_file))
+        mylog.info('Using BC03 files in: %s'%(model_dir))
+
+        if 'Padova1994' in model_dir:
+            metallicities = np.array([0.0001,0.0004,0.004,0.008,0.02,0.05])  # for Padova 1994 library
+        elif 'Padova2000' in model_dir:
+            metallicities = np.array([0.0001,0.0004,0.004,0.008,0.019,0.03])  # for Padova 2000 library (not recommended)
+        ssp_logZ = np.log10(metallicities)  
+
+        for iZ in range(len(metallicities)):
+            ised_file = '%s/bc2003_hr_m%d2_chab_ssp.ised_ASCII'%(model_dir,iZ+2)  # must be un-gzipped!
+
+            # read in entire file
+            f = open(ised_file,'r')
+            data = f.read().split()
+
+            # get ages
+            nage = int(data[0])
+            ssp_ages = np.array([np.log10(max(float(x),1.e5)) for x in data[1:nage+1]])
+
+            # get wavelengths
+            count = len(ssp_ages)
+            while( data[count] != '1221' and data[count] != '6900' ):  # look for possible BC03 nwave values
+                count += 1
+            nwave = int(data[count])
+            wavelengths = np.array([(float(x)) for x in data[count+1:nwave+count+1]])
+            count = nwave+count+1
+
+            # initialize arrays
+            if iZ == 0:
+                ssp_spectra = np.zeros((nage*len(metallicities),nwave))
+                mass_remaining = []
+
+            # get spectra
+            for iage in range(nage):
+                spec = np.array([(float(x)) for x in data[count+1:nwave+count+1]])
+                ssp_spectra[iZ*nage+iage] = spec * wavelengths**2 / CLIGHT_AA
+                count += nwave+54  # skip past the unknown 52 extra numbers at the end of each line
+
+            # get mass remaining
+            m_file = '%s/bc2003_hr_m%d2_chab_ssp.4color'%(model_dir,iZ+2)  
+            logage,msleft = np.loadtxt(m_file,usecols=(0,6),unpack=True)
+            msleft = np.append(np.array([1.0]),msleft)
+            mass_remaining.append(msleft)
+
+        mass_remaining = np.asarray(mass_remaining).flatten()
+
+        with h5py.File(ssp_lookup_file, 'w') as hf:
+            hf.create_dataset('fsps_options',data=model_dir)
+            hf.create_dataset('ages',data=ssp_ages)
+            hf.create_dataset('logZ',data=ssp_logZ)
+            hf.create_dataset('mass_remaining',data=mass_remaining)
+            hf.create_dataset('wavelengths',data=wavelengths)
+            hf.create_dataset('spectra',data=ssp_spectra)
+        memlog('Generated BC03 lookup table with %d ages and %d metallicities'%(len(ssp_ages),len(ssp_logZ)))
+
+        if return_table:
+            return ssp_ages, ssp_logZ, mass_remaining, wavelengths, ssp_spectra
+
+
+## For testing: Routine to return a single SSP spectrum at nearest age, Z
+
+def find_nearest(array, value):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return idx
+
+def get_ssp_spectrum(ssp_lookup_file,age,met):
+    # age in log(yr), met in log(Z/Zsun)
+    hf = h5py.File(ssp_lookup_file,'r')
+    for i in hf.keys():
+        if i=='wavelengths': wavelengths = np.array(list(hf[i]))
+        if i=='mass_remaining': mass_remaining = np.array(list(hf[i]))
+        if i=='ages': ssp_ages = np.array(list(hf[i]))
+        if i=='logZ': ssp_logZ = np.array(list(hf[i]))
+        if i=='spectra': ssp_spectra = np.array(list(hf[i]))
+    iage = find_nearest(ssp_ages, age)
+    imet = find_nearest(ssp_logZ, met)
+    nage = len(ssp_ages)
+    ispec = imet*nage + iage
+    spec = ssp_spectra[ispec]
+    if 'skjdfhl' in ssp_lookup_file:
+        print(ssp_lookup_file,ssp_ages,ssp_logZ)
+        print(mass_remaining)
+        print(ssp_lookup_file,iage,imet,ssp_ages[iage],ssp_logZ[imet],spec)
+    return wavelengths,spec
+
 

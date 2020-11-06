@@ -10,7 +10,6 @@ import six
 from yt.funcs import mylog
 from yt.extern.tqdm import tqdm
 from yt.units.yt_array import uconcatenate, YTArray
-from yt.data_objects.octree_subset import YTPositionArray
 from yt.utilities.lib.contour_finding import ParticleContourTree
 from yt.geometry.selection_routines import AlwaysSelector
 

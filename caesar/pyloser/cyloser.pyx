@@ -207,9 +207,7 @@ cdef void get_galaxy_spectrum(int istart, int iend, float[:] sm, float[:] sage, 
         spec_nd[i] = 0.
     for ip in range(istart,iend):
         # get spectrum of 1 Mo star interpolated to its age and metallicity
-        zsign = interp_tab(sage[ip],sZ[ip],nlam,nage,nZ,ssp_wavelengths,ssp_ages,ssp_logZ,ssp_spectra,spec_star)
-        j = <int>(zsign / nage)  # this is iZ
-        zsign -= j*nage  # this is iage
+        interp_tab(sage[ip],sZ[ip],nlam,nage,nZ,ssp_wavelengths,ssp_ages,ssp_logZ,ssp_spectra,spec_star)
         extinction(sAV[ip],extinct,nextinct,ssfr,Zgal,nlam,dust_ext)
         zfact = svz[ip]/3.e10
         if zfact >= 0: zsign = 1
@@ -236,7 +234,7 @@ cdef void get_galaxy_spectrum(int istart, int iend, float[:] sm, float[:] sage, 
 @cython.boundscheck(False)
 cdef int index_search(float x, float[:] myvec, int nvec) nogil:
     ''' Determines index of value in myvec that is closest but just below x, via bisection search.
-    Assumes myvec is sorted in in increasing order.'''
+    Assumes myvec is sorted in increasing order.'''
     cdef int ilo=0, ihi, imid
 
     if x < myvec[0]: return 0
@@ -256,7 +254,7 @@ cdef int index_search(float x, float[:] myvec, int nvec) nogil:
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef int interp_tab(float age,float met, int nlam, int nage, int nZ, float[:] ssp_wavelengths, float[:] ssp_ages, float[:] ssp_logZ, float[:,:] ssp_spectra, float *spec_star) nogil:
+cdef void interp_tab(float age,float met, int nlam, int nage, int nZ, float[:] ssp_wavelengths, float[:] ssp_ages, float[:] ssp_logZ, float[:,:] ssp_spectra, float *spec_star) nogil:
 
     cdef int i,iage,iZ,i00,i01,i10,i11
     cdef float logage, logZ, fage, fZ
@@ -267,14 +265,14 @@ cdef int interp_tab(float age,float met, int nlam, int nage, int nZ, float[:] ss
     iZ = index_search(logZ,ssp_logZ,nZ)
     fage = (logage-ssp_ages[iage])/(ssp_ages[iage+1]-ssp_ages[iage])
     fZ = (logZ-ssp_logZ[iZ])/(ssp_logZ[iZ+1]-ssp_logZ[iZ])
-    i00 = iage*nZ+ iZ
-    i01 = iage*nZ + iZ + 1
-    i10 = (iage+1)*nZ + iZ
-    i11 = (iage+1)*nZ + iZ + 1
+    i00 = iZ*nage+ iage
+    i01 = iZ*nage + iage + 1
+    i10 = (iZ+1)*nage + iage
+    i11 = (iZ+1)*nage + iage + 1
     for i in range(nlam):
-        spec_star[i] = fage*fZ*ssp_spectra[i11,i] + fage*(1-fZ)*ssp_spectra[i10,i] + (1-fage)*fZ*ssp_spectra[i01,i] + (1-fage)*(1-fZ)*ssp_spectra[i00,i]
+        spec_star[i] = fage*fZ*ssp_spectra[i11,i] + (1-fage)*fZ*ssp_spectra[i10,i] + fage*(1-fZ)*ssp_spectra[i01,i] + (1-fage)*(1-fZ)*ssp_spectra[i00,i]
 
-    return iage + nage*iZ
+    return 
 
 @cython.cdivision(True)
 @cython.wraparound(False)
@@ -425,32 +423,44 @@ def init_kerntab(phot):
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-def smass_at_formation(obj,group_list,ssp_origmass,ssp_ages,nproc=16):
+def smass_at_formation(obj,group_list,ssp_origmass,ssp_ages,ssp_logZ,nproc=16):
 
     from caesar.property_manager import ptype_ints
-    import fsps
 
     # get original stellar mass at time of formation
     obj.smass_orig = np.zeros(obj.simulation.nstar,dtype=MY_DTYPE)
     ptype = obj.data_manager.ptype
 
     cdef:
-        int istar,iage
+        int istar,iage,iZ
         float[:] smass = obj.data_manager.mass[ptype==ptype_ints['star']]
         float[:] sage = obj.data_manager.age
+        float[:] sZ = obj.data_manager.sZ
         int nstar = len(smass)
         float[:] ssp_morig = ssp_origmass  # fraction of original mass remaining
         float[:] ssp_age = ssp_ages
+        float[:] ssp_met = ssp_logZ
         int nage = len(ssp_age)
+        int nZ = len(ssp_met)
         int my_nproc = nproc
-        float logage,fage
+        float logage,fage,logZ,fZ
+        int i00,i01,i10,i11
         float[:] smorig = np.zeros(nstar,dtype=MY_DTYPE)  # quantity to compute
 
     for istar in prange(nstar,nogil=True,num_threads=my_nproc):
         logage = c_log10(sage[istar]+1.e-20)+9
+        logZ = c_log10(sZ[istar]+1.e-20)
         iage = index_search(logage,ssp_age,nage)
         fage = (logage-ssp_age[iage])/(ssp_age[iage+1]-ssp_age[iage])
-        smorig[istar] = smass[istar] / (fage*ssp_morig[iage+1] + (1.-fage)*ssp_morig[iage])
+        iZ = index_search(logZ,ssp_met,nZ)
+        fZ = (logZ-ssp_met[iZ])/(ssp_met[iZ+1]-ssp_met[iZ])
+        i00 = iZ*nage+ iage
+        i01 = iZ*nage + iage + 1
+        i10 = (iZ+1)*nage + iage
+        i11 = (iZ+1)*nage + iage + 1
+        smorig[istar] = fage*fZ*ssp_morig[i11] + (1-fage)*fZ*ssp_morig[i10] + fage*(1-fZ)*ssp_morig[i01] + (1-fage)*(1-fZ)*ssp_morig[i00]  # look up remaining mass fraction
+        #printf("%d %g %g %g\n",istar,logage,logZ,smorig[istar])
+        smorig[istar] = smass[istar] / smorig[istar]  # correct to original mass
 
     return np.array(smorig)
 

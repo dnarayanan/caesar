@@ -9,7 +9,6 @@ from caesar.fof6d import run_fof_6d
 import six
 from yt.funcs import mylog
 from yt.extern.tqdm import tqdm
-from yt.data_objects.octree_subset import YTPositionArray
 from yt.utilities.lib.contour_finding import ParticleContourTree
 from yt.geometry.selection_routines import AlwaysSelector
 
