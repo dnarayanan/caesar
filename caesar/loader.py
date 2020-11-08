@@ -302,7 +302,11 @@ class CAESAR:
         if not hasattr(value, 'dataset_type'):
             raise ValueError('not a yt dataset?')
 
-        hash = get_hash(os.path.join(value.fullpath, value.basename))
+        #if 'skip_hash_check' in self._kwargs and self._kwargs['skip_hash_check']:
+        if self.skip_hash_check:
+            hash = self.hash
+        else:
+            hash = get_hash(os.path.join(value.fullpath, value.basename))
         if hash != self.hash:
             raise RuntimeError('hash mismatch!')
         else:

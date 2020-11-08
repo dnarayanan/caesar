@@ -86,7 +86,7 @@ class CAESAR(object):
 
         infile = '%s/%s' % (value.fullpath, value.basename)
         
-
+        self.skip_hash_check = False
         if hasattr(self, 'hash'):
             if isinstance(self.hash, np.bytes_):
                 self.hash = self.hash.decode('utf8')

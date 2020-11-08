@@ -67,7 +67,7 @@ class photometry:
         Number of OpenMP cores, negative means use all but (nproc+1) cores.
     """
 
-    def __init__(self, obj, group_list, ds=None, band_names='v', ssp_model='FSPS', ssp_table_file='SSP_Chab_EL.hdf5', view_dir='x', use_dust=True, use_cosmic_ext=True, kernel_type='cubic', nproc=-1):
+    def __init__(self, obj, group_list, ds=None, band_names='v', ssp_model='FSPS', ssp_table_file='FSPS_Chab_EL.hdf5', view_dir='x', use_dust=True, ext_law='mw', use_cosmic_ext=True, kernel_type='cubic', nproc=-1):
 
         from caesar.property_manager import ptype_ints
         self.obj = obj  # caesar object
@@ -77,20 +77,23 @@ class photometry:
         self.band_names = band_names
         if hasattr(self.obj,'_kwargs') and 'fsps_bands' in self.obj._kwargs:
             self.band_names = self.obj._kwargs['fsps_bands']
-        self.ssp_table_file = os.path.expanduser('~/caesar/%s'%ssp_table_file)
         self.ssp_model = ssp_model
         if hasattr(self.obj,'_kwargs') and 'ssp_model' in self.obj._kwargs:
             self.ssp_model = self.obj._kwargs['ssp_model']
+        if 'caesar/' not in ssp_table_file: 
+            self.ssp_table_file = os.path.expanduser('~/caesar/%s'%ssp_table_file)
+        else:
+            self.ssp_table_file = ssp_table_file
         if hasattr(self.obj,'_kwargs') and 'ssp_table_file' in self.obj._kwargs:
             self.ssp_table_file = self.obj._kwargs['ssp_table_file']
-        self.ext_law = 'mw'
+        self.ext_law = ext_law
         if hasattr(self.obj,'_kwargs') and 'ext_law' in self.obj._kwargs:
             self.ext_law = self.obj._kwargs['ext_law'].lower()
         if hasattr(self.obj,'_kwargs') and 'view_dir' in self.obj._kwargs:
             view_dir = self.obj._kwargs['view_dir'].lower()
-        if view_dir is 'x': self.viewdir = 0
-        if view_dir is 'y': self.viewdir = 1
-        if view_dir is 'z': self.viewdir = 2
+        if view_dir is 'x' or view_dir is '0': self.viewdir = 0
+        if view_dir is 'y' or view_dir is '1': self.viewdir = 1
+        if view_dir is 'z' or view_dir is '2': self.viewdir = 2
         self.use_dust = use_dust  # if False, will use metals plus an assumed dust-to-metal ratio
         if hasattr(self.obj,'_kwargs') and 'use_dust' in self.obj._kwargs:
             use_dust = self.obj._kwargs['use_dust'].lower()
@@ -98,6 +101,8 @@ class photometry:
         if hasattr(self.obj,'_kwargs') and 'use_cosmic_ext' in self.obj._kwargs:
             use_cosmic_ext = self.obj._kwargs['use_cosmic_ext'].lower()
         self.kernel_type = kernel_type
+        if hasattr(self.obj,'_kwargs') and 'kernel_type' in self.obj._kwargs:
+            use_cosmic_ext = self.obj._kwargs['kernel_type'].lower()
         self.nkerntab = 2000
         if nproc == -1:
             try:
@@ -106,6 +111,7 @@ class photometry:
                 self.nproc = 1
         else:
             self.nproc = nproc
+        self.obj.skip_hash_check = True  # WARNING: this will skip the check that the supplied snapshot file (via ds.load) is the same as the original one used to generate photometry!  
 
         # useful quantities
         self.boxsize = self.obj.simulation.boxsize
@@ -189,7 +195,6 @@ class photometry:
         self.ext_curves.append(lmc(wave))
         self.ext_curves = np.asarray(self.ext_curves)
 
-        memlog('Starting photometry using %s extinction law'%self.ext_law)
         if 'calzetti' in self.ext_law: self.ext_law = 0
         elif 'chevallard' in self.ext_law: self.ext_law = 1
         elif 'conroy' in self.ext_law: self.ext_law = 2

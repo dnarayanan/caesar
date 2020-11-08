@@ -32,7 +32,7 @@ def compute_mags(phot):
 
     from caesar.property_manager import ptype_ints
 
-    memlog('Computing magnitudes for %d bands (nproc=%d)'%(len(phot.band_names),phot.nproc))
+    memlog('Computing magnitudes in %d bands for %d objects (nproc=%d)'%(len(phot.band_names),phot.ngroup,phot.nproc))
     ptype = phot.obj.data_manager.ptype
     # need stars' LOS hubble velocity (from systemic redshift) for generating spectra
     H0 = phot.obj.simulation.H_z.to('1/s').d
@@ -111,7 +111,6 @@ def compute_mags(phot):
         phot.groups[ig].appmag = {}
         phot.groups[ig].appmag_nodust = {}
         for ib,b in enumerate(phot.band_names):
-            #if ig<=10 and ib == 14: print("%d %d %s %g  %g %g %g %g"%(ig,ib,b,np.log10(phot.groups[ig].masses['stellar']),absmags[ig,ib],absmags_nd[ig,ib],appmags[ig,ib],appmags_nd[ig,ib]))
             phot.groups[ig].absmag[b] = absmags[ig,ib]
             phot.groups[ig].absmag_nodust[b] = absmags_nd[ig,ib]
             phot.groups[ig].appmag[b] = appmags[ig,ib]
@@ -459,7 +458,6 @@ def smass_at_formation(obj,group_list,ssp_origmass,ssp_ages,ssp_logZ,nproc=16):
         i10 = (iZ+1)*nage + iage
         i11 = (iZ+1)*nage + iage + 1
         smorig[istar] = fage*fZ*ssp_morig[i11] + (1-fage)*fZ*ssp_morig[i10] + fage*(1-fZ)*ssp_morig[i01] + (1-fage)*(1-fZ)*ssp_morig[i00]  # look up remaining mass fraction
-        #printf("%d %g %g %g\n",istar,logage,logZ,smorig[istar])
         smorig[istar] = smass[istar] / smorig[istar]  # correct to original mass
 
     return np.array(smorig)
