@@ -51,7 +51,7 @@ def rotator(vals, ALPHA=0, BETA=0):
     # rotating many values
     else:
         from .group_funcs import rotator as rotator_cython
-        rotator_cython(vals, Rx, Ry, ALPHA, BETA)
+        rotator_cython(np.asarray(vals), Rx, Ry, ALPHA, BETA)
         
     return vals
 
