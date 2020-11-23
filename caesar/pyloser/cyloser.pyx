@@ -4,7 +4,7 @@ cimport numpy as np
 import sys
 cimport cython
 from cython.parallel import prange, threadid
-from caesar.utils import memlog
+from caesar.utils import memlog,rotator
 from yt.funcs import mylog
 from caesar.property_manager import MY_DTYPE
 from astropy import constants as const
@@ -276,7 +276,7 @@ cdef void interp_tab(float age,float met, int nlam, int nage, int nZ, float[:] s
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-def compute_AV(phot):
+def compute_AV(phot,alpha=0.,beta=0.):
 
     from caesar.property_manager import ptype_ints
 
@@ -295,8 +295,8 @@ def compute_AV(phot):
         ## gas quantities
         long int[:] gasid_bins = phot.gid_bins   # starting indexes of gas particle IDs in each group
         long int[:] starid_bins = phot.sid_bins   # starting indexes of star particle IDs in each group
-        float[:,:] spos = phot.obj.data_manager.pos[ptype==ptype_ints['star']][phot.starids]
-        float[:,:] gpos = phot.obj.data_manager.pos[ptype==ptype_ints['gas']][phot.gasids]
+        double[:,:] spos = phot.obj.data_manager.pos[ptype==ptype_ints['star']][phot.starids].astype('float64')
+        double[:,:] gpos = phot.obj.data_manager.pos[ptype==ptype_ints['gas']][phot.gasids].astype('float64')
         float[:]   ghsm = phot.obj.data_manager.hsml[phot.gasids]
         float[:]   gm = gmass
         float[:]   gZ = gmet
@@ -319,6 +319,12 @@ def compute_AV(phot):
         float[:]   A_V = np.zeros(npart,dtype=MY_DTYPE)  # A_V for stars 
         float[:]   Zcol = np.zeros(npart,dtype=MY_DTYPE)  # metal column density for stars 
 
+
+    if (alpha != 0.) | (beta != 0.):
+        memlog('Rotating particles (alpha=%d,beta=%d)'%(alpha,beta))
+        spos = rotator(spos, alpha,beta)
+        gpos = rotator(gpos, alpha,beta)
+
     for ig in prange(ng,nogil=True,schedule='dynamic',num_threads=my_nproc):
         istart = starid_bins[ig]
         iend = starid_bins[ig+1]
@@ -332,7 +338,7 @@ def compute_AV(phot):
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef float star_AV(int ip, int idir, int igstart, int igend, float[:,:] spos, float[:,:] gpos, float[:] gm, float[:] gZ, float[:] ghsm, float Lbox, int nkerntab, float[:] kerntab, float redshift, float dtm_MW, float NHcol_fact, float AV_fact, bint usedust) nogil:
+cdef float star_AV(int ip, int idir, int igstart, int igend, double[:,:] spos, double[:,:] gpos, float[:] gm, float[:] gZ, float[:] ghsm, float Lbox, int nkerntab, float[:] kerntab, float redshift, float dtm_MW, float NHcol_fact, float AV_fact, bint usedust) nogil:
 
     cdef:
         int i,idim
@@ -343,7 +349,7 @@ cdef float star_AV(int ip, int idir, int igstart, int igend, float[:,:] spos, fl
 
     for i in range(igstart,igend):
         for idim in range(3):
-            dx[idim] = spos[ip,idim] - gpos[i,idim]
+            dx[idim] = spos[ip,idim] - gpos[i,idim] 
             if dx[idim] > 0.5*Lbox: dx[idim] -= Lbox
             if dx[idim] > 0.5*Lbox: dx[idim] += Lbox
         if dx[idir] > 0: continue  # only use gas in front of stars
