@@ -353,9 +353,9 @@ cdef float star_AV(int ip, int idir, int igstart, int igend, double[:,:] spos, d
             if dx[idim] > 0.5*Lbox: dx[idim] -= Lbox
             if dx[idim] > 0.5*Lbox: dx[idim] += Lbox
         if dx[idir] > 0: continue  # only use gas in front of stars
-        if idim == 0: dx2 = dx[1]*dx[1]+dx[2]*dx[2]
-        if idim == 1: dx2 = dx[0]*dx[0]+dx[2]*dx[2]
-        if idim == 2: dx2 = dx[0]*dx[0]+dx[1]*dx[1]
+        if idir == 0: dx2 = dx[1]*dx[1]+dx[2]*dx[2]
+        if idir == 1: dx2 = dx[0]*dx[0]+dx[2]*dx[2]
+        if idir == 2: dx2 = dx[0]*dx[0]+dx[1]*dx[1]
         if dx2 > ghsm[i]*ghsm[i]: continue  # gas does not intersect LOS to star
         ikern = <int>(nkerntab*c_sqrt(dx2/(ghsm[i]*ghsm[i])))
         kernint_val = kerntab[ikern]
