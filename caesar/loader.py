@@ -175,9 +175,10 @@ class LazyDict(Mapping):
 
 
 class CAESAR:
-    def __init__(self, filename):
+    def __init__(self, filename, skip_hash_check=False):
         self._ds = None
         self.data_file = os.path.abspath(filename)
+        self.skip_hash_check=skip_hash_check
 
         self._halo_dmlist = LazyDataset(self, 'halo_data/lists/dmlist')
         self._halo_slist = LazyDataset(self, 'halo_data/lists/slist')
@@ -196,7 +197,10 @@ class CAESAR:
         with h5py.File(filename, 'r') as hd:
             mylog.info('Opening {}'.format(filename))
 
-            self.hash = hd.attrs['hash']
+            if 'hash' in hd.attrs:
+                self.hash = hd.attrs['hash']
+            else:
+                self.hash = None
             if isinstance(self.hash, np.bytes_):
                 self.hash = self.hash.decode('utf8')
 
@@ -303,14 +307,12 @@ class CAESAR:
             raise ValueError('not a yt dataset?')
 
         #if 'skip_hash_check' in self._kwargs and self._kwargs['skip_hash_check']:
-        if self.skip_hash_check:
+        if (self.skip_hash_check) or (self.hash is None):
             hash = self.hash
         else:
             hash = get_hash(os.path.join(value.fullpath, value.basename))
         if hash != self.hash:
             raise RuntimeError('hash mismatch!')
-        else:
-            self._ds = value
 
         self._ds = value
         self._ds_type = DatasetType(self._ds)
@@ -584,5 +586,5 @@ class Cloud(Group):
             self.__class__.__name__, attr))
 
 
-def load(filename):
-    return CAESAR(filename)
+def load(filename, skip_hash_check=False):
+    return CAESAR(filename, skip_hash_check=False)
