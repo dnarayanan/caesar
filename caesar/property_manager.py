@@ -255,17 +255,17 @@ class DatasetType(object):
         prop_unit = {'mass':'Msun', 'pos':'kpccm', 'vel':'km/s', 'pot':'Msun * kpccm**2 / s**2', 'rho':'g / cm**3', 'sfr':'Msun / yr', 'u':'K', 'Dust_Masses':'Msun', 'bhmass':'Msun', 'bhmdot':'Msun / yr', 'hsml':'kpccm'}
 
         # damn you little h!
-        if prop is 'mass' or prop is 'pos':
+        if prop == 'mass' or prop == 'pos':
             hfact = 1./self.ds.hubble_constant
-        elif prop is 'rho':
+        elif prop == 'rho':
             hfact = self.ds.hubble_constant**2
         else:
             hfact = 1.
 
         # deal with differences in pygr vs. yt/caesar naming
-        if ptype is 'bh': ptype = 'bndry'
-        if prop is 'temperature': prop = 'u'
-        if prop is 'haloid' or prop is 'dustmass' or prop is 'aform' or prop is 'bhmass' or prop is 'bhmdot': prop = self.get_property_name(ptype, prop)
+        if ptype == 'bh': ptype = 'bndry'
+        if prop == 'temperature': prop = 'u'
+        if prop == 'haloid' or prop == 'dustmass' or prop == 'aform' or prop == 'bhmass' or prop == 'bhmdot': prop = self.get_property_name(ptype, prop)
 
         # read in the data
         data = readsnap(snapfile, prop, ptype, units=1, suppress=1) * hfact
@@ -436,7 +436,7 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
             continue
       
         count = len(get_property(obj, 'mass', p))
-        if select is 'all': 
+        if select == 'all': 
             flag = [True]*count
         else:
             flag = (select[ip]>=0)

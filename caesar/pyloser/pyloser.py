@@ -91,9 +91,9 @@ class photometry:
             self.ext_law = self.obj._kwargs['ext_law'].lower()
         if hasattr(self.obj,'_kwargs') and 'view_dir' in self.obj._kwargs:
             view_dir = self.obj._kwargs['view_dir'].lower()
-        if view_dir is 'x' or view_dir is '0': self.viewdir = 0
-        if view_dir is 'y' or view_dir is '1': self.viewdir = 1
-        if view_dir is 'z' or view_dir is '2': self.viewdir = 2
+        if view_dir == 'x' or view_dir == '0': self.viewdir = 0
+        if view_dir == 'y' or view_dir == '1': self.viewdir = 1
+        if view_dir == 'z' or view_dir == '2': self.viewdir = 2
         self.use_dust = use_dust  # if False, will use metals plus an assumed dust-to-metal ratio
         if hasattr(self.obj,'_kwargs') and 'use_dust' in self.obj._kwargs:
             use_dust = self.obj._kwargs['use_dust'].lower()

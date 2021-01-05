@@ -96,7 +96,7 @@ def restore_object_list(obj_list, key, hd):
         Open HDF5 dataset.
 
     """
-    if not LOAD_OBJECT_LISTS and key is not 'galaxy_index_list': return
+    if not LOAD_OBJECT_LISTS and key != 'galaxy_index_list': return
     #if not LOAD_OBJECT_LISTS and key is not 'cloud_index_list': return
         
     if ('lists/%s' % key) not in hd: return
