@@ -38,17 +38,18 @@ if __name__ == '__main__':
     # now do photometry in post-processing
     #from caesar.pyloser.pyloser import photometry
     #ds  = sim.yt_dataset
+    myobjs = sim.galaxies
     from caesar.pyloser.pyloser import photometry
-    galphot = photometry(sim,sim.galaxies,ds=ds,band_names='sdss',ext_law='composite',nproc=16)
+    galphot = photometry(sim,myobjs,ds=ds,band_names='sdss',ext_law='composite',nproc=16)
     #galphot.run_pyloser(ssp_model='BPASS')
     spect_dust, spec_nodust = galphot.run_pyloser()
     print('Default (should be same):',galphot.groups[0].absmag['sdss_r'])
 
-    galphot = photometry(sim,sim.galaxies,ds=ds,band_names='sdss',ssp_model='BPASS',ssp_table_file='/home/rad/caesar/BPASS_Chab100.hdf5',ext_law='composite',nproc=16)
+    galphot = photometry(sim,myobjs,ds=ds,band_names='sdss',ssp_model='BPASS',ssp_table_file='/home/rad/caesar/BPASS_Chab100.hdf5',ext_law='composite',nproc=16)
     spect_dust, spec_nodust = galphot.run_pyloser()
     print('BPASS (should be different):',galphot.groups[0].absmag['sdss_r'])
 
-    galphot = photometry(sim,sim.galaxies,ds=ds,band_names='sdss',ext_law='calzetti',ssp_model='BC03',ssp_table_file='/home/rad/caesar/BC03_Chab_Padova94.hdf5',nproc=8)
+    galphot = photometry(sim,myobjs,ds=ds,band_names='sdss',ext_law='calzetti',ssp_model='BC03',ssp_table_file='/home/rad/caesar/BC03_Chab_Padova94.hdf5',nproc=8)
     spect_dust, spec_nodust = galphot.run_pyloser()
     print('BC03 (should be different):',galphot.groups[0].absmag['sdss_r'])
 

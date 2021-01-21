@@ -29,12 +29,12 @@ class DataManager(object):
         self.load_particle_data(select=select)
         memlog('Loaded particle data')
         self._assign_particle_counts()
-        if select == 'all': self._load_gas_data()
+        if isinstance(select,str) and select == 'all': self._load_gas_data()
         else: self._load_gas_data(select=select[self.ptypes.index('gas')])
-        if select == 'all': self._load_star_data()
+        if isinstance(select,str) and select == 'all': self._load_star_data()
         else: self._load_star_data(select=select[self.ptypes.index('star')])
         if self.blackholes:
-            if select == 'all': self._load_bh_data()
+            if isinstance(select,str) and select == 'all': self._load_bh_data()
             else: self._load_bh_data(select=select[self.ptypes.index('bh')])
         memlog('Loaded baryon data')
         
@@ -150,7 +150,7 @@ class DataManager(object):
         ghsml  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), self.obj.units['length'])        
         #dustmass = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas), '')#dustmass_unit)
             
-        if select == 'all': 
+        if isinstance(select,str) and select == 'all': 
             flag = [True]*self.obj.simulation.ngas
         else:
             flag = (select>=0)
@@ -210,7 +210,7 @@ class DataManager(object):
         if self.obj.simulation.nstar == 0:
             return
 
-        if select == 'all': 
+        if isinstance(select,str) and select == 'all': 
             flag = [True]*self.obj.simulation.nstar
         else:
             flag = (select>=0)
@@ -242,7 +242,7 @@ class DataManager(object):
     def _load_bh_data(self, select='all'):
         """If blackholes are present, loads BH_Mdot"""
 
-        if select == 'all': 
+        if isinstance(select,str) and select == 'all': 
             flag = [True]*self.obj.simulation.nbh
         else:
             flag = (select>=0)

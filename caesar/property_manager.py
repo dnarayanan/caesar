@@ -436,7 +436,7 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
             continue
       
         count = len(get_property(obj, 'mass', p))
-        if select == 'all': 
+        if isinstance(select,str) and select == 'all': 
             flag = [True]*count
         else:
             flag = (select[ip]>=0)

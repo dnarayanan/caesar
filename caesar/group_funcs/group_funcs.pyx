@@ -762,7 +762,7 @@ def get_group_overall_properties(group,grp_list):
         if mygroup.obj_type is 'halo':
             mygroup.virial_quantities['r200'] = group.obj.yt_dataset.quan(r200_fact * grp_mtot[ig]**(1./3.), group.obj.units['length'])  # effective R200 calculated for total (FOF) mass.
             mygroup.virial_quantities['circular_velocity'] = group.obj.yt_dataset.quan(np.sqrt(G_in_simunits * grp_mtot[ig] / mygroup.virial_quantities['r200']), group.obj.units['velocity'])  # sqrt(GM_FOF/R_200)
-            mygroup.virial_quantities['temperature'] = 3.6e5 * (mygroup.virial_quantities['circular_velocity'] / 100.0)**2  # eq 4 of Mo et al 2002 (K)
+            mygroup.virial_quantities['temperature'] = group.obj.yt_dataset.quan(3.6e5 * (mygroup.virial_quantities['circular_velocity'] / 100.0)**2, 'K')  # eq 4 of Mo et al 2002 (K)
             #angular_momentum = group.obj.yt_dataset.quan(np.linalg.norm(grp_L[ig,0,:3]), L_units)
             mygroup.virial_quantities['spin_param'] = np.linalg.norm(mygroup.rotation['total_L']) / (1.4142135623730951 * mygroup.masses['total'] * mygroup.virial_quantities['circular_velocity'] * mygroup.virial_quantities['r200'])
             for ir,rtype in enumerate(['200c','500c','2500c']):  # these should match the ones in simulation.Densities
