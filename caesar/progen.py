@@ -48,7 +48,6 @@ def run_progen(snapdirs, snapname, snapnums, prefix='caesar_', suffix='hdf5', **
     if isinstance(snapnums, int):
         snapnums = [int]
 
-
     snaps = []
     for snapdir in snapdirs:
         for snapnum in snapnums:
@@ -98,12 +97,13 @@ def run_progen(snapdirs, snapname, snapnums, prefix='caesar_', suffix='hdf5', **
         obj_current = caesar.load(caesar_filename(snap_current,prefix,suffix))
         obj_progens = caesar.load(caesar_filename(snap_progens,prefix,suffix))
 
-        progen_finder(obj_current, obj_progens, caesar_filename(snap_current,prefix,suffix), **kwargs)
+        progen_finder(obj_current, obj_progens, caesar_filename(snap_current,prefix,suffix), snap_dir=snapdirs[0], **kwargs)
 
 
-def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type='galaxy', part_type='star', overwrite=True, n_most=1, min_in_common=0.1, nproc=1):
+def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type='galaxy', part_type='star', recompute=True, save=True, n_most=1, min_in_common=0.1, nproc=1):
     """Function to find the most massive progenitor of each Caesar object in obj_current
     in the previous snapshot.
+    Returns list of progenitors in obj_target associated with objects in obj_current
 
     Parameters
     ----------
@@ -113,16 +113,18 @@ def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type
         Looking for progenitors in this object.
     caesar_file : str
         Name (including path) of Caesar file associated with primary snapshot, where 
-        progen info will be written
+        progen info will be written 
     snap_dir : str
         Path where snapshot files are located; if None, uses obj.simulation.fullpath
     data_type : str
         'halo', 'galaxy', or 'cloud'
     part_type : str
         Particle type in ptype_ints.  Current options: 'gas', 'dm', 'dm2', 'star', 'bh'
-    overwrite : bool
-        True = (over)write existing progen data in Caesar object; False = don't recompute, 
-        or if not already computed, return computed progens without modifying Caesar file
+    recompute : bool
+        False = see if progen info exists in caesar_file and return, if not then compute
+        True = always (re)compute progens
+    save : bool
+        True/False = write/do not write info to caesar_file
     n_most : int 
         Find n_most most massive progenitors/descendants.  Stored as an array for each galaxy.
         Options are 1 or 2.
@@ -139,25 +141,22 @@ def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type
     else:
         index_name = 'progen_'+data_type+'_'+part_type
 
-    if not overwrite:
-        if check_if_progen_is_present(caesar_file, index_name):
-            mylog.warning('%s data already present; returning data (set overwrite=True to overwrite)!' % (index_name))
-            f = h5py.File(caesar_file)
-            prog_indexes = f['tree_data/%s'%index_name]
-            return prog_indexes
-        else:
-            mylog.warning('Computing and returning progen indexes, but NOT storing in Caesar file!')
+    if not recompute and check_if_progen_is_present(caesar_file, index_name):
+        mylog.warning('%s data already present; returning data (set recompute=True to recompute)!' % (index_name))
+        f = h5py.File(caesar_file,'r')
+        prog_indexes = f['tree_data/%s'%index_name]
+        return np.asarray(prog_indexes)
 
     ng_current, pid_current, gid_current, pid_hash = collect_group_IDs(obj_current, data_type, part_type, snap_dir)
     ng_target, pid_target, gid_target, _ = collect_group_IDs(obj_target, data_type, part_type, snap_dir)
 
     if ng_current == 0 or ng_target == 0:
         mylog.warning('No %s found in current caesar/target file (%d/%d) -- exiting progen_finder'%(data_type,ng_current,ng_target))
-        return
+        return None
 
     prog_indexes = find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, n_most=n_most, min_in_common=min_in_common, nproc=nproc)
 
-    if overwrite:
+    if save:
         write_progens(obj_current, np.array(prog_indexes).T, caesar_file, index_name, obj_target.simulation.redshift)
 
     return prog_indexes
@@ -257,6 +256,7 @@ def collect_group_IDs(obj, data_type, part_type, snap_dir):
     # read in particle IDs
     from readgadget import readsnap
     if snap_dir is None:
+        #snapfile = obj.simulation.fullpath.decode('utf-8')+'/'+obj.simulation.basename.decode('utf-8')
         snapfile = obj.simulation.fullpath.decode('utf-8')+'/'+obj.simulation.basename.decode('utf-8')
     else:
         snapfile = snap_dir+'/'+obj.simulation.basename.decode('utf-8')
@@ -326,6 +326,9 @@ def check_if_progen_is_present(caesar_file, index_name):
     index_name : str
         Name of progen index to get redshift for (e.g. 'progen_galaxy_star')
     """
+    if not os.path.isfile(caesar_file):
+        mylog.warning('caesar_file %s not found')
+        return False
     f = h5py.File(caesar_file,'r')
     present = False
     if 'tree_data/%s' % (index_name) in f: present = True
