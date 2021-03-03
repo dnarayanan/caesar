@@ -149,7 +149,16 @@ def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type
     ng_current, pid_current, gid_current, pid_hash = collect_group_IDs(obj_current, data_type, part_type, snap_dir)
     ng_target, pid_target, gid_target, _ = collect_group_IDs(obj_target, data_type, part_type, snap_dir)
 
-    npart_target = np.array([len(_g.slist) for _g in obj_target.galaxies])
+    'gas', 'dm', 'dm2', 'star', 'bh'
+    if part_type == 'gas':
+        npart_target = np.array([len(_g.glist) for _g in obj_target.galaxies])
+    elif part_type == 'star':
+        npart_target = np.array([len(_g.slist) for _g in obj_target.galaxies])
+    elif part_type == 'bh':
+        npart_target = np.array([len(_g.bhlist) for _g in obj_target.galaxies])
+    elif part_type in ['dm','dm2']:
+        npart_target = np.array([len(_g.dmlist) for _g in obj_target.galaxies])
+
 
     if ng_current == 0 or ng_target == 0:
         mylog.warning('No %s found in current caesar/target file (%d/%d) -- exiting progen_finder'%(data_type,ng_current,ng_target))
