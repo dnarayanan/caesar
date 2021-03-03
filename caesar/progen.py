@@ -127,7 +127,6 @@ def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type
         True/False = write/do not write info to caesar_file
     n_most : int 
         Find n_most most massive progenitors/descendants.  Stored as an array for each galaxy.
-        Options are 1 or 2.
     min_in_common : float 
         Require >this fraction of parts in common between object and progenitor to 
         be a valid progenitor.
@@ -150,11 +149,14 @@ def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type
     ng_current, pid_current, gid_current, pid_hash = collect_group_IDs(obj_current, data_type, part_type, snap_dir)
     ng_target, pid_target, gid_target, _ = collect_group_IDs(obj_target, data_type, part_type, snap_dir)
 
+    npart_target = np.array([len(_g.slist) for _g in obj_target.galaxies])
+
     if ng_current == 0 or ng_target == 0:
         mylog.warning('No %s found in current caesar/target file (%d/%d) -- exiting progen_finder'%(data_type,ng_current,ng_target))
         return None
 
-    prog_indexes = find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, n_most=n_most, min_in_common=min_in_common, nproc=nproc)
+    prog_indexes = find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, 
+                                npart_target, n_most=n_most, min_in_common=min_in_common, nproc=nproc)
 
     if save:
         write_progens(obj_current, np.array(prog_indexes).T, caesar_file, index_name, obj_target.simulation.redshift)
@@ -162,7 +164,7 @@ def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type
     return prog_indexes
 
 
-def find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, n_most=1, min_in_common=0.1, nproc=1):
+def find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, npart_target, n_most=1, min_in_common=0.1, nproc=1):
     """Find most massive and second most massive progenitor/descendants.
     
     Parameters
@@ -178,7 +180,7 @@ def find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, n_m
     pid_hash : np.ndarray
        indexes for the start of each group in pids_current
     n_most : int 
-        Find n_most most massive progenitors/descendants.  Current options are 1 or 2.
+        Find n_most most massive progenitors/descendants.
     min_in_common : float 
         Require >this fraction of parts in common between object and progenitor to be a valid progenitor.
     nproc : int
@@ -195,15 +197,20 @@ def find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, n_m
 
     # Loop over current objects to find progens for each
     if nproc>1:
-        prog_index_tmp = Parallel(n_jobs=nproc)(delayed(_find_target_group)(pid_current[pid_hash[ig]:pid_hash[ig+1]],pid_target,gid_target,min_in_common) for ig in range(ngal_curr))
-        prog_index_tmp = np.array(prog_index_tmp,dtype=int)
-        prog_index = np.array(prog_index_tmp.T[0],dtype=int)
-        prog_index2 = np.array(prog_index_tmp.T[1],dtype=int)
+        prog_index_tmp = Parallel(n_jobs=nproc)(delayed(_find_target_group)\
+                   (pid_current[pid_hash[ig]:pid_hash[ig+1]],pid_target,
+                    gid_target,npart_target,min_in_common,return_N=n_most) \
+                  for ig in range(ngal_curr))
+
+        prog_index = np.array(prog_index_tmp,dtype=int)
     else:
-        prog_index = np.zeros(ngal_curr,dtype=int)
-        prog_index2 = np.zeros(ngal_curr,dtype=int)
+        prog_index = np.zeros((ngal_curr,n_most),dtype=int)
         for ig in range(ngal_curr):
-            prog_index[ig],prog_index2[ig] = _find_target_group(pid_current[pid_hash[ig]:pid_hash[ig+1]],pid_target,gid_target,min_in_common)
+            prog_index[ig] = _find_target_group(pid_current[pid_hash[ig]:pid_hash[ig+1]],pid_target,
+                                                gid_target,npart_target,min_in_common,return_N=n_most)
+
+   
+    return prog_index
 
     # Print some stats and return the indices
     #prog_none = prog_index[prog_index<0]
@@ -211,29 +218,27 @@ def find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, n_m
     #except:
     #    mylog.warning('0 had no progenitors')
 
-    if n_most == 1: return prog_index
-    elif n_most == 2: return prog_index,prog_index2
-    else:
-        myinfo.warning('n_most=%d but must be 1 or 2; using 1'%n_most)
-        return prog_index
 
 # Find progenitor/descendant group having the most & second most particle ID's in common with pid_curr
-def _find_target_group(pid_curr,pid_targ,gid_targ,min_in_common):
+def _find_target_group(pid_curr,pid_targ,gid_targ,npart_targ,min_in_common,return_N=10):
     targ_ind = np.searchsorted(pid_targ,pid_curr) # bisection search to find closest ID in target
     targ_ind = np.where(targ_ind==len(pid_targ),len(pid_targ)-1,targ_ind)
     ig_matched = np.where(pid_targ[targ_ind]==pid_curr,gid_targ[targ_ind],-1)
     ig_matched = ig_matched[ig_matched>=0]
     unique, counts = np.unique(ig_matched,return_counts=True)
-    if len(ig_matched)>int(min_in_common*len(pid_curr)):
-        modestats = stats.mode(ig_matched) # find target galaxy id with most matches
-        prog_index_ig = modestats[0][0]  # prog_index stores target galaxy numbers
-        ig_matched = ig_matched[(ig_matched!=prog_index_ig)]  # remove the first-most common galaxy, recompute mode
-    else: prog_index_ig = -1
-    if len(ig_matched)>0:
-        modestats = stats.mode(ig_matched) # find target galaxy id with second-most matches
-        prog_index_ig2 = modestats[0][0]  # now we have the second progenitor
-    else: prog_index_ig2 = -1
-    return prog_index_ig,prog_index_ig2
+    
+    _cmask = np.argsort(counts)[::-1]
+    match_frac = counts / npart_targ[unique] # ---- fraction of particles from target in current
+    out = np.ones(return_N, dtype=int) * -1 # ---- initialise output array (-1 default, no match)  
+    _matched = unique[_cmask[match_frac > min_in_common]] # ---- matching targets
+    
+    # ---- populate output array
+    if len(_matched) > return_N: 
+        out = _matched[:return_N]
+    else: 
+        out[:len(_matched)] = _matched 
+
+    return out
 
 
 def collect_group_IDs(obj, data_type, part_type, snap_dir):
