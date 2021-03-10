@@ -43,6 +43,7 @@ grid_gas_aliases = {
 ptype_ints = dict(
     gas=0,
     dust=3,
+    dm3=3,
     star=4,
     dm=1,
     dm2=2,
@@ -53,11 +54,11 @@ ptype_ints = dict(
 # the keys 'gas','star','dm','dm2','bh','dust' should point to the corresponding
 # yt field name.
 ptype_aliases = dict(
-    GadgetDataset     = {'gas':'Gas','star':'Stars','dm':'Halo'},
+    GadgetDataset     = {'gas':'Gas','star':'Stars','dm':'Halo','dm2':'Bulge','dm3':'Disk','bh':'Bndry'},
     GadgetHDF5Dataset = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
     EagleDataset      = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
     OWLSDataset       = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5'},
-    GizmoDataset      = {'gas':'PartType0','star':'PartType4','dm':'PartType1','dm2':'PartType2', 'bh':'PartType5','dust':'PartType3'}, 
+    GizmoDataset      = {'gas':'PartType0','star':'PartType4','dm':'PartType1','dm2':'PartType2', 'bh':'PartType5','dust':'PartType3','dm3':'PartType3'},
 	# comment by Qi: maybe add a [Simba's offspring]-Dataset
     TipsyDataset      = {'gas':'Gas','star':'Stars','dm':'DarkMatter'},
     ARTDataset        = {'gas':'gas','star':'stars','dm':'darkmatter'},
@@ -266,6 +267,8 @@ class DatasetType(object):
         if ptype == 'bh': ptype = 'bndry'
         if prop == 'temperature': prop = 'u'
         if prop == 'haloid' or prop == 'dustmass' or prop == 'aform' or prop == 'bhmass' or prop == 'bhmdot': prop = self.get_property_name(ptype, prop)
+        if ptype == 'dm2': ptype = 'disk'
+        if ptype == 'dm3': ptype = 'bulge'
 
         # read in the data
         data = readsnap(snapfile, prop, ptype, units=1, suppress=1) * hfact

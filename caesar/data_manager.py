@@ -1,7 +1,7 @@
 import numpy as np
 from yt.funcs import mylog
 
-from caesar.property_manager import ptype_ints, get_particles_for_FOF, get_property, has_property
+from caesar.property_manager import ptype_ints, ptype_aliases, get_particles_for_FOF, get_property, has_property
 from caesar.utils import memlog
 from caesar.property_manager import MY_DTYPE
 
@@ -25,7 +25,7 @@ class DataManager(object):
     def _member_search_init(self, select='all'):
         """Collect particle information for member_search()"""
         memlog('Initializing member search, loading particles')
-        self._determine_ptypes()
+#         self._determine_ptypes()
         self.load_particle_data(select=select)
         memlog('Loaded particle data')
         self._assign_particle_counts()
@@ -40,12 +40,16 @@ class DataManager(object):
         
     def _determine_ptypes(self):
         """Determines what particle/field types to collect."""
-        self.ptypes = ['gas','star']
+        self.ptypes = ['gas','star','dm']
         #if 'blackholes' in self.obj._kwargs and self.obj._kwargs['blackholes']:
         self.blackholes = self.dust = self.dm2 = False
         if hasattr(self.obj,'_ds_type'):
             if 'PartType5' in self.obj._ds_type.ds.particle_fields_by_type:
                 if 'BH_Mdot' in self.obj._ds_type.ds.particle_fields_by_type['PartType5'] or 'StellarFormationTime' in self.obj._ds_type.ds.particle_fields_by_type['PartType5']:
+                    self.ptypes.append('bh')
+                    self.blackholes = True
+            if 'Bndry' in self.obj._ds_type.ds.particle_fields_by_type:
+                if 'Mass' in self.obj._ds_type.ds.particle_fields_by_type['Bndry']:
                     self.ptypes.append('bh')
                     self.blackholes = True
             else:
@@ -54,14 +58,18 @@ class DataManager(object):
             mylog.warning('Enabling active dust particles')
             self.ptypes.append('dust')
             self.dust = True
-        self.ptypes.append('dm')
-        if hasattr(self.obj,'_kwargs') and 'dm2' in self.obj._kwargs and self.obj._kwargs['dm2']:
-            self.ptypes.append('dm2')
-            self.dm2 = True
 
-        #if self.obj._ds_type.grid:
-        #    self.ptypes.remove('gas')
-        #print self.ptypes
+        if 'lowres' in self.obj._kwargs:
+            if 2 in self.obj._kwargs['lowres']:
+                self.ptypes.append('dm2')
+                self.dm2 = True
+                print(ptype_aliases[self.obj._ds_type.ds_type]['dm2'], 'is assumed as low resolution particles')
+            if 3 in self.obj._kwargs['lowres']:
+                self.ptypes.append('dm3')
+                self.dm3 = True
+                print(ptype_aliases[self.obj._ds_type.ds_type]['dm3'], 'is assumed as low resolution particles')
+        print('The particle types will be loaded: ', [ptype_aliases[self.obj._ds_type.ds_type][i] for i in self.ptypes])
+
         
     def load_particle_data(self, select=None):
         """Loads positions, velocities, masses, particle types, and indexes.
@@ -92,7 +100,8 @@ class DataManager(object):
         self.glist  = np.where(self.ptype == ptype_ints['gas'])[0]
         self.slist  = np.where(self.ptype == ptype_ints['star'])[0]
         self.dmlist = np.where(self.ptype == ptype_ints['dm'])[0]        
-        self.dm2list = np.where(self.ptype == ptype_ints['dm2'])[0]
+        if 'dm2' in self.obj.data_manager.ptypes: self.dm2list = np.where(self.ptype == ptype_ints['dm2'])[0]
+        if 'dm3' in self.obj.data_manager.ptypes: self.dm3list = np.where(self.ptype == ptype_ints['dm3'])[0]
         self.bhlist = np.where(self.ptype == ptype_ints['bh'])[0]
         self.dlist = np.where(self.ptype == ptype_ints['dust'])[0]
 
@@ -123,10 +132,12 @@ class DataManager(object):
         self.obj.simulation.ngas  = len(self.glist)
         self.obj.simulation.nstar = len(self.slist)
         self.obj.simulation.ndm   = len(self.dmlist)
-        self.obj.simulation.ndm2  = len(self.dm2list)
+        ndm2 = ndm3 = 0
+        if 'dm2' in self.obj.data_manager.ptypes: self.obj.simulation.ndm2 = ndm2 = len(self.dm2list)
+        if 'dm3' in self.obj.data_manager.ptypes: self.obj.simulation.ndm3 = ndm3 = len(self.dm3list)
         self.obj.simulation.nbh   = len(self.bhlist)
         self.obj.simulation.ndust = len(self.dlist)
-        self.obj.simulation.ntot  = self.obj.simulation.ngas+self.obj.simulation.nstar+self.obj.simulation.ndm+self.obj.simulation.ndm2+self.obj.simulation.nbh+self.obj.simulation.ndust
+        self.obj.simulation.ntot  = self.obj.simulation.ngas+self.obj.simulation.nstar+self.obj.simulation.ndm+ndm2+ndm3+self.obj.simulation.nbh+self.obj.simulation.ndust
 
 
     def _load_gas_data(self,select='all'):
@@ -249,6 +260,9 @@ class DataManager(object):
 
         if has_property(self.obj, 'bh', 'bhmass'):
             self.bhmass     = self.obj.yt_dataset.arr(get_property(self.obj, 'bhmass', 'bh').d[flag]*1e10, 'Msun/h').to(self.obj.units['mass'])  # I don't know how to convert this automatically
+            self.use_bhmass = True
+        elif has_property(self.obj, 'bh', 'mass'):
+            self.bhmass     = self.obj.yt_dataset.arr(get_property(self.obj, 'mass', 'bh').d[flag]*1e10, 'Msun/h').to(self.obj.units['mass'])  # I don't know how to convert this automatically
             self.use_bhmass = True
         else:
             mylog.warning('No black holes found')

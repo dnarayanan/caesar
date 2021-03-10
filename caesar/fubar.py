@@ -11,6 +11,7 @@ from yt.funcs import mylog
 from yt.extern.tqdm import tqdm
 from yt.utilities.lib.contour_finding import ParticleContourTree
 from yt.geometry.selection_routines import AlwaysSelector
+from yt.data_objects.octree_subset import YTPositionArray
 
 
 """
@@ -301,6 +302,7 @@ def get_mean_interparticle_separation(obj):
     ndm    = len(dmmass)
     dmmass = np.sum(dmmass)
 
+
     gmass  = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
     smass  = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
     bhmass = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
@@ -316,7 +318,6 @@ def get_mean_interparticle_separation(obj):
     if obj.data_manager.dust and has_ptype(obj, 'dust'):
         dustmass= get_property(obj, 'mass', 'dust').to('code_mass')        
     bmass = np.sum(gmass) + np.sum(smass) + np.sum(bhmass) + np.sum(dustmass)
-
 
     """
     DM = obj.data_manager
@@ -579,6 +580,8 @@ def fubar(obj, group_type, **kwargs):
     glist  = np.full(obj.simulation.ngas,  -1, dtype=np.int32)
     slist  = np.full(obj.simulation.nstar, -1, dtype=np.int32)
     dmlist = np.full(obj.simulation.ndm,   -1, dtype=np.int32)
+    if 'dm2' in obj.data_manager.ptypes: dm2list = np.full(obj.simulation.ndm2,   -1, dtype=np.int32)
+    if 'dm3' in obj.data_manager.ptypes: dm3list = np.full(obj.simulation.ndm3,   -1, dtype=np.int32)
     bhlist = np.full(obj.simulation.nbh,   -1, dtype=np.int32)
     dlist  = np.full(obj.simulation.ndust,  -1, dtype=np.int32)
     
@@ -586,6 +589,8 @@ def fubar(obj, group_type, **kwargs):
         glist[group.glist]   = group.GroupID
         slist[group.slist]   = group.GroupID
         dmlist[group.dmlist] = group.GroupID
+        if 'dm2' in obj.data_manager.ptypes: dm2list[group.dm2list] = group.GroupID
+        if 'dm3' in obj.data_manager.ptypes: dm3list[group.dm3list] = group.GroupID
         bhlist[group.bhlist] = group.GroupID
         dlist[group.dlist]   = group.GroupID
         
@@ -595,13 +600,16 @@ def fubar(obj, group_type, **kwargs):
         glist[group.unbound_indexes[ptype_ints['gas']]]  = -2
         slist[group.unbound_indexes[ptype_ints['star']]] = -2
         dmlist[group.unbound_indexes[ptype_ints['dm']]]  = -2
-        #dmlist[group.unbound_indexes[ptype_ints['bh']]]  = -2
+        if 'dm2' in obj.data_manager.ptypes: dm2list[group.unbound_indexes[ptype_ints['dm2']]]  = -2
+        if 'dm3' in obj.data_manager.ptypes: dm3list[group.unbound_indexes[ptype_ints['dm3']]]  = -2
         bhlist[group.unbound_indexes[ptype_ints['bh']]]  = -2
         dlist[group.unbound_indexes[ptype_ints['dust']]]  = -2
             
     setattr(obj.global_particle_lists, '%s_glist'  % group_type, glist)
     setattr(obj.global_particle_lists, '%s_slist'  % group_type, slist)
     setattr(obj.global_particle_lists, '%s_dmlist' % group_type, dmlist)
+    if 'dm2' in obj.data_manager.ptypes: setattr(obj.global_particle_lists, '%s_dm2list' % group_type, dm2list)
+    if 'dm3' in obj.data_manager.ptypes: setattr(obj.global_particle_lists, '%s_dm3list' % group_type, dm3list)
     setattr(obj.global_particle_lists, '%s_bhlist' % group_type, bhlist)
     setattr(obj.global_particle_lists, '%s_dlist'  % group_type, dlist)
     

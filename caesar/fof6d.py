@@ -80,7 +80,7 @@ class fof6d:
         ptype = np.empty(0,dtype=np.int32)
         for ip,p in enumerate(self.obj.data_manager.ptypes):  # get positions
             if not has_ptype(self.obj, p): continue
-            data = get_property(self.obj, 'pos', p).to(obj.units['length'])
+            data = get_property(self.obj, 'pos', p).to(self.obj.units['length'])
             pos = np.append(pos, data.d, axis=0)
             ptype = np.append(ptype, np.full(len(data), ptype_ints[p], dtype=np.int32), axis=0)
         haloid_all = fof(self.obj, pos, LL, group_type='halo')  # run FOF
@@ -155,7 +155,7 @@ class fof6d:
 
         # collect indices for eligible particles
         memlog('Running fof6d on %d halos w/%d proc(s), LL=%g'%(len(self.obj.halo_list),self.nproc,self.fof_LL))
-        g_inds = []  # indexes of particle eligible for being in a group
+        g_inds = []  # indexes of (gas star BH dust) particle eligible for being in a group
         len_hi = len_gi = 0
         for ih in range(len(self.obj.halo_list)):
             g_inds.append(setup_indexes(self,self.obj.halo_list[ih].global_indexes))
@@ -164,16 +164,22 @@ class fof6d:
         memlog('%d halo particles, %g%% eligible for galaxies'%(len_hi, np.round(100*len_gi/len_hi,2)))
 
         # get tags using fof6d
+        ngs=0
         if self.nproc == 1:
             grp_tags = [None]*len(self.obj.halo_list)  # particle IDs for fof6d objects
             for ih in range(len(self.obj.halo_list)):
-                grp_tags[ih] = fof6d_halo(len(self.obj.halo_list[ih].global_indexes),len(g_inds[ih]),self.obj.data_manager.pos[g_inds[ih]],self.obj.data_manager.vel[g_inds[ih]],self.minstars,self.obj.simulation.boxsize.d,self.fof_LL,self.vel_LL,self.kerneltab)
+                grp_tags[ih],tmg = fof6d_halo(len(self.obj.halo_list[ih].global_indexes),len(g_inds[ih]),self.obj.data_manager.pos[g_inds[ih]],self.obj.data_manager.vel[g_inds[ih]],self.minstars,self.obj.simulation.boxsize.d,self.fof_LL,self.vel_LL,self.kerneltab)
+                ngs+=tmg
         else:
-            grp_tags = Parallel(n_jobs=self.nproc)(delayed(fof6d_halo)(len(self.obj.halo_list[ih].global_indexes),len(g_inds[ih]),self.obj.data_manager.pos[g_inds[ih]],self.obj.data_manager.vel[g_inds[ih]],self.minstars,self.obj.simulation.boxsize.d,self.fof_LL,self.vel_LL,self.kerneltab) for ih in range(len(self.obj.halo_list)))
+            tmg = Parallel(n_jobs=self.nproc)(delayed(fof6d_halo)(len(self.obj.halo_list[ih].global_indexes),len(g_inds[ih]),self.obj.data_manager.pos[g_inds[ih]],self.obj.data_manager.vel[g_inds[ih]],self.minstars,self.obj.simulation.boxsize.d,self.fof_LL,self.vel_LL,self.kerneltab) for ih in range(len(self.obj.halo_list)))
+            grp_tags,ngs = zip(*tmg)
+            grp_tags=list(grp_tags)
+            ngs = np.sum(ngs)
 
         # adjust tags to be sequential in galaxy number overall (rather than within each halo)
         ngrp = 0
-        self.group_parents = np.zeros(len(grp_tags),dtype=np.int32)
+        memlog('total galaxies %d, total groups %d'%(ngs,len(grp_tags)))
+        self.group_parents = np.zeros(ngs,dtype=np.int32)
         for ih in range(len(grp_tags)):
             grp_tags[ih] = np.where(grp_tags[ih]>=0, grp_tags[ih]+ngrp, -1)
             mygals = np.unique(grp_tags[ih])
@@ -181,6 +187,8 @@ class fof6d:
             self.group_parents[mygals] = ih
             ngrp += len(mygals)
 
+        if ngrp != ngs:
+            memlog('WARNING!! total galaxies number do not agree: %d, %d'%(ngs,ngrp))
         # collect overall tags 
         self.tags_fof6d = np.zeros(self.nparttot,dtype=np.int64) - 1
         for igrp in range(len(grp_tags)):
@@ -229,6 +237,9 @@ class fof6d:
                 elif p == 'dm2': 
                     mygrp.dm2list = my_indexes[my_ptype==ptype_ints[p]]-offset
                     mygrp.ndm2 = len(mygrp.dm2list)
+                elif p == 'dm3':
+                    mygrp.dm3list = my_indexes[my_ptype==ptype_ints[p]]-offset
+                    mygrp.ndm3 = len(mygrp.dm3list)
                 offset += self.nparttype[p]
             if mygrp._valid:
                 mygrp.obj_type = self.obj_type
@@ -350,7 +361,7 @@ def fof6d_halo(nparthalo,npart,pos,vel,minstars,Lbox,fof_LL,vel_LL,kerneltab):
     #initialize fof6d
     fof6d_tags = np.zeros(npart,dtype=np.int64)-1  # default is that no particles are in galaxies
     if npart <= minstars:  # no possible valid galaxies; we're done
-        return fof6d_tags
+        return fof6d_tags, 0
     mypos = np.copy(pos)
     myvel = np.copy(vel)
     mypos = mypos.T # transpose since fof6d routines expect [npart,ndim]
@@ -363,7 +374,7 @@ def fof6d_halo(nparthalo,npart,pos,vel,minstars,Lbox,fof_LL,vel_LL,kerneltab):
     for idir in range(len(mypos)):  # sort in each direction, find groups within sorted list
         if len(groups) > 0: groups = fof_sorting_old(groups,mypos,myvel,myhaloID,pindex,fof_LL,Lbox,idir,mingrp=minstars)
     if len(groups) == 0: 
-        return fof6d_tags  # found no valid groups after sorting
+        return fof6d_tags,0  # found no valid groups after sorting
     fof6d_results = [None]*len(groups)
     for igrp in range(len(groups)):
         if groups[igrp][1]-groups[igrp][0] < minstars: continue
@@ -382,9 +393,8 @@ def fof6d_halo(nparthalo,npart,pos,vel,minstars,Lbox,fof_LL,vel_LL,kerneltab):
     # reset back into original particle order and collect tags for particles in this halo
     for i in range(npart):
         fof6d_tags[pindex[i]] = galindex[i]
-
     # returns the group to which each particle belongs (-1 if not in group)
-    return fof6d_tags  
+    return fof6d_tags,nfof
 
 def fof6d_main(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,mingrp,fof_LL,vel_LL=None,nfof=0):
     # find neighbors of all particles within fof_LL
