@@ -713,7 +713,7 @@ def get_group_overall_properties(group,grp_list):
         for ip,p in enumerate(group.obj.data_manager.ptypes):
             if has_ptype(group.obj,p):
                 mygroup.masses[list_types[p]] = group.obj.yt_dataset.quan(grp_mass[ig,ip], group.obj.units['mass'])
-                if p is not 'dm' and p is not 'dm2':
+                if p is not 'dm' and p is not 'dm2' and p is not 'dm3':
                     mbaryon += grp_mass[ig,ip]
         mygroup.masses['baryon'] = group.obj.yt_dataset.quan(mbaryon, group.obj.units['mass'])
         mygroup.pos = group.obj.yt_dataset.arr(grp_pos[ig], group.obj.units['length'])

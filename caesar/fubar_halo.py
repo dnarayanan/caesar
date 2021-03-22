@@ -118,7 +118,7 @@ def fubar_halo(obj):
     return
 
 
-plist_dict = dict( gas='glist', star='slist', bh='bhlist', dust='dlist', dm='dmlist', dm2='dm2list')
+plist_dict = dict( gas='glist', star='slist', bh='bhlist', dust='dlist', dm='dmlist', dm2='dm2list', dm3='dm3list')
 
 def reset_global_particle_IDs(obj):
     ''' Maps particle lists from currently loaded ID's to the ID's corresponding to the full snapshot '''
@@ -148,6 +148,9 @@ def reset_global_particle_IDs(obj):
         elif p == 'dm2': 
             offset[ip+1] = offset[ip] + obj.simulation.ndm2
             obj.simulation.ndm2 = count
+        elif p == 'dm3':
+            offset[ip+1] = offset[ip] + obj.simulation.ndm3
+            obj.simulation.ndm3 = count
 
     # reset lists
     for group_type in obj.group_types:
@@ -165,6 +168,7 @@ def reset_global_particle_IDs(obj):
                 if p == 'dust': group.dlist = mylist
                 if p == 'dm': group.dmlist = mylist
                 if p == 'dm2': group.dm2list = mylist
+                if p == 'dm3': group.dm3list = mylist
 
     return
 
@@ -178,7 +182,8 @@ def load_global_lists(obj):
         bhlist = np.full(obj.simulation.nbh, -1, dtype=np.int32)
         dlist  = np.full(obj.simulation.ndust, -1, dtype=np.int32)
         dmlist = np.full(obj.simulation.ndm, -1, dtype=np.int32)
-        dm2list = np.full(obj.simulation.ndm2, -1, dtype=np.int32)
+        if 'dm2' in obj.data_manager.ptypes: dm2list = np.full(obj.simulation.ndm2, -1, dtype=np.int32)
+        if 'dm3' in obj.data_manager.ptypes: dm3list = np.full(obj.simulation.ndm3, -1, dtype=np.int32)
 
         group_list = 'obj.%s_list'%group_type
         for group in eval(group_list):
@@ -192,12 +197,14 @@ def load_global_lists(obj):
                 if p == 'dust': dlist[eval(part_list)] = group.GroupID
                 if p == 'dm': dmlist[eval(part_list)] = group.GroupID
                 if p == 'dm2': dm2list[eval(part_list)] = group.GroupID
+                if p == 'dm3': dm3list[eval(part_list)] = group.GroupID
 
         setattr(obj.global_particle_lists, '%s_glist'  % group_type, glist)
         setattr(obj.global_particle_lists, '%s_slist'  % group_type, slist)
         setattr(obj.global_particle_lists, '%s_bhlist' % group_type, bhlist)
         setattr(obj.global_particle_lists, '%s_dlist'  % group_type, dlist)
         setattr(obj.global_particle_lists, '%s_dmlist' % group_type, dmlist)
-        setattr(obj.global_particle_lists, '%s_dm2list'% group_type, dm2list)
+        if 'dm2' in obj.data_manager.ptypes: setattr(obj.global_particle_lists, '%s_dm2list'% group_type, dm2list)
+        if 'dm3' in obj.data_manager.ptypes: setattr(obj.global_particle_lists, '%s_dm3list'% group_type, dm3list)
 
     return

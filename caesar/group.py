@@ -1,7 +1,7 @@
 import six
 import numpy as np
 
-from caesar.property_manager import ptype_ints
+from caesar.property_manager import ptype_ints, has_property
 #from caesar.group_funcs import get_periodic_r,get_virial_mr
 
 MINIMUM_STARS_PER_GALAXY = 24  # set a bit below 32 so we capture all galaxies above a given Mstar, rather than a given Nstar.
@@ -20,13 +20,16 @@ list_types = dict(
     bh='bh',
     dust='dust',
     dm='dm',
-    dm2='dm2'
+    dm2='dm2',
+    dm3='dm3'
 )
 
 info_blacklist = [
     '_glist','glist_end','glist_start',
     '_slist','slist_end','slist_start',
     '_dmlist','dmlist_end','dmlist_start',
+    '_dm2list','dm2list_end','dm2list_start',
+    '_dm3list','dm3list_end','dm3list_start',
     '_dlist','dlist_end','dlist_start',
     'obj', 'halo', 'galaxies','clouds', 'satellites',
     'galaxy_index_list_end', 'galaxy_index_list_start','cloud_index_list_end','cloud_index_list_start']
@@ -117,10 +120,14 @@ class Group(object):
         """Galaxies/clouds do not have DM, so remove references."""
         if self.obj_type != 'galaxy' or not self._valid:
             return
-        self._delete_attribute('ndm')        
+        self._delete_attribute('ndm')
+        if 'dm2' in self.obj.data_manager.ptypes: self._delete_attribute('ndm2')
+        if 'dm3' in self.obj.data_manager.ptypes: self._delete_attribute('ndm3')
         self._delete_key(self.radii,'dm_half_mass')
         self._delete_key(self.radii,'dm')
         self._delete_key(self.masses,'dm')
+        if 'dm2' in self.obj.data_manager.ptypes: self._delete_key(self.masses,'dm2')
+        if 'dm3' in self.obj.data_manager.ptypes: self._delete_key(self.masses,'dm3')
         self._delete_key(self.velocity_dispersions,'dm')
             
     def _cleanup(self):
@@ -132,7 +139,8 @@ class Group(object):
         self._delete_attribute('periodic_r')
         self._delete_attribute('__slist')
         self._delete_attribute('__dmlist')
-
+        if 'dm2' in self.obj.data_manager.ptypes: self._delete_attribute('__dm2list')
+        if 'dm3' in self.obj.data_manager.ptypes: self._delete_attribute('__dm3list')
 
     def _process_group(self):
         """Process each group after creation.  This entails 
@@ -171,17 +179,23 @@ class Group(object):
         self.__glist = np.where(ptypes == ptype_ints['gas'])[0]
         self.__slist = np.where(ptypes == ptype_ints['star'])[0]
         self.__dmlist = np.where(ptypes == ptype_ints['dm'])[0]
+        if 'dm2' in self.obj.data_manager.ptypes: self.__dm2list = np.where(ptypes == ptype_ints['dm2'])[0]
+        if 'dm3' in self.obj.data_manager.ptypes: self.__dm3list = np.where(ptypes == ptype_ints['dm3'])[0]
 
         # individual global lists
         self.glist  = indexes[np.where(ptypes == ptype_ints['gas'])[0]]
         self.slist  = indexes[np.where(ptypes == ptype_ints['star'])[0]]
         self.dmlist = indexes[np.where(ptypes == ptype_ints['dm'])[0]]
+        if 'dm2' in self.obj.data_manager.ptypes: self.dm2list = indexes[np.where(ptypes == ptype_ints['dm2'])[0]]
+        if 'dm3' in self.obj.data_manager.ptypes: self.dm3list = indexes[np.where(ptypes == ptype_ints['dm3'])[0]]
         self.bhlist = indexes[np.where(ptypes == ptype_ints['bh'])[0]]
         self.dlist  = indexes[np.where(ptypes == ptype_ints['dust'])[0]]
         
         self.ngas  = len(self.glist)
         self.nstar = len(self.slist)
         self.ndm   = len(self.dmlist)
+        if 'dm2' in self.obj.data_manager.ptypes: self.ndm2  = len(self.dm2list)
+        if 'dm3' in self.obj.data_manager.ptypes: self.ndm3  = len(self.dm3list)
         self.ndust = len(self.dlist)
 
         if self.obj.data_manager.blackholes:
@@ -195,11 +209,15 @@ class Group(object):
     def _calculate_masses(self):
         """Calculate various total masses."""
         mass_dm     = np.sum(self.obj.data_manager.mass[self.obj.data_manager.dmlist[self.dmlist]])
+        if 'dm2' in self.obj.data_manager.ptypes: mass_dm2    = np.sum(self.obj.data_manager.mass[self.obj.data_manager.dm2list[self.dm2list]])
+        if 'dm3' in self.obj.data_manager.ptypes: mass_dm3    = np.sum(self.obj.data_manager.mass[self.obj.data_manager.dm3list[self.dm3list]])
         mass_gas    = np.sum(self.obj.data_manager.mass[self.obj.data_manager.glist[self.glist]])
         mass_star   = np.sum(self.obj.data_manager.mass[self.obj.data_manager.slist[self.slist]])
         mass_baryon = mass_gas + mass_star
 
         self.masses['dm']      = self.obj.yt_dataset.quan(mass_dm, self.obj.units['mass'])
+        if 'dm2' in self.obj.data_manager.ptypes: self.masses['dm2']      = self.obj.yt_dataset.quan(mass_dm2, self.obj.units['mass'])
+        if 'dm3' in self.obj.data_manager.ptypes: self.masses['dm3']      = self.obj.yt_dataset.quan(mass_dm3, self.obj.units['mass'])
         self.masses['gas']     = self.obj.yt_dataset.quan(mass_gas, self.obj.units['mass'])
         self.masses['stellar'] = self.obj.yt_dataset.quan(mass_star, self.obj.units['mass'])
         self.masses['baryon']  = self.obj.yt_dataset.quan(mass_baryon, self.obj.units['mass'])
@@ -730,6 +748,8 @@ class Halo(Group):
     def __init__(self,obj):
         super(Halo, self).__init__(obj)
         self.child = False
+        if 'dm2' in obj.data_manager.ptypes: dm2list   = GroupList('dm2list')
+        if 'dm3' in obj.data_manager.ptypes: dm3list   = GroupList('dm3list')
         self.galaxies = []
         self.central_galaxy = None
         self.satellite_galaxies = []
@@ -778,7 +798,7 @@ def get_group_properties(self,grp_list):
     get_group_overall_properties(self,grp_list)
     get_group_gas_properties(self,grp_list)
     get_group_star_properties(self,grp_list)
-    if self.obj.data_manager.blackholes:
+    if (self.obj.data_manager.blackholes) & has_property(self.obj, 'bh', 'bhmdot'):
         get_group_bh_properties(self,grp_list)
 
     from caesar.utils import calculate_local_densities
@@ -821,6 +841,8 @@ def collate_group_ids(grp_list,part_type,ntot):
     elif part_type == 'star': suffix = 'slist'
     elif part_type == 'bh': suffix = 'bhlist'
     elif part_type == 'dm': suffix = 'dmlist'
+    elif part_type == 'dm2': suffix = 'dm2list'
+    elif part_type == 'dm3': suffix = 'dm3list'
     ngroup = len(grp_list)
     grpids = np.zeros(ntot,dtype=np.int64)
     gid_bins = np.zeros(ngroup+1,dtype=np.int64)
