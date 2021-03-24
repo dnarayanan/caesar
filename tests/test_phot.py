@@ -16,7 +16,7 @@ MODEL = sys.argv[1]
 SNAP = int(sys.argv[2])
 WIND = sys.argv[3]
 
-band = 'sdss_r'
+band = 'euclid_h'
 
 if __name__ == '__main__':
 
@@ -29,6 +29,7 @@ if __name__ == '__main__':
 # get caesar info for galaxies
     myobjs = sim.galaxies
     mag = np.asarray([m.absmag[band] for m in myobjs]) # load desired mags
+    LIR = np.asarray([m.L_FIR for m in myobjs]) # load desired mags
     print('%s mag original: %g'%(band,mag[0]))
     ms = np.log10(np.asarray([i.masses['stellar'] for i in myobjs]))
     mlim = np.log10(32*sim.simulation.critical_density.value*sim.simulation.boxsize.value**3*sim.simulation.omega_baryon/sim.simulation.effective_resolution**3) # galaxy mass resolution limit: 32 gas particle masses
@@ -40,18 +41,20 @@ if __name__ == '__main__':
     #ds  = sim.yt_dataset
     myobjs = sim.galaxies
     from caesar.pyloser.pyloser import photometry
-    galphot = photometry(sim,myobjs,ds=ds,band_names='sdss',ext_law='composite',nproc=16)
+    galphot = photometry(sim,myobjs,ds=ds,band_names=band,ext_law='composite',nproc=16)
     #galphot.run_pyloser(ssp_model='BPASS')
     spect_dust, spec_nodust = galphot.run_pyloser()
-    print('Default (should be same):',galphot.groups[0].absmag['sdss_r'])
+    print('Default (should be same):',mag[0],galphot.groups[0].absmag[band])
+    for i in range(len(mag)):
+        if mag[i] > 50: print('TROUBLE:',i,mag[i],galphot.groups[i].absmag[band],ms[i],ssfr[i],LIR[i])
 
     galphot = photometry(sim,myobjs,ds=ds,band_names='sdss',ssp_model='BPASS',ssp_table_file='/home/rad/caesar/BPASS_Chab100.hdf5',ext_law='composite',nproc=16)
     spect_dust, spec_nodust = galphot.run_pyloser()
-    print('BPASS (should be different):',galphot.groups[0].absmag['sdss_r'])
+    print('BPASS (should be different):',galphot.groups[0].absmag[band])
 
     galphot = photometry(sim,myobjs,ds=ds,band_names='sdss',ext_law='calzetti',ssp_model='BC03',ssp_table_file='/home/rad/caesar/BC03_Chab_Padova94.hdf5',nproc=8)
     spect_dust, spec_nodust = galphot.run_pyloser()
-    print('BC03 (should be different):',galphot.groups[0].absmag['sdss_r'])
+    print('BC03 (should be different):',galphot.groups[0].absmag[band])
 
 #######################################
 

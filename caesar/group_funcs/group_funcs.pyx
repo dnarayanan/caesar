@@ -473,7 +473,8 @@ def get_group_gas_properties(group,grp_list):
                 grp_Tcgm[ig] += gm[i]*gtemp[i]
                 grp_ZTcgm[ig] += gm[i]*gtemp[i]*gZ[i]
         grp_Zm[ig] /= grp_mass[ig]
-        grp_Zsfr[ig] /= grp_sfr[ig]
+        if grp_sfr[ig]>0: 
+            grp_Zsfr[ig] /= grp_sfr[ig]
         if grp_mnonsf[ig] > 0:
             grp_Zcgm[ig] /= grp_mnonsf[ig]
             grp_Tcgm[ig] /= grp_mnonsf[ig]
@@ -616,7 +617,7 @@ def get_group_overall_properties(group,grp_list):
 
     from caesar.group import MINIMUM_DM_PER_HALO,MINIMUM_STARS_PER_GALAXY,MINIMUM_GAS_PER_CLOUD
     from caesar.property_manager import ptype_ints
-    from caesar.group import create_new_group, group_types, collate_group_ids, list_types
+    from caesar.group import group_types, collate_group_ids, list_types
 
     # collect particle IDs.  need to concatenate into a single array for cython.
     ngroup, grpids, gid_bins = collate_group_ids(grp_list,'all',group.nparttot)
