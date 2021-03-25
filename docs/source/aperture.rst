@@ -17,7 +17,7 @@ Note that ``get_aperture_masses()`` only sums over particles within a galaxy's h
 Usage
 =====
 
-This example computes the quantities listed in ``myquants`` in a 2-D aperture projected in ``z``, with an aperture radius given by twice the stellar half mass radius, on 8 cores:
+This example computes the quantities listed in ``myquants`` in a 2-D aperture projected in ``z``, within an aperture given by twice the stellar half mass radius for each galaxy, on 8 cores:
 
 .. code-block:: python
 
@@ -28,16 +28,19 @@ This example computes the quantities listed in ``myquants`` in a 2-D aperture pr
    In [5]: rhalf = np.array([i.radii['stellar_half_mass'] for i in sim.galaxies])
    In [6]: m_apert = get_aperture_masses(SNAPFILE,sim.galaxies,sim.halos,quantities=myquants,aperture=2*rhalf,projection='z',nproc=8)
 
-``get_aperture_masses()`` returns a 2-D array of size ``(Nquants,Ngal)``, with the aperture-summed quantities for each galaxy, in the order specified in the ``quantities`` option.  ``CAESARFILE`` and ``SNAPFILE`` are the filenames of the Caesar catalog and particle snapshot, respectively.
+``get_aperture_masses()`` returns a 2-D array of size ``(Nquants,Ngal)``, with the aperture-summed quantities for each galaxy, in the order specified in the ``quantities`` option.  ``CAESARFILE`` and ``SNAPFILE`` are the filenames of the ``CAESAR`` catalog and particle snapshot, respectively.
 
 Options
 =======
 
-The following options can be passed to ``run_progen()`` or ``progen_finder()``:
+``get_aperture_masses()`` requires the original simulation snapshot, as well as the ``galaxies`` and ``halos`` objects from the corresponding ``CAESAR`` catalog.  It operates only on galaxies, and cannot operate on a subset of objects.
+
+The following options can be passed to ``get_aperture_masses()``:
 
 * ``quantities``: Can be any particle type (e.g. ``'gas'``), or else ``'HI'``, ``'H2'`` or ``'sfr'``.  *Default:* ``['gas','star','dm']``
 * ``aperture``:  The aperture size.  Can be a constant, which is assumed to be in comoving kpc, or else an array of length ``Ngalaxies``.  *Default:* ``30``
-* ``projection``: ``None`` gives the 3-D aperture values.  Specifying ``'x'``, ``'y'``, ``'z'`` gives the 2-D aperture projected along that axies. *Default:* ``None``
+* ``projection``: ``None`` gives the 3-D aperture values.  Specifying ``'x'``, ``'y'``, ``'z'`` gives the 2-D aperture projected along that axis. *Default:* ``None``
 * ``nproc``: Number of OpenMP cores (using `joblib <https://joblib.readthedocs.io/en/latest/generated/joblib.Parallel.html>`_, passed as ``n_jobs``). *Default:* 1
 
+The routine returns a single 2-D array of length ``(Nquants,Ngal)``, where ``Nquants=len(quantities)`` and ``Ngal=len(sim.galaxies)``.
 

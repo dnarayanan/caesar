@@ -584,10 +584,12 @@ def _get_aperture_masses(galaxies,aperture=30,projection=None):
 
     _, grpids, gid_bins = collate_group_ids(galaxies.obj.halo_list,'all',galaxies.obj.simulation.ntot)
 
-    # if aperture specified as a constant, make it an array
-    if not isinstance(aperture, (list, tuple, np.ndarray)):
-        aperture = np.zeros(len(galaxies),dtype=np.float32)+aperture*aperture
-    aperture = (aperture*aperture).astype(np.float32)
+    # if aperture specified as a constant value, make into array
+    if isinstance(aperture, (list, tuple, np.ndarray)):
+        aperture2 = (aperture*aperture).astype(np.float32)
+        assert(len(aperture2)==len(galaxies.obj.galaxy_list),"Length of aperture array %d must equal number of galaxies %d"%(len(aperture2),len(galaxies.obj.galaxy_list)))
+    else:
+        aperture2 = np.zeros(len(galaxies.obj.galaxy_list),dtype=np.float32)+aperture*aperture
 
     # set up projection (None/'x'/'y'/'z')
     if projection is None: kproj = -1
@@ -621,7 +623,7 @@ def _get_aperture_masses(galaxies,aperture=30,projection=None):
         ## general variables
         int         ih,ig,istart,iend,igstart,igend
         double      Lbox = galaxies.obj.simulation.boxsize.d
-        float[:]    apert2 = aperture*aperture
+        float[:]    apert2 = aperture2
         int[:]      ptypes = ptype_array
         ## things to compute
         double[:]   galaxy_gmass = np.zeros(ngal)
@@ -669,6 +671,7 @@ def get_aperture_masses(snapfile,galaxies,halos,quantities=['gas','star','dm'],a
     # if aperture specified as a constant value, make into array
     if isinstance(aperture, (list, tuple, np.ndarray)):
         aperture2 = (aperture*aperture).astype(np.float32)
+        assert(len(aperture2)==len(galaxies),"Length of aperture array %d must equal number of galaxies %d"%(len(aperture2),len(galaxies)))
     else:
         aperture2 = np.zeros(len(galaxies),dtype=np.float32)+aperture*aperture
 
