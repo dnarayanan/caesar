@@ -93,6 +93,7 @@ Contents
    running
    loading
    usage
+   catalog
    progen
    photometry
    aperture

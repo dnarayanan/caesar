@@ -779,7 +779,7 @@ def get_aperture_masses(snapfile,galaxies,halos,quantities=['gas','star','dm'],a
         ## things to compute
         double[:,:]   galaxy_mass = np.zeros((npt,ngal))
 
-    memlog('Doing aperture mass calculation %d'%kdir)
+    memlog('Doing aperture mass calculation')
     # set up list of galaxies to process, associated to halos
     for ih in prange(nhalo,nogil=True,schedule='dynamic',num_threads=my_nproc):
         istart = hid_bins[ih]
