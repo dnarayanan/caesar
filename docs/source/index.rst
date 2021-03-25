@@ -95,6 +95,7 @@ Contents
    usage
    progen
    photometry
+   aperture
    units
 
 ----
