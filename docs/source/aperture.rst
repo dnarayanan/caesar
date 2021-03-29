@@ -40,6 +40,7 @@ The following options can be passed to ``get_aperture_masses()``:
 * ``quantities``: Can be any particle type (e.g. ``'gas'``), or else ``'HI'``, ``'H2'`` or ``'sfr'``.  *Default:* ``['gas','star','dm']``
 * ``aperture``:  The aperture size.  Can be a constant, which is assumed to be in comoving kpc, or else an array of length ``Ngalaxies``.  *Default:* ``30``
 * ``projection``: ``None`` gives the 3-D aperture values.  Specifying ``'x'``, ``'y'``, ``'z'`` gives the 2-D aperture projected along that axis. *Default:* ``None``
+* ``exclude``: ``None`` includes all particles in halo.  ``satellites`` or ``central`` excludes particles in satellite or central galaxies, respectively.  ``galaxies``/``both`` excludes all particles in galaxies. *Default:* ``None``
 * ``nproc``: Number of OpenMP cores (using `joblib <https://joblib.readthedocs.io/en/latest/generated/joblib.Parallel.html>`_, passed as ``n_jobs``). *Default:* 1
 
 The routine returns a single 2-D array of length ``(Nquants,Ngal)``, where ``Nquants=len(quantities)`` and ``Ngal=len(sim.galaxies)``.

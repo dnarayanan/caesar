@@ -663,7 +663,7 @@ def _get_aperture_masses(galaxies,aperture=30,projection=None):
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-def get_aperture_masses(snapfile,galaxies,halos,quantities=['gas','star','dm'],aperture=30,projection=None,nproc=1):
+def get_aperture_masses(snapfile,galaxies,halos,quantities=['gas','star','dm'],aperture=30,projection=None,exclude=None,nproc=1):
     ''' Compute aperture masses in various quantities; standalone version '''
 
     import sys
@@ -680,6 +680,9 @@ def get_aperture_masses(snapfile,galaxies,halos,quantities=['gas','star','dm'],a
     elif projection == 'x' or projection == '0': kproj = 0
     elif projection == 'y' or projection == '1': kproj = 1
     elif projection == 'z' or projection == '2': kproj = 2
+
+    if exclude is not None and 'central' not in exclude and 'satellite' not in exclude and 'both' not in exclude and 'galaxies' not in exclude:
+        sys.exit('exclude flag %s not recognized'%exclude)
 
     # if you want a gas-related quantity, gas masses must be computed
     quants = quantities.copy()
@@ -712,13 +715,28 @@ def get_aperture_masses(snapfile,galaxies,halos,quantities=['gas','star','dm'],a
             elif pt == 'dm2': mylist = h.dm2list
             elif pt == 'dm3': mylist = h.dm3list
             else: sys.exit('quantity/particle type %s not understood -- EXITING'%pt)
+            if exclude is not None:
+                # collect list of particles in galaxies and remove from halo list
+                gplist = np.zeros(0)
+                for ig in h.galaxy_index_list:
+                    g = galaxies[ig]
+                    if ('satellite' in exclude) and g.central == 1: continue
+                    if ('central' in exclude) and g.central == 0: continue
+                    if pt == 'gas' or pt == 'sfr' or pt == 'HI' or pt == 'H2': gplist = np.concatenate((gplist , g.glist))
+                    elif pt == 'star': gplist = np.concatenate((gplist , g.slist))
+                    elif pt == 'bh': gplist = np.concatenate((gplist , g.bhlist))
+                    elif pt == 'dm': gplist = np.concatenate((gplist , g.dmlist))
+                    elif pt == 'dm2': gplist = np.concatenate((gplist , g.dm2list))
+                    elif pt == 'dm3': gplist = np.concatenate((gplist , g.dm3list))
+                gplist_set = set(gplist)
+                mylist = [i for i in mylist if i not in gplist_set]
             npart += len(mylist)
         gid_bins[ihalo+1] = npart
     phalo_pos = np.zeros((npart,3),dtype=np.float32)
     phalo_mass = np.zeros(npart,dtype=np.float32)
     phalo_type = np.zeros(npart,dtype=np.int32)
 
-    # load particles
+    # load particle info from snapshot
     from readgadget import readsnap,readhead
     hubble = readhead(snapfile,'h')
     boxsize = readhead(snapfile,'boxsize')/hubble
@@ -732,6 +750,7 @@ def get_aperture_masses(snapfile,galaxies,halos,quantities=['gas','star','dm'],a
             all_pos.append(readsnap(snapfile,'pos',pt,units=1,suppress=1)/hubble)
             all_mass.append(readsnap(snapfile,'mass',pt,units=1,suppress=1)/hubble)
 
+    # collate particle info for each halo
     npart = 0
     for ihalo,h in enumerate(halos):
         for ipt,pt in enumerate(quants):
@@ -744,6 +763,20 @@ def get_aperture_masses(snapfile,galaxies,halos,quantities=['gas','star','dm'],a
             elif pt == 'dm': mylist = h.dmlist
             elif pt == 'dm2': mylist = h.dm2list
             elif pt == 'dm3': mylist = h.dm3list
+            if exclude is not None:
+                gplist = np.zeros(0)
+                for ig in h.galaxy_index_list:
+                    g = galaxies[ig]
+                    if ('satellite' in exclude) and g.central == 1: continue
+                    if ('central' in exclude) and g.central == 0: continue
+                    if pt == 'gas' or pt == 'sfr' or pt == 'HI' or pt == 'H2': gplist = np.concatenate((gplist , g.glist))
+                    elif pt == 'star': gplist = np.concatenate((gplist , g.slist))
+                    elif pt == 'bh': gplist = np.concatenate((gplist , g.bhlist))
+                    elif pt == 'dm': gplist = np.concatenate((gplist , g.dmlist))
+                    elif pt == 'dm2': gplist = np.concatenate((gplist , g.dm2list))
+                    elif pt == 'dm3': gplist = np.concatenate((gplist , g.dm3list))
+                gplist_set = set(gplist)
+                mylist = [i for i in mylist if i not in gplist_set]
             npnew = len(mylist)
             all_type = np.zeros(npnew,dtype=np.int)+ipt
             phalo_pos[npart:npart+npnew] = all_pos[kpt][mylist]
@@ -797,7 +830,7 @@ def get_aperture_masses(snapfile,galaxies,halos,quantities=['gas','star','dm'],a
             galaxy_mass[ipt,ig] = gmass[ipt,ih]
 
     # if we computed gas masses but it was not requested, remove it now
-    if 'gas' not in quantities:
+    if ('sfr' in quantities or 'HI' in quantities or 'H2' in quantities) and 'gas' not in quantities:
         galaxy_mass = galaxy_mass[1:len(galaxy_mass)]
 
     return np.array(galaxy_mass)
