@@ -208,7 +208,11 @@ def save(obj, filename='test.hdf5'):
         hddd = hd.create_group('dicts')
 
         # gather
-        index_lists = ['galaxy_index_list', 'dmlist', 'glist', 'slist']
+        index_lists = ['dmlist']
+        if 'gas' in obj.data_manager.ptypes: index_lists.append('glist')
+        if 'star' in obj.data_manager.ptypes: index_lists.extend(['slist','galaxy_index_list'])
+        if 'dm2' in obj.data_manager.ptypes: index_lists.append('dm2list')
+        if 'dm3' in obj.data_manager.ptypes: index_lists.append('dm3list')
         if obj.data_manager.blackholes:
             index_lists.append('bhlist')
         if obj.data_manager.dust:

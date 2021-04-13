@@ -660,6 +660,102 @@ def _get_aperture_masses(galaxies,aperture=30,projection=None):
 
     return 
 
+
+@cython.cdivision(True)
+@cython.wraparound(False)
+@cython.boundscheck(False)
+def _get_aperture_quan(galaxies,aperture=30,aptname=None,projection=None):
+    ''' Compute aperture mass and velocity dispersion in various quantities.  The aperture should be specified
+    in the same units as the galaxy positions in data_manager, usually ckpc '''
+
+    from caesar.group import collate_group_ids
+    from caesar.property_manager import has_property,ptype_ints
+
+    _, grpids, gid_bins = collate_group_ids(galaxies.obj.halo_list,'all',galaxies.obj.simulation.ntot)
+
+    # if aperture specified as a constant value, make into array
+    if isinstance(aperture, (list, tuple, np.ndarray)):
+        aperture2 = (aperture*aperture).astype(np.float32)
+        assert(len(aperture2)==len(galaxies.obj.galaxy_list),"Length of aperture array %d must equal number of galaxies %d"%(len(aperture2),len(galaxies.obj.galaxy_list)))
+        if aptname == None:
+            raise ValueError('aptname can not be None for list of apertures!')
+        else:
+            apert_str = aptname
+    else:
+        aperture2 = np.zeros(len(galaxies.obj.galaxy_list),dtype=np.float32)+aperture*aperture
+        if aptname == None:
+            apert_str = '%dkpc'%int(aperture)
+        else:
+            apert_str = aptname
+
+    # set up projection (None/'x'/'y'/'z')
+    cdef int kproj = -1
+    if projection is None: kproj = -1
+    elif projection == 'x' or projection == '0': kproj = 0
+    elif projection == 'y' or projection == '1': kproj = 1
+    elif projection == 'z' or projection == '2': kproj = 2
+
+    # set up ptype indexes
+    galpos = np.asarray([i.pos for i in galaxies.obj.galaxy_list], dtype=np.float64)
+    ptype_array = []
+    for pt in galaxies.obj.data_manager.ptypes:  # this is the ordering for ptypes to be computed
+        ptype_array.append(ptype_ints[pt])
+    ptype_array = np.array(ptype_array,dtype=np.int32)
+
+    cdef:
+        ## global quantities
+        int         nhalo = len(galaxies.obj.halo_list)
+        int         ngal  = len(galaxies.obj.galaxy_list)
+        int         npart = len(grpids)
+        long int    nptype= len(ptype_array)
+        int         my_nproc = galaxies.nproc
+        int         kdir = kproj
+        long int[:] hid_bins = gid_bins   # starting indexes of particle IDs in each halo
+        double[:,:] galaxy_pos = galpos
+        float[:,:]  ppos = galaxies.obj.data_manager.pos[grpids]
+        float[:,:]  pvel = galaxies.obj.data_manager.vel[grpids]
+        float[:]    pmass = galaxies.obj.data_manager.mass[grpids]
+        int[:]      ptype = galaxies.obj.data_manager.ptype[grpids]
+        int[:]      galaxy_indexes = np.zeros(ngal,dtype=np.int32)
+        int[:]      galind_bins = np.zeros(nhalo+1,dtype=np.int32)
+        ## general variables
+        int         ih,ig
+        double      Lbox = galaxies.obj.simulation.boxsize.d
+        float[:]    apert2 = aperture2
+        int[:]      ptypes = np.arange(np.max(ptype_array)+1, dtype=np.int32)
+        ## things to compute
+        double[:,:]   gmas = np.zeros((ngal,nptype))
+        double[:,:]   gvds = np.zeros((ngal,nptype))
+
+    memlog('Doing aperture mass calculation within %s'%(apert_str))
+    
+    for ih,ig in enumerate(ptype_array):
+        ptypes[ig]=ih
+#     print(ptype_array,ptypes)
+    
+    # set up list of galaxies to process, associated to halos
+    ngal = 0
+    for ih in range(nhalo):
+        for ig in range(len(galaxies.obj.halo_list[ih].galaxy_index_list)):
+            galaxy_indexes[ngal+ig] = galaxies.obj.halo_list[ih].galaxy_index_list[ig]
+        ngal += len(galaxies.obj.halo_list[ih].galaxy_index_list)
+        galind_bins[ih+1] = ngal
+
+    get_galaxy_aperture(nhalo,ngal,npart, hid_bins,galind_bins, galaxy_pos, pmass, ppos, pvel, ptype, Lbox, ptypes, nptype, kdir, apert2, my_nproc, gmas,gvds)
+    for ih in range(len(ptype_array)):
+        outn='%s_%s'%(galaxies.obj.data_manager.ptypes[ih],apert_str)
+        for ig in range(ngal):
+            galaxies.obj.galaxy_list[ig].masses[outn] = galaxies.obj.yt_dataset.quan(gmas[ig,ih], galaxies.obj.units['mass'])
+            galaxies.obj.galaxy_list[ig].velocity_dispersions[outn] = galaxies.obj.yt_dataset.quan(gvds[ig,ih], galaxies.obj.units['velocity'])
+
+#     mv = np.array([filtered_m[i]*filtered_v[i] for i in range(len(filtered_v))])
+#     v_std = np.std(mv,axis=0)/np.mean(filtered_m)
+#     return np.sqrt(v_std.dot(v_std))
+           
+    memlog('filled galaxy_lists')
+
+    return
+
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
@@ -790,6 +886,7 @@ def get_aperture_masses(snapfile,galaxies,halos,quantities=['gas','star','dm'],a
             phalo_type[npart:npart+npnew] = all_type
             npart += npnew
     #print(npart,np.shape(phalo_pos),np.shape(phalo_mass),np.shape(phalo_type),np.amax(phalo_pos,axis=0))
+    
 
     cdef:
         ## global quantities
@@ -835,6 +932,208 @@ def get_aperture_masses(snapfile,galaxies,halos,quantities=['gas','star','dm'],a
 
     return np.array(galaxy_mass)
 
+
+@cython.cdivision(True)
+@cython.wraparound(False)
+@cython.boundscheck(False)
+def get_aperture_vdis(snapfile,caesarobj,quantities=['gas','star','dm'],aperture=30,projection=None,exclude=None,return_masses=False,nproc=1):
+    ''' Compute aperture masses in various quantities; standalone version '''
+
+    import sys
+    from caesar.property_manager import ptype_aliases,ptype_ints
+
+    galaxies = caesarobj.galaxies
+    halos = caesarobj.halos
+    # if aperture specified as a constant value, make into array
+    if isinstance(aperture, (list, tuple, np.ndarray)):
+        aperture2 = (aperture*aperture).astype(np.float32)
+        assert(len(aperture2)==len(galaxies),"Length of aperture array %d must equal number of galaxies %d"%(len(aperture2),len(galaxies)))
+    elif aperture=='stellar_half_mass':
+        apert = np.asarray([i.radii['stellar_half_mass'].value for i in galaxies])
+        aperture2 = (apert*apert).astype(np.float32)
+    else:
+        aperture2 = np.zeros(len(galaxies),dtype=np.float32)+aperture*aperture
+
+    # set up projection (None/'x'/'y'/'z')
+    if projection is None: kproj = -1
+    elif projection == 'x' or projection == '0': kproj = 0
+    elif projection == 'y' or projection == '1': kproj = 1
+    elif projection == 'z' or projection == '2': kproj = 2
+
+    if exclude is not None and 'central' not in exclude and 'satellite' not in exclude and 'both' not in exclude and 'galaxies' not in exclude:
+        sys.exit('exclude flag %s not recognized'%exclude)
+
+    # if you want a gas-related quantity, gas masses must be computed
+    quants = quantities.copy()
+    if ('sfr' in quants or 'HI' in quants or 'H2' in quants) and 'gas' not in quants:
+        quants.insert(0,'gas')
+        
+    ptype_array = []
+    for pt in quants:  # this is the ordering for ptypes to be computed
+        ptype_array.append(ptype_ints[pt])
+    ptype_array = np.array(ptype_array,dtype=np.int32)
+
+    # collate galaxy info in order of halos
+    g_indexes = np.zeros(len(galaxies),dtype=np.int32)
+    gind_bins = np.zeros(len(halos)+1,dtype=np.int32)
+    ngal = 0
+    galpos = []
+    galmass = []
+    for ihalo,h in enumerate(halos):
+        nghalo = len(h.galaxy_index_list)
+        g_indexes[ngal:ngal+nghalo] = h.galaxy_index_list
+        ngal += nghalo
+        gind_bins[ihalo+1] = ngal
+    galpos = np.array([galaxies[i].pos.to('kpccm') for i in g_indexes])
+    galmass = np.array([galaxies[i].masses['stellar'] for i in g_indexes])
+
+    # initialize particle lists
+    cdef long int npart = 0
+    gid_bins = np.zeros(len(halos)+1,dtype=np.int64)
+    for ihalo,h in enumerate(halos):
+        for pt in quants:
+            if pt == 'gas' or pt == 'sfr' or pt == 'HI' or pt == 'H2': mylist = h.glist
+            elif pt == 'star': mylist = h.slist
+            elif pt == 'bh': mylist = h.bhlist
+            elif pt == 'dm': mylist = h.dmlist
+            elif pt == 'dm2': mylist = h.dm2list
+            elif pt == 'dm3': mylist = h.dm3list
+            else: sys.exit('quantity/particle type %s not understood -- EXITING'%pt)
+            if exclude is not None:
+                # collect list of particles in galaxies and remove from halo list
+                gplist = np.zeros(0)
+                for ig in h.galaxy_index_list:
+                    g = galaxies[ig]
+                    if ('satellite' in exclude) and g.central == 1: continue
+                    if ('central' in exclude) and g.central == 0: continue
+                    if pt == 'gas' or pt == 'sfr' or pt == 'HI' or pt == 'H2': gplist = np.concatenate((gplist , g.glist))
+                    elif pt == 'star': gplist = np.concatenate((gplist , g.slist))
+                    elif pt == 'bh': gplist = np.concatenate((gplist , g.bhlist))
+                    elif pt == 'dm': gplist = np.concatenate((gplist , g.dmlist))
+                    elif pt == 'dm2': gplist = np.concatenate((gplist , g.dm2list))
+                    elif pt == 'dm3': gplist = np.concatenate((gplist , g.dm3list))
+                gplist_set = set(gplist)
+                mylist = [i for i in mylist if i not in gplist_set]
+            npart += len(mylist)
+        gid_bins[ihalo+1] = npart
+    phalo_pos = np.zeros((npart,3),dtype=np.float32)
+    phalo_vel = np.zeros((npart,3),dtype=np.float32)
+    phalo_mass = np.zeros(npart,dtype=np.float32)
+    phalo_type = np.zeros(npart,dtype=np.int32)
+
+    # load particle info from snapshot
+    from readgadget import readsnap,readhead
+    hubble = readhead(snapfile,'h')
+    boxsize = readhead(snapfile,'boxsize')/hubble
+    time = readhead(snapfile,'time')
+    all_pos = []
+    all_mass = []
+    all_vel = []
+    ptnames=[] # readin paticle type names
+    for pt in quants:
+        if pt == 'dm2': ptnames.append('bulge')
+        elif pt == 'dm3': ptnames.append('disk')
+        elif pt == 'bh': ptnames.append('bndry')
+        else: ptnames.append(pt)
+
+    for ipt,pt in enumerate(ptnames):
+        if pt == 'sfr': all_sfr = readsnap(snapfile,'sfr','gas',units=1,suppress=1)
+        elif pt == 'HI': all_fHI = readsnap(snapfile,'nh','gas',units=1,suppress=1)
+        elif pt == 'H2': all_fH2 = readsnap(snapfile,'fH2','gas',units=1,suppress=1)
+        else:
+            all_pos.append(readsnap(snapfile,'pos',pt,units=1,suppress=1)/hubble)
+            all_mass.append(readsnap(snapfile,'mass',pt,units=1,suppress=1)/hubble)
+            all_vel.append(readsnap(snapfile,'vel',pt,units=1,suppress=1)*np.sqrt(time))  #to particular
+
+    # collate particle info for each halo
+    npart = 0
+    for ihalo,h in enumerate(halos):
+        for ipt,pt in enumerate(quants):
+            kpt = ptype_ints[pt]
+            if pt == 'gas' or pt == 'sfr' or pt == 'HI' or pt == 'H2': 
+                mylist = h.glist
+                ipt = quants.index('gas')
+            elif pt == 'star': mylist = h.slist
+            elif pt == 'bh': mylist = h.bhlist
+            elif pt == 'dm': mylist = h.dmlist
+            elif pt == 'dm2': mylist = h.dm2list
+            elif pt == 'dm3': mylist = h.dm3list
+            if exclude is not None:
+                gplist = np.zeros(0)
+                for ig in h.galaxy_index_list:
+                    g = galaxies[ig]
+                    if ('satellite' in exclude) and g.central == 1: continue
+                    if ('central' in exclude) and g.central == 0: continue
+                    if pt == 'gas' or pt == 'sfr' or pt == 'HI' or pt == 'H2': gplist = np.concatenate((gplist , g.glist))
+                    elif pt == 'star': gplist = np.concatenate((gplist , g.slist))
+                    elif pt == 'bh': gplist = np.concatenate((gplist , g.bhlist))
+                    elif pt == 'dm': gplist = np.concatenate((gplist , g.dmlist))
+                    elif pt == 'dm2': gplist = np.concatenate((gplist , g.dm2list))
+                    elif pt == 'dm3': gplist = np.concatenate((gplist , g.dm3list))
+                gplist_set = set(gplist)
+                mylist = [i for i in mylist if i not in gplist_set]
+            npnew = len(mylist)
+            all_type = np.zeros(npnew,dtype=np.int32)+kpt
+            phalo_pos[npart:npart+npnew] = all_pos[ipt][mylist]
+            phalo_vel[npart:npart+npnew] = all_vel[ipt][mylist]
+            if pt == 'sfr':
+                phalo_mass[npart:npart+npnew] = all_sfr[mylist]
+            else:
+                mfactor = 1.
+                if pt == 'HI': mfactor = all_fHI[mylist]
+                if pt == 'H2': mfactor = all_fH2[mylist]
+                phalo_mass[npart:npart+npnew] = mfactor*all_mass[ipt][mylist]
+            phalo_type[npart:npart+npnew] = all_type
+            npart += npnew
+
+    cdef:
+        ## global quantities
+        int         my_nproc = nproc
+        int         kdir = kproj
+        int         nhalo = len(halos)
+        int         npt = len(quants)
+        long int[:] hid_bins = gid_bins   # starting indexes of particle IDs in each halo
+        double[:,:] galaxy_pos = galpos
+        float[:,:]  ppos = phalo_pos
+        float[:,:]  pvel = phalo_vel
+        float[:]    pmass = phalo_mass
+        int[:]      ptype = phalo_type
+        int[:]      galaxy_indexes = g_indexes
+        int[:]      galind_bins = gind_bins
+        ## general variables
+        int         ih
+        int[:]      ptypes = np.arange(np.max(ptype_array)+1, dtype=np.int32)
+        #double      Lbox = galaxies.obj.simulation.boxsize.d
+        float       Lbox = boxsize
+        float[:]    apert2 = aperture2
+        ## things to compute
+        double[:,:]   gmas = np.zeros((ngal,npt))
+        double[:,:]   gvds = np.zeros((ngal,npt))
+
+    for ih,ig in enumerate(ptype_array):
+        ptypes[ig]=ih
+    memlog('Doing aperture mass calculation')
+    get_galaxy_aperture(nhalo,ngal,npart, hid_bins,galind_bins, galaxy_pos, pmass, ppos, pvel, ptype, Lbox, ptypes, npt, kdir, apert2, my_nproc, gmas,gvds)
+    
+    # reset order to order of galaxies in caesar file
+    tmpmas = np.array(gmas)
+    tmpvds = np.array(gvds)
+    for ipt in range(len(quants)):
+        for ih,ig in enumerate(g_indexes):
+            gmas[ig,ipt] = tmpmas[ih,ipt]
+            gvds[ig,ipt] = tmpvds[ih,ipt]
+
+    # if we computed gas masses but it was not requested, remove it now
+    if ('sfr' in quantities or 'HI' in quantities or 'H2' in quantities) and 'gas' not in quantities:
+        gmas = gmas[:,1:len(gmas)]
+        gvds = gvds[:,1:len(gvds)]
+
+    if return_masses:
+        return np.array(gmas),np.array(gvds)
+    else:
+        return np.array(gvds)
+
+
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
@@ -867,3 +1166,87 @@ cdef void get_galaxy_aperture_masses(int igstart, int igend, int istart, int ien
 
     return
 
+@cython.cdivision(True)
+@cython.wraparound(False)
+@cython.boundscheck(False)
+cdef void get_galaxy_aperture(int nh, int ng, long int npt, long int[:] hbins,int[:] gbins, double[:,:] galaxy_pos, float[:] pmass, float[:,:] ppos, float[:,:] pvel, int[:] ptype, float Lbox, int[:] target_ptype, int nptype, int kdir, float[:] apert2, int nproc, double[:,:] aperture_mass, double[:,:] aperture_vd):
+    """
+    Note that this only looks at particles belongs to a galaxy's halo, so it may miss some mass
+    particularly for satellites on the outskirts of the halo.
+    Should be good for centrals, though!
+
+    """
+
+    cdef int j,k,l,ih, igstart, igend
+    cdef long int i, istart, iend
+    cdef double d2
+    cdef double dx[3]
+#     cdef double[:,:]   aperture_mass = np.zeros((ng,nptype))
+    cdef double[:,:,:] aperture_vsum = np.zeros((ng,3,nptype))
+    cdef double[:,:,:] aperture_vsig = np.zeros((ng,3,nptype))
+    cdef int[:,:]      aperture_npat = np.zeros((ng,nptype), dtype=np.int32)
+
+    
+    for ih in prange(nh,nogil=True,schedule='dynamic',num_threads=nproc):
+        istart = hbins[ih]
+        iend = hbins[ih+1]
+        igstart = gbins[ih]
+        igend = gbins[ih+1]
+        if igstart < igend:
+            for i in range(istart,iend):
+                for j in range(igstart,igend):
+                    d2 = 0.0
+                    for k in range(3):
+                        if k == kdir: continue
+                        dx[k] = c_fabs(ppos[i,k] - galaxy_pos[j,k])
+                        if dx[k] > 0.5*Lbox: 
+                            dx[k] = Lbox - dx[k]
+                        d2 += dx[k]*dx[k]
+
+                    if d2 < apert2[j]:
+                        aperture_mass[j,target_ptype[ptype[i]]] += pmass[i]
+#                         aperture_ids[i] = j  # this will not work properly when projecting two halos overlap
+                        aperture_npat[j,target_ptype[ptype[i]]] += 1
+                        for k in range(3):
+                            aperture_vsum[j, k, target_ptype[ptype[i]]] += pmass[i]*pvel[i, k]
+                        d2 = 1.e30
+    
+    # calculate vd for each galaxy
+    for i in prange(ng,nogil=True,schedule='dynamic',num_threads=nproc):
+        for l in range(nptype):
+            if aperture_npat[i,l]>0:
+                for k in range(3):
+                    aperture_vsum[i, k, l] /= aperture_npat[i,l] #mean v
+
+    for ih in prange(nh,nogil=True,schedule='dynamic',num_threads=nproc):  # stupid but safer
+        istart = hbins[ih]
+        iend = hbins[ih+1]
+        igstart = gbins[ih]
+        igend = gbins[ih+1]
+        if igstart < igend:
+            for i in range(istart,iend):
+                for j in range(igstart,igend):
+                    d2 = 0.0
+                    for k in range(3):
+                        if k == kdir: continue
+                        dx[k] = c_fabs(ppos[i,k] - galaxy_pos[j,k])
+                        if dx[k] > 0.5*Lbox: 
+                            dx[k] = Lbox - dx[k]
+                        d2 += dx[k]*dx[k]
+                        
+                    if d2 < apert2[j]:
+                        for k in range(3):
+                            aperture_vsig[j, k, target_ptype[ptype[i]]] += (pmass[i]*pvel[i, k] - aperture_vsum[j, k, target_ptype[ptype[i]]])**2
+                        d2 = 1.e30
+    
+    for i in prange(ng,nogil=True,schedule='dynamic',num_threads=nproc): #get final vsig
+        for l in range(nptype):
+            if aperture_npat[i, l]>0:
+                for k in range(3):
+                    aperture_vsig[i, k, l] = (aperture_vsig[i, k, l]/aperture_npat[i, l])**(0.5)/(aperture_mass[i, l]/aperture_npat[i,l])
+            if kdir == -1:
+                aperture_vd[i, l] = ((aperture_vsig[i, 0, l]**2+aperture_vsig[i, 1, l]**2+aperture_vsig[i, 2, l]**2)/3)**0.5  #to 1d sigma
+            else:
+                aperture_vd[i, l] = aperture_vsig[i, kdir, l]
+                
+    return

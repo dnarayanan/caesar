@@ -796,10 +796,11 @@ def get_group_properties(self,grp_list):
     from caesar.group_funcs import get_group_overall_properties,get_group_gas_properties,get_group_star_properties,get_group_bh_properties
 
     get_group_overall_properties(self,grp_list)
-    get_group_gas_properties(self,grp_list)
-    get_group_star_properties(self,grp_list)
-    if (self.obj.data_manager.blackholes) & has_property(self.obj, 'bh', 'bhmdot'):
-        get_group_bh_properties(self,grp_list)
+    if 'gas' in self.obj.data_manager.ptypes: get_group_gas_properties(self,grp_list)
+    if 'star' in self.obj.data_manager.ptypes: get_group_star_properties(self,grp_list)
+    if (self.obj.data_manager.blackholes):
+        if (self.obj.data_manager.blackholes) & has_property(self.obj, 'bh', 'bhmdot'):
+            get_group_bh_properties(self,grp_list)
 
     from caesar.utils import calculate_local_densities
     calculate_local_densities(self.obj, grp_list)
@@ -810,11 +811,14 @@ def get_group_properties(self,grp_list):
         self.obj.nhalos = len(self.obj.halo_list)
     if (self.obj_type == 'galaxy') and (len(grp_list) > 0):
         # compute some extra quantities for galaxies 
-        from caesar.hydrogen_mass_calc import get_HIH2_masses,_get_aperture_masses
+        from caesar.hydrogen_mass_calc import get_HIH2_masses,_get_aperture_masses,_get_aperture_quan
         if 'aperture' in self.obj._kwargs: aperture = float(self.obj._kwargs['aperture'])
         else: aperture = 30   # this is the default in units of obj.units['length']
         get_HIH2_masses(self,aperture=aperture)
-        _get_aperture_masses(self,aperture=aperture)
+#         _get_aperture_masses(self,aperture=aperture)
+        _get_aperture_quan(self,aperture=aperture)
+        if 'half_stellar_radius_property' in self.obj._kwargs:
+            _get_aperture_quan(self,aperture=np.asarray([i.radii['stellar_half_mass'].value for i in grp_list]),aptname='stellar_half_mass_radius')
         # sort and load galaxies into list
         sort_groups(grp_list,'stellar')
         self.obj.galaxies = self.obj.galaxy_list

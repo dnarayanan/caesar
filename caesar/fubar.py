@@ -302,6 +302,12 @@ def get_mean_interparticle_separation(obj):
     ndm    = len(dmmass)
     dmmass = np.sum(dmmass)
 
+#   Only need this when the second family (not low res one!) of dark matter particles is presented.
+#     if 'dm2' in obj.data_manager.ptypes:
+#         dmmass2 = get_property(obj, 'mass', 'dm2').to('code_mass')
+#         ndm     += len(dmmass2)
+#         dmmass  += np.sum(dmmass2)
+    
 
     gmass  = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
     smass  = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
