@@ -25,14 +25,17 @@ class DataManager(object):
     def _member_search_init(self, select='all'):
         """Collect particle information for member_search()"""
         memlog('Initializing member search, loading particles')
+        self.obj.simulation.ds_type  = self.obj._ds_type.ds_type
 #         self._determine_ptypes()
         self.load_particle_data(select=select)
         memlog('Loaded particle data')
         self._assign_particle_counts()
-        if isinstance(select,str) and select == 'all': self._load_gas_data()
-        else: self._load_gas_data(select=select[self.ptypes.index('gas')])
-        if isinstance(select,str) and select == 'all': self._load_star_data()
-        else: self._load_star_data(select=select[self.ptypes.index('star')])
+        if ('Gas' in self.obj._ds_type.ds.particle_fields_by_type) or ('PartType0' in self.obj._ds_type.ds.particle_fields_by_type):
+            if isinstance(select,str) and select == 'all': self._load_gas_data()
+            else: self._load_gas_data(select=select[self.ptypes.index('gas')])
+        if ('Stars' in self.obj._ds_type.ds.particle_fields_by_type) or ('PartType4' in self.obj._ds_type.ds.particle_fields_by_type):
+            if isinstance(select,str) and select == 'all': self._load_star_data()
+            else: self._load_star_data(select=select[self.ptypes.index('star')])
         if self.blackholes:
             if isinstance(select,str) and select == 'all': self._load_bh_data()
             else: self._load_bh_data(select=select[self.ptypes.index('bh')])
@@ -40,15 +43,20 @@ class DataManager(object):
         
     def _determine_ptypes(self):
         """Determines what particle/field types to collect."""
-        self.ptypes = ['gas','star','dm']
+        self.ptypes = []
         #if 'blackholes' in self.obj._kwargs and self.obj._kwargs['blackholes']:
+        if ('Gas' in self.obj._ds_type.ds.particle_fields_by_type) or ('PartType0' in self.obj._ds_type.ds.particle_fields_by_type):
+            self.ptypes.append('gas')
+        if ('Stars' in self.obj._ds_type.ds.particle_fields_by_type) or ('PartType4' in self.obj._ds_type.ds.particle_fields_by_type):
+            self.ptypes.append('star')   
+        self.ptypes.append('dm')
         self.blackholes = self.dust = self.dm2 = False
         if hasattr(self.obj,'_ds_type'):
             if 'PartType5' in self.obj._ds_type.ds.particle_fields_by_type:
                 if 'BH_Mdot' in self.obj._ds_type.ds.particle_fields_by_type['PartType5'] or 'StellarFormationTime' in self.obj._ds_type.ds.particle_fields_by_type['PartType5']:
                     self.ptypes.append('bh')
                     self.blackholes = True
-            if 'Bndry' in self.obj._ds_type.ds.particle_fields_by_type:
+            elif 'Bndry' in self.obj._ds_type.ds.particle_fields_by_type:
                 if 'Mass' in self.obj._ds_type.ds.particle_fields_by_type['Bndry']:
                     self.ptypes.append('bh')
                     self.blackholes = True

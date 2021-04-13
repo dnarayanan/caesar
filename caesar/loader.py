@@ -431,6 +431,14 @@ class Halo(Group):
     @property
     def dmlist(self):
         return self.obj._halo_dmlist[self.dmlist_start:self.dmlist_end]
+    
+    @property
+    def dm2list(self):
+        return self.obj._halo_dmlist[self.dm2list_start:self.dm2list_end]
+    
+    @property
+    def dm3list(self):
+        return self.obj._halo_dmlist[self.dm3list_start:self.dm3list_end]
 
     @property
     def bhlist(self):

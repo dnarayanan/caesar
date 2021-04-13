@@ -627,7 +627,11 @@ def get_group_overall_properties(group,grp_list):
     # NOTE: this routine assumes gadget numbering: 0=gas, 1=DM, 2=DM2, 3=dust, 4=star, 5=BH
     pt_ints = []
     for p in group.obj.data_manager.ptypes:
-        pt_ints.append(ptype_ints[p])
+        if (group.obj_type in ['galaxy', 'cloud']):
+            if p not in ['dm','dm2','dm3']:  # not DM informaiton for galaxies, see aperture calculation later
+                pt_ints.append(ptype_ints[p])
+        else:
+            pt_ints.append(ptype_ints[p])
 
     cdef:
         ## global quantities

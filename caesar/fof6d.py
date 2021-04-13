@@ -279,7 +279,7 @@ class fof6d:
         self.tags_fof6d = np.asarray(hf['fof6d_tags'])
         self.group_parents = np.asarray(hf['group_parents'])
         hf.close()
-        if len(self.tags_fof6d)!=self.nparttot or len(self.group_parents)!=self.counts[self.obj_type]:
+        if len(self.tags_fof6d)!=self.nparttot:
             mylog.warning('fof6d_file invalid! len(fof6d_tags) does not match length of particle list in halos (%d != %d) and/or len(group_parents) does not match length of halo list (%d != %d) -- RUNNING FOF6D'%(len(self.tags_fof6d),self.nparttot,len(self.group_parents),self.counts[self.obj_type]))
             return True
         return False
