@@ -56,7 +56,7 @@ class DataManager(object):
                 if 'BH_Mdot' in self.obj._ds_type.ds.particle_fields_by_type['PartType5'] or 'StellarFormationTime' in self.obj._ds_type.ds.particle_fields_by_type['PartType5']:
                     self.ptypes.append('bh')
                     self.blackholes = True
-            if 'Bndry' in self.obj._ds_type.ds.particle_fields_by_type:
+            elif 'Bndry' in self.obj._ds_type.ds.particle_fields_by_type:
                 if 'Mass' in self.obj._ds_type.ds.particle_fields_by_type['Bndry']:
                     self.ptypes.append('bh')
                     self.blackholes = True
