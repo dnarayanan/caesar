@@ -189,7 +189,10 @@ class DatasetType(object):
 
         """
         prop  = self.get_property_name(requested_ptype, requested_prop)
-        ptype = self.get_ptype_name(requested_ptype)
+        try:
+            ptype = self.get_ptype_name(requested_ptype)
+        except NotImplementedError:
+            return False
 
         if ptype in self.ds.particle_fields_by_type:
             fields = self.ds.particle_fields_by_type[ptype]
