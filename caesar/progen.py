@@ -100,7 +100,7 @@ def run_progen(snapdirs, snapname, snapnums, prefix='caesar_', suffix='hdf5', **
         progen_finder(obj_current, obj_progens, caesar_filename(snap_current,prefix,suffix), snap_dir=snapdirs[0], **kwargs)
 
 
-def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type='galaxy', part_type='star', recompute=True, save=True, n_most=1, min_in_common=0.1, nproc=1):
+def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type='galaxy', part_type='star', recompute=True, save=True, n_most=None, min_in_common=0.1, nproc=1):
     """Function to find the most massive progenitor of each Caesar object in obj_current
     in the previous snapshot.
     Returns list of progenitors in obj_target associated with objects in obj_current
@@ -126,7 +126,8 @@ def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type
     save : bool
         True/False = write/do not write info to caesar_file
     n_most : int 
-        Find n_most most massive progenitors/descendants.  Stored as an array for each galaxy.
+        Find n_most most massive progenitors/descendants.  Stored as a list for each galaxy.
+        Default: None for all progenitors/descendants
     min_in_common : float 
         Require >this fraction of parts in common between object and progenitor to 
         be a valid progenitor.
@@ -168,12 +169,15 @@ def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type
                                 npart_target, n_most=n_most, min_in_common=min_in_common, nproc=nproc)
 
     if save:
-        write_progens(obj_current, np.array(prog_indexes).T, caesar_file, index_name, obj_target.simulation.redshift)
+        if n_most is not None:
+            write_progens(obj_current, np.array(prog_indexes).T, caesar_file, index_name, obj_target.simulation.redshift)
+        else:
+            write_progens(obj_current, prog_indexes, caesar_file, index_name, obj_target.simulation.redshift)
 
     return prog_indexes
 
 
-def find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, npart_target, n_most=1, min_in_common=0.1, nproc=1):
+def find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, npart_target, n_most=None, min_in_common=0.1, nproc=1):
     """Find most massive and second most massive progenitor/descendants.
     
     Parameters
@@ -189,7 +193,7 @@ def find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, npa
     pid_hash : np.ndarray
        indexes for the start of each group in pids_current
     n_most : int 
-        Find n_most most massive progenitors/descendants.
+        Find n_most most massive progenitors/descendants, None for all.
     min_in_common : float 
         Require >this fraction of parts in common between object and progenitor to be a valid progenitor.
     nproc : int
@@ -210,10 +214,15 @@ def find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, npa
                    (pid_current[pid_hash[ig]:pid_hash[ig+1]],pid_target,
                     gid_target,npart_target,min_in_common,return_N=n_most) \
                   for ig in range(ngal_curr))
-
-        prog_index = np.array(prog_index_tmp,dtype=int)
+        if n_most is not None:
+            prog_index = np.array(prog_index_tmp,dtype=np.int32)
+        else:
+            prog_index = np.array(prog_index_tmp,dtype=object)
     else:
-        prog_index = np.zeros((ngal_curr,n_most),dtype=int)
+        if n_most is not None:
+            prog_index = np.zeros((ngal_curr,n_most),dtype=np.int32)
+        else:
+            prog_index = np.zeros(ngal_curr,dtype=object)
         for ig in range(ngal_curr):
             prog_index[ig] = _find_target_group(pid_current[pid_hash[ig]:pid_hash[ig+1]],pid_target,
                                                 gid_target,npart_target,min_in_common,return_N=n_most)
@@ -242,11 +251,16 @@ def _find_target_group(pid_curr,pid_targ,gid_targ,npart_targ,min_in_common,retur
     _matched = unique[_cmask[match_frac > min_in_common]] # ---- matching targets
     
     # ---- populate output array
-    if len(_matched) > return_N: 
-        out = _matched[:return_N]
-    else: 
-        out[:len(_matched)] = _matched 
-
+    if return_N is not None:
+        if len(_matched) > return_N: 
+            out = _matched[:return_N]
+        else: 
+            out[:len(_matched)] = _matched
+    else: #return all matched galaxies as a list 
+        if len(_matched) > 0:
+            out = _matched.tolist()
+        else:
+            out = []
     return out
 
 
@@ -273,7 +287,7 @@ def collect_group_IDs(obj, data_type, part_type, snap_dir):
         #snapfile = obj.simulation.fullpath.decode('utf-8')+'/'+obj.simulation.basename.decode('utf-8')
         snapfile = obj.simulation.fullpath.decode('utf-8')+'/'+obj.simulation.basename.decode('utf-8')
     else:
-        snapfile = snap_dir+'/'+obj.simulation.basename.decode('utf-8')
+        snapfile = snap_dir+'/'+obj.simulation.basename
     all_pids = np.array(readsnap(snapfile,'pid',part_type,suppress=1),dtype=np.uint64)
 
     from caesar.fubar_halo import plist_dict
@@ -325,7 +339,16 @@ def write_progens(obj, data, caesar_file, index_name, redshift):
         tree = f.create_group('tree_data')
     except:
         tree = f['tree_data']
-    progens = tree.create_dataset('%s' % (index_name), data=data, compression=1)
+        
+    if data.dtype == np.int32:
+        progens = tree.create_dataset('%s' % (index_name), data=data, compression=1)
+    else:
+        try:
+            progens = f.create_group('tree_data/%s' % (index_name))
+        except:
+            progens = f['tree_data/%s' % (index_name)]
+        for index, element in enumerate(data):
+            progens.create_dataset("%d"%index, data=np.array(element, dtype=np.int32), compression=1)
     tree.attrs[('z_'+index_name).encode('utf8')] = redshift
     f.close()
     return    

@@ -44,13 +44,19 @@ class LazyDataset:
     def __getitem__(self, index):
         if self._data is None:
             with h5py.File(self._obj.data_file, 'r') as hd:
-                dataset = hd[self._dataset_path]
-                if 'unit' in dataset.attrs:
-                    self._data = YTArray(dataset[:],
-                                         dataset.attrs['unit'],
-                                         registry=self._obj.unit_registry)
+                if self._dataset_path[:9] == "tree_data":
+                    if isinstance(hd[self._dataset_path], h5py.Dataset): # old prgen tree
+                        self._data = hd[self._dataset_path]
+                    else: # new one
+                        self._data = [hd[self._dataset_path+'/%d'%i][:] for i in range(self._obj.ngalaxies)]
                 else:
-                    self._data = dataset[:]
+                    dataset = hd[self._dataset_path]
+                    if 'unit' in dataset.attrs:
+                        self._data = YTArray(dataset[:],
+                                             dataset.attrs['unit'],
+                                             registry=self._obj.unit_registry)
+                    else:
+                        self._data = dataset[:]
         return self._data.__getitem__(index)
 
 
@@ -208,7 +214,7 @@ class CAESAR:
             self.caesar = hd.attrs['caesar']
 
             self.unit_registry = UnitRegistry.from_json(
-                hd.attrs['unit_registry_json'].decode('utf8'))
+                hd.attrs['unit_registry_json'])
 
             # Load the information about the simulation itself
             self.simulation = SimulationAttributes()
