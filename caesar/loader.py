@@ -46,7 +46,7 @@ class LazyDataset:
             with h5py.File(self._obj.data_file, 'r') as hd:
                 if self._dataset_path[:9] == "tree_data":
                     if isinstance(hd[self._dataset_path], h5py.Dataset): # old prgen tree
-                        self._data = hd[self._dataset_path]
+                        self._data = hd[self._dataset_path][:]
                     else: # new one
                         self._data = [hd[self._dataset_path+'/%d'%i][:] for i in range(self._obj.ngalaxies)]
                 else:
