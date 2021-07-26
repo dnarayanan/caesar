@@ -285,7 +285,11 @@ def collect_group_IDs(obj, data_type, part_type, snap_dir):
     from readgadget import readsnap
     if snap_dir is None:
         #snapfile = obj.simulation.fullpath.decode('utf-8')+'/'+obj.simulation.basename.decode('utf-8')
-        snapfile = obj.simulation.fullpath.decode('utf-8')+'/'+obj.simulation.basename.decode('utf-8')
+        if isinstance(obj.simulation.fullpath,str) & isinstance(obj.simulation.basename,str):
+            snapfile = obj.simulation.fullpath+'/'+obj.simulation.basename
+        else:
+            snapfile = obj.simulation.fullpath.decode('utf-8')+'/'+obj.simulation.basename.decode('utf-8')
+
     else:
         snapfile = snap_dir+'/'+obj.simulation.basename
     all_pids = np.array(readsnap(snapfile,'pid',part_type,suppress=1),dtype=np.uint64)
