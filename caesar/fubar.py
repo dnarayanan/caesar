@@ -8,10 +8,8 @@ from caesar.fof6d import run_fof_6d
 
 import six
 from yt.funcs import mylog
-from yt.extern.tqdm import tqdm
 from yt.utilities.lib.contour_finding import ParticleContourTree
 from yt.geometry.selection_routines import AlwaysSelector
-from yt.data_objects.octree_subset import YTPositionArray
 
 
 """
@@ -65,14 +63,8 @@ def fof(obj, positions, LL, group_type=None):
                                                                              
     pct = ParticleContourTree(LL)
 
-    pos = YTPositionArray(obj.yt_dataset.arr(positions, obj.units['length']))
-    #pos = YTPositionArray(pdata['pos'])
+    pos = obj.yt_dataset.arr(positions, obj.units['length'])
     ot  = pos.to_octree()
-
-    #ot  = [c._current_chunk.objs[0] for c in obj._dd.chunks([], 'all')][0]
-    #group_tags = pct.identify_contours(ot.oct_handler, ot.domain_ind, pdata['pos'],
-    #                                   np.arange(0,len(pdata['pos']),dtype=np.int64),
-    #                                   0,0)
 
     group_tags = pct.identify_contours(
         ot,
@@ -559,10 +551,13 @@ def fubar(obj, group_type, **kwargs):
 
     if unbind: mylog.info('Unbinding %s' % group_types[group_type])
 
-    for v in tqdm(groupings.values(),
-                  total=len(groupings),
-                  desc='Processing %s' % group_types[group_type]):
-        v._process_group()
+    try:
+        import tqdm
+        for v in tqdm.tqdm(groupings.values(), total=len(groupings), desc='Processing %s' % group_types[group_type]):
+            v._process_group()
+    except:
+        for v in groupings.values():
+            v._process_group()
 
     n_invalid = 0
     group_list = []
