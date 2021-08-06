@@ -796,8 +796,8 @@ def get_aperture_masses(snapfile,galaxies,halos,quantities=['gas','star','dm'],a
         g_indexes[ngal:ngal+nghalo] = h.galaxy_index_list
         ngal += nghalo
         gind_bins[ihalo+1] = ngal
-    galpos = np.array([galaxies[i].pos.to('kpccm') for i in g_indexes])
-    galmass = np.array([galaxies[i].masses['stellar'] for i in g_indexes])
+    galpos = np.array([galaxies[i].pos.to('kpccm') for i in g_indexes], dtype=np.float64)
+    galmass = np.array([galaxies[i].masses['stellar'] for i in g_indexes], dtype=np.float64)
 
     # initialize particle lists
     npart = 0
@@ -984,8 +984,8 @@ def get_aperture_vdis(snapfile,caesarobj,quantities=['gas','star','dm'],aperture
         g_indexes[ngal:ngal+nghalo] = h.galaxy_index_list
         ngal += nghalo
         gind_bins[ihalo+1] = ngal
-    galpos = np.array([galaxies[i].pos.to('kpccm') for i in g_indexes])
-    galmass = np.array([galaxies[i].masses['stellar'] for i in g_indexes])
+    galpos = np.array([galaxies[i].pos.to('kpccm') for i in g_indexes], dtype=np.float64)
+    galmass = np.array([galaxies[i].masses['stellar'] for i in g_indexes], dtype=np.float64)
 
     # initialize particle lists
     cdef long int npart = 0
