@@ -152,13 +152,21 @@ def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type
 
     'gas', 'dm', 'dm2', 'star', 'bh'
     if part_type == 'gas':
-        npart_target = np.array([len(_g.glist) for _g in obj_target.galaxies])
+        if 'gal' in data_type: npart_target = np.array([len(_g.glist) for _g in obj_target.galaxies])
+        if 'halo' in data_type: npart_target = np.array([len(_g.glist) for _g in obj_target.halos])
+        if 'cloud' in data_type: npart_target = np.array([len(_g.glist) for _g in obj_target.clouds])
     elif part_type == 'star':
-        npart_target = np.array([len(_g.slist) for _g in obj_target.galaxies])
+        if 'gal' in data_type: npart_target = np.array([len(_g.slist) for _g in obj_target.galaxies])
+        if 'halo' in data_type: npart_target = np.array([len(_g.slist) for _g in obj_target.halos])
+        if 'cloud' in data_type: npart_target = np.array([len(_g.slist) for _g in obj_target.clouds])
     elif part_type == 'bh':
-        npart_target = np.array([len(_g.bhlist) for _g in obj_target.galaxies])
+        if 'gal' in data_type: npart_target = np.array([len(_g.bhlist) for _g in obj_target.galaxies])
+        if 'halo' in data_type: npart_target = np.array([len(_g.bhlist) for _g in obj_target.halos])
+        if 'cloud' in data_type: npart_target = np.array([len(_g.bhlist) for _g in obj_target.clouds])
     elif part_type in ['dm','dm2']:
-        npart_target = np.array([len(_g.dmlist) for _g in obj_target.galaxies])
+        if 'gal' in data_type: npart_target = np.array([len(_g.dmlist) for _g in obj_target.galaxies])
+        if 'halo' in data_type: npart_target = np.array([len(_g.dmlist) for _g in obj_target.halos])
+        if 'cloud' in data_type: npart_target = np.array([len(_g.dmlist) for _g in obj_target.clouds])
 
 
     if ng_current == 0 or ng_target == 0:
