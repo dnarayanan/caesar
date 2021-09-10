@@ -236,7 +236,15 @@ class CAESAR:
                 dictname, arrname = k.split('.')
                 self._halo_dicts[dictname][arrname] = LazyDataset(
                     self, 'halo_data/dicts/' + k)
-
+                
+            if 'tree_data/progen_halo_dm' in hd:
+                self._halo_data['progen_halo_dm'] = self._progen_halo_dm = LazyDataset(
+                    self, 'tree_data/progen_halo_dm')
+                
+            if 'tree_data/descend_halo_dm' in hd:
+                self._halo_data['descend_halo_dm'] = self._descend_halo_dm = LazyDataset(
+                    self, 'tree_data/descend_halo_dm')
+                
             self.nhalos = hd.attrs['nhalos']
             self.halos = LazyList(self.nhalos, lambda i: Halo(self, i))
             mylog.info('Found {} halos'.format(len(self.halos)))
