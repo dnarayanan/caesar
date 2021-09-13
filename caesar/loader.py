@@ -48,7 +48,14 @@ class LazyDataset:
                     if isinstance(hd[self._dataset_path], h5py.Dataset): # old prgen tree
                         self._data = hd[self._dataset_path][:]
                     else: # new one
-                        self._data = [hd[self._dataset_path+'/%d'%i][:] for i in range(self._obj.ngalaxies)]
+                        if 'galaxy' in self._dataset_path.split('_'):
+                            self._data = [hd[self._dataset_path+'/%d'%i][:] for i in range(self._obj.ngalaxies)]
+                        elif 'halo' in self._dataset_path.split('_'):
+                            self._data = [hd[self._dataset_path+'/%d'%i][:] for i in range(self._obj.nhalos)]
+                        elif 'cloud' in self._dataset_path.split('_'):
+                            self._data = [hd[self._dataset_path+'/%d'%i][:] for i in range(self._obj.ncloud)]
+                        else:
+                            raise ValueError('The data set path not correct!!', self._dataset_path)
                 else:
                     dataset = hd[self._dataset_path]
                     if 'unit' in dataset.attrs:
@@ -298,6 +305,14 @@ class CAESAR:
                     dictname, arrname = k.split('.')
                     self._cloud_dicts[dictname][arrname] = LazyDataset(
                         self, 'cloud_data/dicts/' + k)
+                    
+                if 'tree_data/progen_cloud_gas' in hd:
+                    self._cloud_data['progen_cloud_gas'] = self._progen_cloud_gas = LazyDataset(
+                        self, 'tree_data/progen_cloud_gas')
+                    
+                if 'tree_data/descend_cloud_gas' in hd:
+                    self._cloud_data['descend_cloud_gas'] = self._descend_cloud_gas = LazyDataset(
+                        self, 'tree_data/descend_cloud_gas')
 
                 self.nclouds = hd.attrs['nclouds']
                 self.clouds = LazyList(self.nclouds, lambda i: Cloud(self, i))
