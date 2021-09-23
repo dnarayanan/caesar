@@ -1,9 +1,0 @@
-numpy
-h5py
-cython
-psutil
-scipy
-joblib
-scikit-learn
-yt
-astropy
