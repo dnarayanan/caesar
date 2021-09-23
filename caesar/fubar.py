@@ -10,7 +10,7 @@ import six
 from yt.funcs import mylog
 from yt.utilities.lib.contour_finding import ParticleContourTree
 from yt.geometry.selection_routines import AlwaysSelector
-
+from yt.data_objects.index_subobjects.octree_subset import YTPositionArray
 
 """
 ## RS TESTING TEMP ##
@@ -63,7 +63,7 @@ def fof(obj, positions, LL, group_type=None):
                                                                              
     pct = ParticleContourTree(LL)
 
-    pos = obj.yt_dataset.arr(positions, obj.units['length'])
+    pos = YTPositionArray(obj.yt_dataset.arr(positions, obj.units['length']))
     ot  = pos.to_octree()
 
     group_tags = pct.identify_contours(
