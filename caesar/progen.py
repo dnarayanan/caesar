@@ -100,7 +100,9 @@ def run_progen(snapdirs, snapname, snapnums, prefix='caesar_', suffix='hdf5', **
         progen_finder(obj_current, obj_progens, caesar_filename(snap_current,prefix,suffix), snap_dir=snapdirs[0], **kwargs)
 
 
-def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type='galaxy', part_type='star', recompute=True, save=True, n_most=None, min_in_common=0.1, nproc=1):
+def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type='galaxy', 
+                  part_type='star', recompute=True, save=True, n_most=None, min_in_common=0.1, 
+                  nproc=1, match_frac=False, reverse_match=False):
     """Function to find the most massive progenitor of each Caesar object in obj_current
     in the previous snapshot.
     Returns list of progenitors in obj_target associated with objects in obj_current
@@ -133,6 +135,12 @@ def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type
         be a valid progenitor.
     nproc : int
         Number of cores for multiprocessing. 
+    match_fracs : bool
+        True/False = Return / do _not_ return match fraction for each match
+    reverse_match : bool 
+        False = match all objects where fraction of _current_ is above min_in_common
+        True = match all objects where fraction of _target_ is above min_in_common
+        if match_fracs=True, returned fraction is the fraction of the current/target (False/True)
 
     """
 
@@ -173,8 +181,10 @@ def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type
         mylog.warning('No %s found in current caesar/target file (%d/%d) -- exiting progen_finder'%(data_type,ng_current,ng_target))
         return None
 
-    prog_indexes = find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, 
-                                npart_target, n_most=n_most, min_in_common=min_in_common, nproc=nproc)
+    prog_indexes, match_fracs = \
+            find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, 
+                         npart_target, n_most=n_most, min_in_common=min_in_common, 
+                         nproc=nproc, reverse_match=reverse_match)
 
     if save:
         if n_most is not None:
@@ -182,10 +192,14 @@ def progen_finder(obj_current, obj_target, caesar_file, snap_dir=None, data_type
         else:
             write_progens(obj_current, prog_indexes, caesar_file, index_name, obj_target.simulation.redshift)
 
-    return prog_indexes
+    if match_frac:
+        return prog_indexes, match_fracs
+    else:
+        return prog_indexes
 
 
-def find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, npart_target, n_most=None, min_in_common=0.1, nproc=1):
+def find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, npart_target, 
+                 n_most=None, min_in_common=0.1, nproc=1, reverse_match=False):
     """Find most massive and second most massive progenitor/descendants.
     
     Parameters
@@ -206,7 +220,8 @@ def find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, npa
         Require >this fraction of parts in common between object and progenitor to be a valid progenitor.
     nproc : int
         Number of cores for multiprocessing. Note that this doesn't help much since most of the time is spent in sorting.
-
+    reverse_match : bool
+        
     """
 
     # Sort the progenitor IDs and object numbers for faster searching
@@ -218,25 +233,32 @@ def find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, npa
 
     # Loop over current objects to find progens for each
     if nproc>1:
-        prog_index_tmp = Parallel(n_jobs=nproc)(delayed(_find_target_group)\
-                   (pid_current[pid_hash[ig]:pid_hash[ig+1]],pid_target,
-                    gid_target,npart_target,min_in_common,return_N=n_most) \
-                  for ig in range(ngal_curr))
+        prog_index_tmp, match_frac_tmp = \
+                   zip(*Parallel(n_jobs=nproc)(delayed(_find_target_group)\
+                   (pid_current[pid_hash[ig]:pid_hash[ig+1]],pid_target,gid_target,
+                    npart_target,min_in_common,return_N=n_most,reverse_match=reverse_match) \
+                  for ig in range(ngal_curr)))
         if n_most is not None:
             prog_index = np.array(prog_index_tmp,dtype=np.int32)
+            match_frac = np.array(match_frac_tmp,dtype=np.float)
         else:
             prog_index = np.array(prog_index_tmp,dtype=object)
+            match_frac = np.array(match_frac_tmp,dtype=object)
     else:
         if n_most is not None:
             prog_index = np.zeros((ngal_curr,n_most),dtype=np.int32)
+            match_frac = np.zeros((ngal_curr,n_most),dtype=np.float)
         else:
             prog_index = np.zeros(ngal_curr,dtype=object)
-        for ig in range(ngal_curr):
-            prog_index[ig] = _find_target_group(pid_current[pid_hash[ig]:pid_hash[ig+1]],pid_target,
-                                                gid_target,npart_target,min_in_common,return_N=n_most)
+            match_frac = np.zeros(ngal_curr,dtype=object)
+        for ig in range(10): # range(ngal_curr):
+            prog_index[ig], match_frac[ig] = \
+                    _find_target_group(pid_current[pid_hash[ig]:pid_hash[ig+1]],pid_target,
+                                       gid_target,npart_target,min_in_common,return_N=n_most, 
+                                       reverse_match=reverse_match)
 
    
-    return prog_index
+    return prog_index, match_frac
 
     # Print some stats and return the indices
     #prog_none = prog_index[prog_index<0]
@@ -246,30 +268,43 @@ def find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, npa
 
 
 # Find progenitor/descendant group having the most & second most particle ID's in common with pid_curr
-def _find_target_group(pid_curr,pid_targ,gid_targ,npart_targ,min_in_common,return_N=10):
+def _find_target_group(pid_curr,pid_targ,gid_targ,npart_targ,min_in_common,
+                       return_N=10,reverse_match=False):
+
     targ_ind = np.searchsorted(pid_targ,pid_curr) # bisection search to find closest ID in target
     targ_ind = np.where(targ_ind==len(pid_targ),len(pid_targ)-1,targ_ind)
     ig_matched = np.where(pid_targ[targ_ind]==pid_curr,gid_targ[targ_ind],-1)
     ig_matched = ig_matched[ig_matched>=0]
     unique, counts = np.unique(ig_matched,return_counts=True)
-    
+
     _cmask = np.argsort(counts)[::-1]
-    match_frac = counts / npart_targ[unique] # ---- fraction of particles from target in current
-    out = np.ones(return_N, dtype=int) * -1 # ---- initialise output array (-1 default, no match)  
-    _matched = unique[_cmask[match_frac > min_in_common]] # ---- matching targets
     
+    if reverse_match:
+        match_frac = counts / len(pid_curr) # ---- fraction of particles from _current_ in target
+    else:
+        match_frac = counts / npart_targ[unique] # ---- fraction of particles from target in current
+
+    _matched = unique[_cmask[match_frac > min_in_common]] # ---- matching targets
+
+    out = np.ones(return_N, dtype=int) * -1 # ---- initialise output array (-1 default, no match) 
+    out_frac = np.zeros(return_N, dtype=float) # ---- initialise output array (0 default) 
+     
     # ---- populate output array
     if return_N is not None:
         if len(_matched) > return_N: 
             out = _matched[:return_N]
+            out_frac = match_frac[_cmask][:return_N] 
         else: 
             out[:len(_matched)] = _matched
+            out_frac[:len(_matched)] = match_frac[_cmask[match_frac > min_in_common]]
     else: #return all matched galaxies as a list 
         if len(_matched) > 0:
             out = _matched.tolist()
+            out_frac = match_frac[_cmask].tolist()
         else:
             out = []
-    return out
+            out_frac = []
+    return out, out_frac
 
 
 def collect_group_IDs(obj, data_type, part_type, snap_dir):
