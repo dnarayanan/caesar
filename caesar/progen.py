@@ -251,7 +251,7 @@ def find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, npa
         else:
             prog_index = np.zeros(ngal_curr,dtype=object)
             match_frac = np.zeros(ngal_curr,dtype=object)
-        for ig in range(10): # range(ngal_curr):
+        for ig in range(ngal_curr):
             prog_index[ig], match_frac[ig] = \
                     _find_target_group(pid_current[pid_hash[ig]:pid_hash[ig+1]],pid_target,
                                        gid_target,npart_target,min_in_common,return_N=n_most, 
