@@ -27,7 +27,7 @@ ctypedef struct part_struct:  # structure to hold particle info for particles wi
     float v[3]  # velocities (for vel disp)
     float x[3]  # positions with respect to center
     int t  # type
-    int i  # index, for sorting purposes
+    #long long i  # index, for sorting purposes
 
 @cython.cdivision(True)
 @cython.wraparound(False)
@@ -48,7 +48,7 @@ cdef int mycmp(const_void * pa, const_void * pb) nogil:  # qsort comparison func
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void nogil_CoM_quants(int ig, float[:,:] pos, float[:,:] vel, float[:] mass, float[:] pot, float[:] grp_mtot, int istart, int iend, int ndim, float Lbox, float[:,:] grp_pos, float[:,:] grp_vel, float[:,:] grp_minpotpos, float[:,:] grp_minpotvel) nogil:
+cdef void nogil_CoM_quants(int ig, float[:,:] pos, float[:,:] vel, float[:] mass, float[:] pot, float[:] grp_mtot, long long istart, long long iend, int ndim, float Lbox, float[:,:] grp_pos, float[:,:] grp_vel, float[:,:] grp_minpotpos, float[:,:] grp_minpotvel) nogil:
     """ Computes center-of-mass position and velocity, as well as minimum potential position.
 
     ig: group index
@@ -61,8 +61,8 @@ cdef void nogil_CoM_quants(int ig, float[:,:] pos, float[:,:] vel, float[:] mass
 
     Returns minpotpart, index of particle at minimum of potential
     """
-    cdef int i,ip
-    cdef int minpotpart = -1
+    cdef int ip
+    cdef long long i, minpotpart = -1
     cdef float minpot = 1.e30
     cdef float[3] mypos
 
@@ -97,7 +97,7 @@ cdef void nogil_CoM_quants(int ig, float[:,:] pos, float[:,:] vel, float[:] mass
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void nogil_load_partinfo(float[:] mass, float[:,:] pos, float[:,:] vel, int[:] ptype, float[:] cent_pos, float[:] cent_vel, part_struct *pinfo, float Lbox, int istart, int iend, int ndim) nogil:
+cdef void nogil_load_partinfo(float[:] mass, float[:,:] pos, float[:,:] vel, int[:] ptype, float[:] cent_pos, float[:] cent_vel, part_struct *pinfo, float Lbox, long long istart, long long iend, int ndim) nogil:
     """ Computes center-of-mass position and velocity, as well as minimum potential position.
 
     ig: group index
@@ -108,7 +108,8 @@ cdef void nogil_load_partinfo(float[:] mass, float[:,:] pos, float[:,:] vel, int
     ndim: number of dimensions, usually 3
     pinfo: particle info structure to be filled
     """
-    cdef int i,j,ip
+    cdef int ip
+    cdef long long i,j
     cdef float dx[3]
     
     for i in range(istart,iend):
@@ -127,7 +128,7 @@ cdef void nogil_load_partinfo(float[:] mass, float[:,:] pos, float[:,:] vel, int
         pinfo[j].r = c_sqrt(pinfo[j].r)
         pinfo[j].m = mass[i]
         pinfo[j].t = ptype[i]
-        pinfo[j].i = i
+        #pinfo[j].i = i
 
 @cython.cdivision(True)
 @cython.wraparound(False)
@@ -371,17 +372,17 @@ cdef void nogil_rotator(float *vector, float ALPHA, float BETA) nogil:
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void nogil_radial_quants(int ig, int istart, int iend, int ndim, float[:] mass, float[:,:] pos, float[:,:] vel, int[:] ptype, float[:] cent_pos, float[:] cent_vel, float Lbox, int nptypes, int[:] group_ptypes, int gtflag, double[:] Densities, int nDens, float[:,:] grp_mass, float[:,:] grp_R20, float[:,:] grp_Rhalf, float[:,:] grp_R80, float[:,:] grp_vdisp, float[:,:,:] grp_L, float[:,:] grp_rvir, float[:,:] grp_mvir) nogil:
+cdef void nogil_radial_quants(int ig, long long istart, long long iend, int ndim, float[:] mass, float[:,:] pos, float[:,:] vel, int[:] ptype, float[:] cent_pos, float[:] cent_vel, float Lbox, int nptypes, int[:] group_ptypes, int gtflag, double[:] Densities, int nDens, float[:,:] grp_mass, float[:,:] grp_R20, float[:,:] grp_Rhalf, float[:,:] grp_R80, float[:,:] grp_vdisp, float[:,:,:] grp_L, float[:,:] grp_rvir, float[:,:] grp_mvir) nogil:
     """Compute radial quantities """
 
-    cdef int ip
+    cdef int ip, nparticles = iend-istart
     cdef float mtarget
     cdef part_struct *grp_partinfo
 
     # get radius of each particle, sort by radii
-    grp_partinfo = <part_struct *> malloc((iend-istart)*sizeof(part_struct))  # allocate particle info
+    grp_partinfo = <part_struct *> malloc((nparticles)*sizeof(part_struct))  # allocate particle info
     nogil_load_partinfo(mass, pos, vel, ptype, cent_pos, cent_vel, grp_partinfo, Lbox, istart, iend, ndim)
-    qsort(<void*>grp_partinfo, <size_t>(iend-istart), sizeof(part_struct), mycmp)
+    qsort(<void*>grp_partinfo, <size_t>(nparticles), sizeof(part_struct), mycmp)
 
     # calculate radii, velocity dispersions, angular quantities
     for ip in range(nptypes+2):
@@ -398,19 +399,19 @@ cdef void nogil_radial_quants(int ig, int istart, int iend, int ndim, float[:] m
         else:
             mtarget = grp_mass[ig,ip]
         # compute radii for this ptype(s), and 20%, 50%, and 80% of total mass
-        grp_R20[ig,ip] = nogil_half_mass_radius(grp_partinfo, 0.2*mtarget, ip, group_ptypes, iend-istart)
-        grp_Rhalf[ig,ip] = nogil_half_mass_radius(grp_partinfo, 0.5*mtarget, ip, group_ptypes, iend-istart)
-        grp_R80[ig,ip] = nogil_half_mass_radius(grp_partinfo, 0.8*mtarget, ip, group_ptypes, iend-istart)
+        grp_R20[ig,ip] = nogil_half_mass_radius(grp_partinfo, 0.2*mtarget, ip, group_ptypes, nparticles)
+        grp_Rhalf[ig,ip] = nogil_half_mass_radius(grp_partinfo, 0.5*mtarget, ip, group_ptypes, nparticles)
+        grp_R80[ig,ip] = nogil_half_mass_radius(grp_partinfo, 0.8*mtarget, ip, group_ptypes, nparticles)
         # compute velocity dispersions for this ptype(s)
-        grp_vdisp[ig,ip] = nogil_velocity_dispersions(grp_partinfo, ip, group_ptypes, iend-istart, ndim)
+        grp_vdisp[ig,ip] = nogil_velocity_dispersions(grp_partinfo, ip, group_ptypes, nparticles, ndim)
         # calculate angular quantities for this ptypes(s)
-        nogil_angular_quants(grp_partinfo, iend-istart, ip, group_ptypes, grp_L[ig,ip])
+        nogil_angular_quants(grp_partinfo, nparticles, ip, group_ptypes, grp_L[ig,ip])
 
         # calculate virial quantities
         if gtflag == 1:  # only calculate these for halos
-            nogil_virial_quants(grp_partinfo, Densities, iend-istart, nDens, grp_rvir[ig], grp_mvir[ig])
+            nogil_virial_quants(grp_partinfo, Densities, nparticles, nDens, grp_rvir[ig], grp_mvir[ig])
 
-    #if ig < 5: printf("%d %d %d %g %g %g %g %g %g\n",ig,istart,iend,c_log10(grp_mass[ig,0]),c_log10(grp_mass[ig,1]),grp_Rhalf[ig,0],grp_Rhalf[ig,1],grp_vdisp[ig,1],grp_L[ig,1,5])
+    #if ig < 5: printf("%d %q %q %g %g %g %g %g %g\n",ig,istart,iend,c_log10(grp_mass[ig,0]),c_log10(grp_mass[ig,1]),grp_Rhalf[ig,0],grp_Rhalf[ig,1],grp_vdisp[ig,1],grp_L[ig,1,5])
 
     free(grp_partinfo)
 
@@ -429,7 +430,7 @@ def get_group_gas_properties(group,grp_list):
 
     cdef:
         ## gas quantities
-        long int[:] hid_bins = gid_bins   # starting indexes of particle IDs in each group
+        long long[:] hid_bins = gid_bins   # starting indexes of particle IDs in each group
         float[:]   gm = group.obj.data_manager.mass[grpids]
         float[:]   gnh = group.obj.data_manager.gnh[grpids]
         float[:]   gsfr = group.obj.data_manager.gsfr[grpids]
@@ -440,7 +441,8 @@ def get_group_gas_properties(group,grp_list):
         # general variables
         int ng = ngroup
         int my_nproc = group.nproc
-        int i,ig,istart,iend
+        int ig
+        long long i,istart,iend
         double XH = group.obj.simulation.XH
         # Things to compute
         float[:]   grp_mass = np.zeros(ngroup,dtype=MY_DTYPE)  # total mass
@@ -510,14 +512,15 @@ def get_group_star_properties(group,grp_list):
 
     cdef:
         ## star quantities
-        long int[:] hid_bins = gid_bins   # starting indexes of particle IDs in each group
+        long long[:] hid_bins = gid_bins   # starting indexes of particle IDs in each group
         float[:]   sm = group.obj.data_manager.mass[grpids]
         float[:]   sZ = group.obj.data_manager.sZ[grpids]
         float[:]   sage = group.obj.data_manager.age[grpids]
         # general variables
         int ng = ngroup
         int my_nproc = group.nproc
-        int i,ig,istart,iend
+        int ig
+        long long i,istart,iend
         # Things to compute
         float[:]   grp_mass = np.zeros(ngroup,dtype=MY_DTYPE)  # total mass
         float[:]   grp_Zm = np.zeros(ngroup,dtype=MY_DTYPE)  # mass-weighted metallicity
@@ -561,13 +564,14 @@ def get_group_bh_properties(group,grp_list):
 
     cdef:
         ## bh quantities
-        long int[:] hid_bins = gid_bins   # starting indexes of particle IDs in each group
+        long long[:] hid_bins = gid_bins   # starting indexes of particle IDs in each group
         float[:]   bhmass = group.obj.data_manager.bhmass[grpids]
         float[:]   bhmdot = group.obj.data_manager.bhmdot[grpids]
         # general variables
         int ng = ngroup
         int my_nproc = group.nproc
-        int i,ig,istart,iend,imax
+        int ig
+        long long i, imax, istart,iend
         float bhmax
         # Things to compute
         float[:]   bhm = np.zeros(ngroup,dtype=MY_DTYPE)  # max BH mass in group
@@ -635,7 +639,7 @@ def get_group_overall_properties(group,grp_list):
 
     cdef:
         ## global quantities
-        long int[:] hid_bins = gid_bins   # starting indexes of particle IDs in each group
+        long long[:] hid_bins = gid_bins   # starting indexes of particle IDs in each group
         float[:,:] pos = group.obj.data_manager.pos[grpids]
         float[:,:] vel = group.obj.data_manager.vel[grpids]
         float[:]   mass = group.obj.data_manager.mass[grpids]
@@ -652,8 +656,9 @@ def get_group_overall_properties(group,grp_list):
         int nDens = len(Densities)
         float Lbox = group.obj.simulation.boxsize.d
         bint use_pot = group.obj.load_pot
-        int gtflag,minpotpart
-        int i,j,ig,ip,ir,istart,iend,binary
+        int minpotpart,gtflag=-1
+        int j,ig,ip,ir,binary
+        long long i,istart,iend
         float[3] dx
         float mtarget
         float r200_fact, G_in_simunits
