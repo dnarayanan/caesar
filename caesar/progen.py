@@ -284,7 +284,11 @@ def _find_target_group(pid_curr,pid_targ,gid_targ,npart_targ,min_in_common,
     else:
         match_frac = counts / npart_targ[unique] # ---- fraction of particles from target in current
 
-    _matched = unique[_cmask[match_frac > min_in_common]] # ---- matching targets
+    _matched = unique[_cmask]
+    _matched = _matched[match_frac > min_in_common] # ---- matching targets
+    _match_frac = match_frac[_cmask]
+    _match_frac = _match_frac[_match_frac > min_in_common]
+
 
     out = np.ones(return_N, dtype=int) * -1 # ---- initialise output array (-1 default, no match) 
     out_frac = np.zeros(return_N, dtype=float) # ---- initialise output array (0 default) 
@@ -293,14 +297,14 @@ def _find_target_group(pid_curr,pid_targ,gid_targ,npart_targ,min_in_common,
     if return_N is not None:
         if len(_matched) > return_N: 
             out = _matched[:return_N]
-            out_frac = match_frac[_cmask][:return_N] 
+            out_frac = _match_frac[:return_N] 
         else: 
             out[:len(_matched)] = _matched
-            out_frac[:len(_matched)] = match_frac[_cmask[match_frac > min_in_common]]
+            out_frac[:len(_matched)] = _match_frac
     else: #return all matched galaxies as a list 
         if len(_matched) > 0:
             out = _matched.tolist()
-            out_frac = match_frac[_cmask].tolist()
+            out_frac = _match_frac.tolist()
         else:
             out = []
             out_frac = []
