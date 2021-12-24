@@ -22,7 +22,7 @@ Requirements
   * `joblib <https://joblib.readthedocs.io/>`_
   * `six <https://six.readthedocs.io/>`_
   * `astropy <https://www.astropy.org/>`_
-  * `yt >= 3.3 <https://bitbucket.org/yt_analysis/yt>`_
+  * `yt >= 4.0 <https://bitbucket.org/yt_analysis/yt>`_
 
 ----
     
@@ -90,14 +90,23 @@ many cores via MPI, it is also necessary to install ``mpi4py``:
 Note that ``CAESAR`` is natively OpenMP-parallel, and the MPI implementation
 may be system-specific. 
 
+If you wish to work with galaxy and halo particle lists (for instance to compute
+your own quantities) it is highly recommended that you install ``pygadgetreader``:
+
+.. code-block:: bash
+
+   $> git clone https://github.com/dnarayanan/pygadgetreader.git
+   $> cd pygadgetreader
+   $> python setup.py install
+
+
 ----
 
 yt
 --
 
 ``CAESAR`` builds on the `yt <https://yt-project.org/>`_ simulation analysis toolkit.
-``CAESAR`` currently requires yt version >=3.3, though when yt-4.0 is released it will
-be updated to utilise this.
+``CAESAR`` requires yt version >=4.0, though a lot of functionality will still work with yt-3.6+.
 
 We recommend installing ``yt`` via Anaconda:
 

@@ -50,7 +50,7 @@ def run():
         return
 
     if not os.path.isfile(args.input):
-        raise IOError('%s not a valid file!' % args.input)
+        raise IOError('%s not a valid file; maybe it does not exist?' % args.input)
     
     caesar_file = False
     try:
@@ -114,7 +114,7 @@ def run_caesar(infile, args):
         try:
             import pygadgetreader as pygr
         except ImportError:
-            raise ImportError('Whoops! It looks like you need to install pygadgetreader: https://bitbucket.org/rthompson/pygadgetreader/src/default/')
+            raise ImportError('Whoops! It looks like you need to install pygadgetreader: https://github.com/dnarayanan/pygadgetreader/src/default/')
 
         print('Figuring out the box size for a non-cosmological simulation')
         #find the min/max coordinates and use a bbox
