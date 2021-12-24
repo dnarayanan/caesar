@@ -37,13 +37,9 @@ the CLI command above; it also details what the CLI command does:
    # now we create a CAESAR object, and pass along the yt dataset
    obj = caesar.CAESAR(ds)
 
-   # now we execute member_search(), which identifies galaxies and halos, computes
-   # their properties, and saves them all in a single hdf5 file
+   # now we execute member_search(), which identifies halos, galaxies, and computes
+   # all their properties (including photometry) on 16 OpenMP cores
    obj.member_search(haloid='fof',fof6d_file='my_fof6dfile',fsps_bands='uvoir',ssp_model='FSPS',ssp_table_file='SSP_Chab_EL.hdf5',ext_law='composite',nproc=16)
-   # In this case, we are asking it to identify halos via yt's friends-of-friends algorithm,
-   # then it will identify galaxies within halos using a 6DFOF and save it to 'my_fof6dfile',
-   # then compute photometry in all UV/Opt/NIR bands using a composite extinction law, all
-   # using 16 OpenMP cores.  See specific doc pages for all options.
 
    # finally we save the CAESAR galaxy/halo catalog to your desired filename
    obj.save('my_caesar_file.hdf5')
@@ -72,7 +68,7 @@ Command Line
 ============
 
 NOTE: CURRENTLY, RUNNING FROM THE COMMAND-LINE IS NOT OPERATIONAL.  
-PLEASE USE A SCRIPT AS DESCRIBED ABOVE.
+Please use the Scripted method described above.
 
 ..
    Running ``CAESAR``'s primary functionality is very simple.  The command line interface (CLI) allows you to quickly execute ``CAESAR`` on a single snapshot:
