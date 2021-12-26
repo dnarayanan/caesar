@@ -75,9 +75,11 @@ functionality straightforwardly within a single analysis package.
 6. `RAMSES <http://www.ics.uzh.ch/~teyssier/ramses/RAMSES.html>`_
 
 In principle, any ``yt``-supported simulation snapshot could be 
-supported by ``CAESAR``, but it may not work out-of-the-box.
-We accept pull requests for further functionality, and bug fixes
-of course.
+supported by ``CAESAR``, but some aspects may not work out-of-the-box owing
+to different conventions for e.g. metallicity arrays.
+``CAESAR`` has been tested on Mufasa, Simba, Illustris/TNG, and EAGLE
+snapshots.
+We happily accept pull requests for further functionality and bug fixes.
 
 To get started, follow the ``Getting Started`` link below!
 

@@ -59,6 +59,7 @@ ptype_aliases = dict(
     EagleDataset      = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5','dm2':'PartType2','dm3':'PartType3'},
     OWLSDataset       = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5','dm2':'PartType2','dm3':'PartType3'},
     GizmoDataset      = {'gas':'PartType0','star':'PartType4','dm':'PartType1','dm2':'PartType2', 'bh':'PartType5','dust':'PartType3','dm3':'PartType3'},
+    ArepoHDF5Dataset  = {'gas':'PartType0','star':'PartType4','dm':'PartType1','dm2':'PartType2', 'bh':'PartType5','tracer':'PartType3'},
 	# comment by Qi: maybe add a [Simba's offspring]-Dataset
     TipsyDataset      = {'gas':'Gas','star':'Stars','dm':'DarkMatter'},
     ARTDataset        = {'gas':'gas','star':'stars','dm':'darkmatter'},
