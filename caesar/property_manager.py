@@ -254,7 +254,7 @@ class DatasetType(object):
         return data
 
     def _get_simba_property(self,ptype,prop):
-        from readgadget import readsnap
+        import pygadgetreader as pygr
         snapfile = ('%s/%s'%(self.ds.fullpath,self.ds.basename))
         # set up units coming out of pygr
         prop_unit = {'mass':'Msun', 'pos':'kpccm', 'vel':'km/s', 'pot':'Msun * kpccm**2 / s**2', 'rho':'g / cm**3', 'sfr':'Msun / yr', 'u':'K', 'Dust_Masses':'Msun', 'bhmass':'Msun', 'bhmdot':'Msun / yr', 'hsml':'kpccm'}
@@ -275,7 +275,7 @@ class DatasetType(object):
         if ptype == 'dm3': ptype = 'disk'
 
         # read in the data
-        data = readsnap(snapfile, prop, ptype, units=1, suppress=1) * hfact
+        data = pygr.readsnap(snapfile, prop, ptype, units=1, suppress=1) * hfact
 
         # set to doubles
         if prop == 'HaloID' or prop == 'particle_index':  # this fixes a bug in our Gizmo, that HaloID is output as a float!
