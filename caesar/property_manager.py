@@ -243,7 +243,6 @@ class DatasetType(object):
             data = self._get_gas_grid_posvel(requested_prop)
         else:
             if self.ds_type == 'GizmoDataset' or self.ds_type == None:  # assumes this has Simba units, which is fairly standard
-            #if self.ds_type == None:  # assumes this has Simba units, which is fairly standard
                 data = self._get_simba_property(requested_ptype,requested_prop)
             else:
                 data = self.dd[ptype, prop].astype(MY_DTYPE)
@@ -254,7 +253,10 @@ class DatasetType(object):
         return data
 
     def _get_simba_property(self,ptype,prop):
-        import pygadgetreader as pygr
+        try:
+            import pygadgetreader as pygr
+        except:
+            return self.dd[ptype, prop].astype(MY_DTYPE)
         snapfile = ('%s/%s'%(self.ds.fullpath,self.ds.basename))
         # set up units coming out of pygr
         prop_unit = {'mass':'Msun', 'pos':'kpccm', 'vel':'km/s', 'pot':'Msun * kpccm**2 / s**2', 'rho':'g / cm**3', 'sfr':'Msun / yr', 'u':'K', 'Dust_Masses':'Msun', 'bhmass':'Msun', 'bhmdot':'Msun / yr', 'hsml':'kpccm'}
