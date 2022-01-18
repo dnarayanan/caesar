@@ -69,6 +69,9 @@ To assign a unit, you can use the yt functions ``YTQuantity`` and ``YTArray``:
 
 Similarly, use ``YTArray`` for arrays.  
 
+Removing units
+==============
+
 If you need to get rid of the units and return a value for any reason,
 simply append ``.d`` to the quantity:
 

@@ -59,6 +59,7 @@ ptype_aliases = dict(
     EagleDataset      = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5','dm2':'PartType2','dm3':'PartType3'},
     OWLSDataset       = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5','dm2':'PartType2','dm3':'PartType3'},
     GizmoDataset      = {'gas':'PartType0','star':'PartType4','dm':'PartType1','dm2':'PartType2', 'bh':'PartType5','dust':'PartType3','dm3':'PartType3'},
+    ArepoHDF5Dataset  = {'gas':'PartType0','star':'PartType4','dm':'PartType1','dm2':'PartType2', 'bh':'PartType5','tracer':'PartType3'},
 	# comment by Qi: maybe add a [Simba's offspring]-Dataset
     TipsyDataset      = {'gas':'Gas','star':'Stars','dm':'DarkMatter'},
     ARTDataset        = {'gas':'gas','star':'stars','dm':'darkmatter'},
@@ -242,7 +243,6 @@ class DatasetType(object):
             data = self._get_gas_grid_posvel(requested_prop)
         else:
             if self.ds_type == 'GizmoDataset' or self.ds_type == None:  # assumes this has Simba units, which is fairly standard
-            #if self.ds_type == None:  # assumes this has Simba units, which is fairly standard
                 data = self._get_simba_property(requested_ptype,requested_prop)
             else:
                 data = self.dd[ptype, prop].astype(MY_DTYPE)
@@ -253,7 +253,10 @@ class DatasetType(object):
         return data
 
     def _get_simba_property(self,ptype,prop):
-        from readgadget import readsnap
+        try:
+            import pygadgetreader as pygr
+        except:
+            return self.dd[ptype, prop].astype(MY_DTYPE)
         snapfile = ('%s/%s'%(self.ds.fullpath,self.ds.basename))
         # set up units coming out of pygr
         prop_unit = {'mass':'Msun', 'pos':'kpccm', 'vel':'km/s', 'pot':'Msun * kpccm**2 / s**2', 'rho':'g / cm**3', 'sfr':'Msun / yr', 'u':'K', 'Dust_Masses':'Msun', 'bhmass':'Msun', 'bhmdot':'Msun / yr', 'hsml':'kpccm'}
@@ -274,7 +277,7 @@ class DatasetType(object):
         if ptype == 'dm3': ptype = 'bulge'
 
         # read in the data
-        data = readsnap(snapfile, prop, ptype, units=1, suppress=1) * hfact
+        data = pygr.readsnap(snapfile, prop, ptype, units=1, suppress=1) * hfact
 
         # set to doubles
         if prop == 'HaloID' or prop == 'particle_index':  # this fixes a bug in our Gizmo, that HaloID is output as a float!

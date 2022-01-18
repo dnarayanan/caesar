@@ -329,7 +329,7 @@ def collect_group_IDs(obj, data_type, part_type, snap_dir):
 
     """
     # read in particle IDs
-    from readgadget import readsnap
+    import pygadgetreader as pygr
     if snap_dir is None:
         #snapfile = obj.simulation.fullpath.decode('utf-8')+'/'+obj.simulation.basename.decode('utf-8')
         if isinstance(obj.simulation.fullpath,str) & isinstance(obj.simulation.basename,str):
@@ -339,7 +339,7 @@ def collect_group_IDs(obj, data_type, part_type, snap_dir):
 
     else:
         snapfile = snap_dir+'/'+obj.simulation.basename
-    all_pids = np.array(readsnap(snapfile,'pid',part_type,suppress=1),dtype=np.uint64)
+    all_pids = np.array(pygr.readsnap(snapfile,'pid',part_type,suppress=1),dtype=np.uint64)
 
     from caesar.fubar_halo import plist_dict
     if data_type == 'halo':
