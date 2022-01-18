@@ -1031,8 +1031,8 @@ def get_aperture_vdis(snapfile,caesarobj,quantities=['gas','star','dm'],aperture
     all_vel = []
     ptnames=[] # readin paticle type names
     for pt in quants:
-        if pt == 'dm2': ptnames.append('bulge')
-        elif pt == 'dm3': ptnames.append('disk')
+        if pt == 'dm2': ptnames.append('disk')
+        elif pt == 'dm3': ptnames.append('bulge')
         elif pt == 'bh': ptnames.append('bndry')
         else: ptnames.append(pt)
 

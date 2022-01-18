@@ -270,8 +270,8 @@ class DatasetType(object):
         if ptype == 'bh': ptype = 'bndry'
         if prop == 'temperature': prop = 'u'
         if prop == 'haloid' or prop == 'dustmass' or prop == 'aform' or prop == 'bhmass' or prop == 'bhmdot': prop = self.get_property_name(ptype, prop)
-        if ptype == 'dm2': ptype = 'bulge'
-        if ptype == 'dm3': ptype = 'disk'
+        if ptype == 'dm2': ptype = 'disk'
+        if ptype == 'dm3': ptype = 'bulge'
 
         # read in the data
         data = readsnap(snapfile, prop, ptype, units=1, suppress=1) * hfact
