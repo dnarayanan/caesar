@@ -67,7 +67,7 @@ class DataManager(object):
             self.ptypes.append('dust')
             self.dust = True
 
-        if 'lowres' in self.obj._kwargs:
+        if hasattr(self.obj,'_kwargs') and 'lowres' in self.obj._kwargs:
             if 2 in self.obj._kwargs['lowres']:
                 self.ptypes.append('dm2')
                 self.dm2 = True

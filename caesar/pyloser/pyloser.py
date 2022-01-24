@@ -127,8 +127,8 @@ class photometry:
         if not hasattr(self.obj,'data_manager'):
             from caesar.data_manager import DataManager
             from caesar.property_manager import DatasetType
-            self.obj.data_manager = DataManager(self.obj)
             self.obj._ds_type = DatasetType(ds)
+            self.obj.data_manager = DataManager(self.obj)
             self.obj.yt_dataset = ds
             self.obj.units = dict(
                 mass='Msun',
