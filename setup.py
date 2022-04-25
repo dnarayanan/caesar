@@ -34,7 +34,9 @@ class sdist(_sdist):
     def run(self):
         # Make sure the compiled Cython files in the distribution are up-to-date
         from Cython.Build import cythonize
-        cythonize(cython_extensions)
+        cythonize(cython_extensions,
+        compiler_directives={'language_level' : "3"}
+        )
         _sdist.run(self)
 
 if sys.platform == 'darwin':
