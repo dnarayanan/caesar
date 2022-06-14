@@ -28,6 +28,17 @@ ctypedef struct part_struct:  # structure to hold particle info for particles wi
     float x[3]  # positions with respect to center
     int t  # type
     #long long i  # index, for sorting purposes
+ 
+@cython.cdivision(True)
+@cython.wraparound(False)
+@cython.boundscheck(False)    
+cdef int isin(int val, int[:] arr) nogil:
+    cdef int i
+    cdef int size = len(arr)
+    for i in range(size):
+        if arr[i] == val:
+            return 1
+    return 0
 
 @cython.cdivision(True)
 @cython.wraparound(False)
@@ -48,7 +59,7 @@ cdef int mycmp(const_void * pa, const_void * pb) nogil:  # qsort comparison func
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void nogil_CoM_quants(int ig, float[:,:] pos, float[:,:] vel, float[:] mass, float[:] pot, float[:] grp_mtot, long long istart, long long iend, int ndim, float Lbox, float[:,:] grp_pos, float[:,:] grp_vel, float[:,:] grp_minpotpos, float[:,:] grp_minpotvel) nogil:
+cdef void nogil_CoM_quants(int ig, float[:,:] pos, float[:,:] vel, float[:] mass, float[:] pot, int[:] ptype, int[:] group_ptypes, float[:] grp_mtot, long long istart, long long iend, int ndim, float Lbox, float[:,:] grp_pos, float[:,:] grp_vel, float[:,:] grp_minpotpos, float[:,:] grp_minpotvel) nogil:
     """ Computes center-of-mass position and velocity, as well as minimum potential position.
 
     ig: group index
@@ -68,14 +79,15 @@ cdef void nogil_CoM_quants(int ig, float[:,:] pos, float[:,:] vel, float[:] mass
 
     for ip in range(ndim):
         for i in range(istart,iend):
-            # handle periodicity by keeping all particles close to the first particle
-            mypos[ip] = pos[i,ip]
-            if mypos[ip] - pos[istart,ip] > 0.5*Lbox:
-                mypos[ip] -= Lbox
-            if mypos[ip] - pos[istart,ip] < -0.5*Lbox:
-                mypos[ip] += Lbox
-            grp_pos[ig,ip] += mass[i] * mypos[ip]
-            grp_vel[ig,ip] += mass[i] * vel[i,ip]
+            if isin(ptype[i], group_ptypes): # only selected types for calculation
+                # handle periodicity by keeping all particles close to the first particle
+                mypos[ip] = pos[i,ip]
+                if mypos[ip] - pos[istart,ip] > 0.5*Lbox:
+                    mypos[ip] -= Lbox
+                if mypos[ip] - pos[istart,ip] < -0.5*Lbox:
+                    mypos[ip] += Lbox
+                grp_pos[ig,ip] += mass[i] * mypos[ip]
+                grp_vel[ig,ip] += mass[i] * vel[i,ip]
         grp_pos[ig,ip] /= grp_mtot[ig]
         grp_vel[ig,ip] /= grp_mtot[ig]
         # if the CoM pos ends up outside the box, periodically wrap it back in
@@ -84,9 +96,10 @@ cdef void nogil_CoM_quants(int ig, float[:,:] pos, float[:,:] vel, float[:] mass
         if grp_pos[ig,ip] < -Lbox: 
             grp_pos[ig,ip] += Lbox
     for i in range(istart,iend):
-        if pot[i] < minpot:
-            minpotpart = i
-            minpot = pot[i]
+        if isin(ptype[i], group_ptypes): # only selected types for calculation
+            if pot[i] < minpot:
+                minpotpart = i
+                minpot = pot[i]
     for ip in range(ndim):
         grp_minpotpos[ig,ip] = pos[minpotpart,ip]  # position of minimum potential particle, of any type
         grp_minpotvel[ig,ip] = vel[minpotpart,ip]  # velocity of minimum potential particle, of any type
@@ -666,7 +679,7 @@ def get_group_overall_properties(group,grp_list):
         # things to compute
         float[:]   grp_mtot = np.zeros(ngroup,dtype=MY_DTYPE)  # total masses
         float[:,:] grp_mass = np.zeros((ngroup,nptypes),dtype=MY_DTYPE)  # masses in the various types
-        int[:,:]   grp_count = np.zeros((ngroup,nptypes),dtype=np.int32)  # part counts in the various types
+        # int[:,:]   grp_count = np.zeros((ngroup,nptypes),dtype=np.int32)  # part counts in the various types
         float[:,:] grp_pos = np.zeros((ngroup,ndim),dtype=MY_DTYPE)  # CoM positions
         float[:,:] grp_vel = np.zeros((ngroup,ndim),dtype=MY_DTYPE)  # CoM velocities
         float[:,:] grp_minpotpos = np.zeros((ngroup,ndim),dtype=MY_DTYPE)  # position of minimum potential
@@ -696,11 +709,11 @@ def get_group_overall_properties(group,grp_list):
             for i in range(istart,iend):
                 if ptype[i] == group_ptypes[ip]: 
                     grp_mass[ig,ip] += mass[i]
-                    grp_count[ig,ip] += 1
+                    # grp_count[ig,ip] += 1
             grp_mtot[ig] += grp_mass[ig,ip]
 
         # Center of mass quantities
-        nogil_CoM_quants(ig, pos, vel, mass, pot, grp_mtot, istart, iend, ndim, Lbox, grp_pos, grp_vel, grp_minpotpos, grp_minpotvel)
+        nogil_CoM_quants(ig, pos, vel, mass, pot, ptype, group_ptypes, grp_mtot, istart, iend, ndim, Lbox, grp_pos, grp_vel, grp_minpotpos, grp_minpotvel)
 
         # Compute other quantities that require radially sorted particle list
         if gtflag == 1 and use_pot: # if halo, use min potential for halo center
