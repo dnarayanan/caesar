@@ -176,11 +176,17 @@ class DataManager(object):
 
         if has_property(self.obj, 'gas', 'sfr'):
             sfr = get_property(self.obj, 'sfr', 'gas')[flag].to(sfr_unit)
+        elif has_property(self.obj, 'gas', 'sfr_swift'):
+            sfr = get_property(self.obj, 'sfr_swift', 'gas')[flag].to(sfr_unit)
+        else:
+            mylog.warning('SFRs not found in snapshot, all SFRs set to 0')
 
         if has_property(self.obj, 'gas', 'metallicity'):            
             gZ  = get_property(self.obj, 'metallicity', 'gas')[flag]
         elif has_property(self.obj, 'gas', 'met_tng'):
             gZ  = get_property(self.obj, 'met_tng', 'gas')[flag]  # for Illustris, array of mets
+        elif has_property(self.obj, 'gas', 'met_swift'):
+            gZ  = get_property(self.obj, 'met_swift', 'gas')[flag]  # for Swift, array of 9 elements
         else:
             mylog.warning('Metallicity not found: setting all gas to solar=0.0134')
             gZ = 0.0134*np.ones(self.obj.simulation.nstar,dtype=MY_DTYPE)
@@ -240,6 +246,8 @@ class DataManager(object):
             self.sZ  = get_property(self.obj, 'met_tng', 'star')[flag]  
             #self.sZ  = np.sum(self.sZ.T[2:],axis=0)  # first two are H,He; the rest sum to give metallicity
             #self.sZ[self.sZ<0] = 0.  # some (very small) negative values, set to 0
+        elif has_property(self.obj, 'star', 'met_swift'):  # try Swift alias
+            self.sZ  = get_property(self.obj, 'met_swift', 'star')[flag]  
         else:
             mylog.warning('Metallicity not found: setting all stars to solar=0.0134')
             self.sZ = 0.0134*np.ones(self.obj.simulation.nstar,dtype=MY_DTYPE)
@@ -250,6 +258,8 @@ class DataManager(object):
         elif has_property(self.obj, 'star', 'aform_tng'):  # try Illustris/TNG alias
             self.age  = get_property(self.obj, 'aform_tng', 'star')[flag]  
             self.age  = abs(self.age)  # some negative values here too; not sure what to do?
+        elif has_property(self.obj, 'star', 'aform_swift'):  # try Swift alias
+            self.age  = get_property(self.obj, 'aform_swift', 'star')[flag]  
         else:
             self.age = np.zeros(self.obj.simulation.nstar,dtype=MY_DTYPE)
             mylog.warning('Stellar age not found -- photometry will be incorrect!')
