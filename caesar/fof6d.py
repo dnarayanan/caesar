@@ -16,7 +16,8 @@ import os
 import h5py
 from yt.funcs import mylog
 from caesar.utils import memlog
-from caesar.property_manager import MY_DTYPE
+from caesar.property_manager import MY_DTYPE, get_property,has_ptype,ptype_ints
+from caesar.group import MINIMUM_STARS_PER_GALAXY
 
 class fof6d:
 
@@ -48,6 +49,8 @@ class fof6d:
             self.run_caesar_fof(self.obj)
         elif 'haloid' in self.obj._kwargs and 'rockstar' in self.obj._kwargs['haloid']:
             sys.exit('Sorry, reading from rockstar files not implemented yet')
+        elif 'haloid' in self.obj._kwargs and 'AHF' in self.obj._kwargs['haloid']:
+            self.load_ahf_id()
         else:
             from caesar.property_manager import get_haloid
             memlog('No Halo ID source specified -- running FOF.  This is the yt 3D FOF for halos and our homegrown 6D FOF for galaxies ...')
@@ -56,10 +59,79 @@ class fof6d:
                 self.obj._kwargs['haloid'] = 'fof'
             except:
                 sys.exit("No Halo IDs found in snapshot -- please specify a source (haloid='fof' or 'snap')")
+    def load_ahf_id(self):
+        if 'haloid_file' in self.obj._kwargs and self.obj._kwargs['haloid'] is not None:
+            haloid_file = self.obj._kwargs['haloid_file']
+            if os.path.isfile(haloid_file):
+                memlog('Reading AHF halo IDs from %s'%(haloid_file))
+                if '.gz' == haloid_file[-3:]: #compressed txt file
+                    import gzip
+                    with gzip.open(haloid_file) as f:
+                        lines = f.readlines()
+                else:        
+                    with open(haloid_file) as f:
+                        lines = f.readlines()
 
+                nhalos=int(lines[0])
+                hpp=1 # halo particle numbers and halo ID position
+                hid_info={} #particle ID, particle type, halo_ID as keys fillup with the information from AHF particle file
+                for i in range(nhalos):
+                    npt,hid=[int(x) for x in lines[hpp].split()]
+                    hpp+=1
+                    hid_info[str(hid)]=np.loadtxt(lines[hpp:hpp+npt],dtype=int)
+                    hpp+=npt
+                    # hid_info.extend(tmpd.tolist())
+                    
+                #exclude subhalo particles in host halo!!
+                if '.gz' == haloid_file[-3:]: #compressed txt file
+                    haloid_file=haloid_file.replace('particles.gz','halos')
+                else:
+                    haloid_file=haloid_file.replace('particles','halos')
+                halo_info=np.loadtxt(haloid_file,usecols=(0,1),dtype=np.int64) #hid, host hid
+                idsh=np.where(halo_info[:,1]>0)[0]
+                for i in idsh:
+                    if halo_info[i,1] in halo_info[:,0]: # sometimes substructure ID doesn't exist
+                        com,x_ind,y_ind = np.intersect1d(hid_info[str(halo_info[i,1])][:,0], hid_info[str(halo_info[i,0])][:,0], return_indices=True)
+                        hid_info[str(halo_info[i,1])]=np.delete(hid_info[str(halo_info[i,1])], x_ind, axis=0)
+
+                # now put everything togather
+                tmpp=[] #particle ID, particle type, halo_ID
+                Nh=0
+                for i in hid_info.keys():
+                    if hid_info[i].shape[0]>20:
+                        tmppd=np.zeros((hid_info[i].shape[0],3),dtype=np.int64)
+                        tmppd[:,:2]=hid_info[i]
+                        tmppd[:,2]=np.int64(i)
+                        tmpp.extend(tmppd.tolist())
+                        Nh+=1
+                hid_info=np.asarray(tmpp)
+                if len(np.unique(hid_info[:,0])) != hid_info.shape[0]:
+                    print('!!Warning!! Still dumplicated particle IDs !!', Nh, len(np.unique(hid_info[:,0])), hid_info.shape[0])
+                
+                # Now load the simulation particle IDs # map back to the position 
+                self.haloid = []
+                pids = []
+                nhid = 0
+                for p in self.obj.data_manager.ptypes:
+                    if has_ptype(self.obj, p): 
+                        data = get_property(self.obj, 'pid', p).d.astype(np.int64)
+                        tmpp = np.zeros(len(data),dtype=np.int64)-1
+                        tmppd=hid_info[hid_info[:,1]==ptype_ints[p]]
+                        com,x_ind, y_ind = np.intersect1d(data,tmppd[:,0],return_indices=True)
+                        #tmpp = tmppd[y_ind,2][np.argsort(x_ind)]
+                        tmpp[x_ind] = tmppd[y_ind,2]
+                        nhid += len(com)
+                        pids.extend(tmpp[tmpp>=0])
+                        self.haloid.append(tmpp)
+                memlog('Total halo particle IDs = %d'%(nhid))
+                self.haloid = np.asarray(self.haloid)         # all particles   
+                self.obj.data_manager.haloid = np.asarray(pids) # only halo particles
+        else:
+            mylog.warning("With haloid='AHF' you must also specify a haloid_file containing halo[+subhalo] IDs.")
+            sys.exit()
+        
     def run_caesar_fof(self,obj):
         from caesar.fubar import get_mean_interparticle_separation,get_b,fof
-        from caesar.property_manager import get_property,has_ptype,ptype_ints
         LL = get_mean_interparticle_separation(self.obj) * get_b(self.obj, 'halo')
         if 'haloid_file' in self.obj._kwargs and self.obj._kwargs['haloid'] is not None:
             haloid_file = self.obj._kwargs['haloid_file']
@@ -128,12 +200,13 @@ class fof6d:
             self.nparttype[p] = len(grpid[self.obj.data_manager.ptype==ptype_ints[p]])
         sort_grpid = np.argsort(grpid)
         self.pid_sorted = np.arange(self.nparttot,dtype=np.int64)[sort_grpid]
-        self.grouplist = np.unique(grpid)  # list of objects (halo/galaxy/cloud) to process
+        # self.grouplist = np.unique(grpid)  # list of objects (halo/galaxy/cloud) to process
         hid_sorted = grpid[sort_grpid]
         self.hid_bins = find_bins(hid_sorted,self.nparttot)
+        self.grouplist = hid_sorted[self.hid_bins[:-1]] # list of objects (halo/galaxy/cloud) as haloid-1 in the same order
         return True
 
-    def run_fof6d(self, target_type, nHlim=0.13, Tlim=1.e5, sfflag=True, minstars=24):
+    def run_fof6d(self, target_type, nHlim=0.13, Tlim=1.e5, sfflag=True, minstars=MINIMUM_STARS_PER_GALAXY):
 
         from joblib import Parallel, delayed
         from caesar.fubar import get_b
@@ -243,6 +316,9 @@ class fof6d:
                 offset += self.nparttype[p]
             if mygrp._valid:
                 mygrp.obj_type = self.obj_type
+                if self.obj_type == 'halo':
+                    if self.obj._kwargs['haloid'] == 'AHF':
+                        mygrp.AHF_haloID = self.grouplist[igrp] + 1 # recover to orginal ID, see line 156
                 if parent is not None: 
                     ihalo = parent.group_parents[igrp-zero_marker]
                     mygrp.parent_halo_index = ihalo
