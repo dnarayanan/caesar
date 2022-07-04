@@ -12,7 +12,6 @@ particle_data_aliases = {
     'rho':'density',
     'hsml':'smoothing_length',
     'sfr':'StarFormationRate',
-    'sfr_swift':'StarFormationRates',  
     'mass':'particle_mass',
     'u':'thermal_energy',
     'temp':'Temperature',
@@ -23,15 +22,34 @@ particle_data_aliases = {
     'fh2':'FractionH2',
     'metallicity':'metallicity',
     'met_tng':'GFM_Metallicity',  # for Illustris/TNG
-    'met_swift':'MetalMassFractions',  # for Swift
     'aform':'StellarFormationTime',
     'aform_tng':'GFM_StellarFormationTime',  # for Illustris/TNG
-    'aform_swift':'BirthScaleFactors',  # for Swift
     'bhmdot':'BH_Mdot',
     'bhmass':'BH_Mass',
     'haloid':'HaloID',
-    'haloid_swift':'FOFGroupIDs',  # for Swift
     'dustmass':'Dust_Masses'
+}
+
+# Field name aliases for SwiftDataset
+particle_data_aliases_swift = {
+    'pos':'Coordinates',
+    'vel':'Velocities',
+    'pot':'Potentials',
+    'rho':'Densities',
+    'hsml':'SmoothingLengths',
+    'sfr':'StarFormationRates',
+    'mass':'Masses',
+    'temp':'Temperatures',
+    'temperature':'Temperatures',
+    'ne':'ElectronNumberDensities',
+    'nh':'AtomicHydrogenMasses',
+    'pid':'ParticleIDs',
+    'fh2':'MolecularHydrogenMasses',
+    'metallicity':'MetalMassFractions',  
+    'aform':'BirthScaleFactors',  
+    'bhmdot':'AccretionRates',
+    'bhmass':'SubgridMasses',
+    'haloid':'FOFGroupIDs',  
 }
 
 # Field name aliases for grid cells
@@ -175,8 +193,12 @@ class DatasetType(object):
             if prop in grid_gas_aliases.keys():
                 return grid_gas_aliases[prop]
         else:
-            if prop in particle_data_aliases.keys():
-                return particle_data_aliases[prop]
+            if self.ds_type == 'SwiftDataset':
+                if prop in particle_data_aliases_swift.keys():
+                    return particle_data_aliases_swift[prop]
+            else:
+                if prop in particle_data_aliases.keys():
+                    return particle_data_aliases[prop]
         return prop
             
     def has_property(self, requested_ptype, requested_prop):
@@ -447,8 +469,11 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
     for ip,p in enumerate(ptypes):
         if not has_ptype(obj, p):
             continue
-      
-        count = len(get_property(obj, 'mass', p))
+     
+        if p == 'bh':
+            count = len(get_property(obj, 'bhmass', p))
+        else:
+            count = len(get_property(obj, 'mass', p))
         if isinstance(select,str) and select == 'all': 
             flag = [True]*count
         else:
@@ -460,7 +485,10 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
         data = get_property(obj, 'vel', p).to(obj.units['velocity'])[flag]
         vel  = np.append(vel, data.d, axis=0)
         
-        data = get_property(obj, 'mass', p).to(obj.units['mass'])[flag]
+        if p == 'bh':
+            data = obj.yt_dataset.arr(get_property(obj, 'bhmass', 'bh').d[flag]*1e10, 'Msun/h').to(obj.units['mass'])
+        else:
+            data = get_property(obj, 'mass', p).to(obj.units['mass'])[flag]
         mass = np.append(mass, data.d, axis=0)
 
         if obj.load_pot:

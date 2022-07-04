@@ -30,6 +30,15 @@ class RSHalo(object):
 #####################
 """
 
+def rockstar_ids(rs_idfile):
+    """Get halo IDs from rockstar"""
+
+    with h5py.open(rs_idfile,'r') as hf:
+        haloid  = np.empty(0, dtype=np.int64)
+        for p in obj.data_manager.ptypes:
+            haloid = np.append(haloid,hf[p])
+    return haloid
+
 def fof(obj, positions, LL, group_type=None):
     """Friends of friends.
 
@@ -312,7 +321,7 @@ def get_mean_interparticle_separation(obj):
     if has_ptype(obj, 'star'):
         smass = get_property(obj, 'mass', 'star').to('code_mass')
     if obj.data_manager.blackholes and has_ptype(obj, 'bh'):
-        bhmass= get_property(obj, 'mass', 'bh').to('code_mass')        
+        bhmass= obj.yt_dataset.arr(get_property(obj, 'bhmass', 'bh').d * 1.e10, 'Msun').to('code_mass')
     if obj.data_manager.dust and has_ptype(obj, 'dust'):
         dustmass= get_property(obj, 'mass', 'dust').to('code_mass')        
     bmass = np.sum(gmass) + np.sum(smass) + np.sum(bhmass) + np.sum(dustmass)
@@ -519,6 +528,9 @@ def fubar(obj, group_type, **kwargs):
         if ('fof_from_snap' in obj._kwargs and obj._kwargs['fof_from_snap']==1):
             mylog.info('Using Halo fof ID from snapshots')
             fof_tags = obj.data_manager.haloid - 1
+        elif ('rockstar_id_file' in obj._kwargs and obj._kwargs['rockstar_id_file'] is not None):
+            mylog.info('Reading RockStar halo ID ')
+            fof_tags = rockstar_ids(obj._kwargs['rockstar_id_file'])
         else:
             LL = get_mean_interparticle_separation(obj) * get_b(obj, group_type)
             fof_tags = fof(obj, pos, LL, group_type=group_type, **kwargs)

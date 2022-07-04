@@ -53,7 +53,7 @@ class DataManager(object):
         self.blackholes = self.dust = self.dm2 = False
         if hasattr(self.obj,'_ds_type'):
             if 'PartType5' in self.obj._ds_type.ds.particle_fields_by_type:
-                if 'BH_Mdot' in self.obj._ds_type.ds.particle_fields_by_type['PartType5'] or 'StellarFormationTime' in self.obj._ds_type.ds.particle_fields_by_type['PartType5']:
+                if 'BH_Mdot' in self.obj._ds_type.ds.particle_fields_by_type['PartType5'] or 'StellarFormationTime' in self.obj._ds_type.ds.particle_fields_by_type['PartType5'] or 'SubgridMasses' in self.obj._ds_type.ds.particle_fields_by_type['PartType5']:
                     self.ptypes.append('bh')
                     self.blackholes = True
             elif 'Bndry' in self.obj._ds_type.ds.particle_fields_by_type:
@@ -159,6 +159,7 @@ class DataManager(object):
         dustmass_unit = '%s' % (self.obj.units['mass'])
         gnh_unit = '1/%s**3' % (self.obj.units['length'])
 
+        gm  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), self.obj.units['mass'])        
         sfr = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), sfr_unit)
         gZ  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), '')        
         gT  = self.obj.yt_dataset.arr(np.zeros(self.obj.simulation.ngas,dtype=MY_DTYPE), self.obj.units['temperature'])
@@ -174,10 +175,9 @@ class DataManager(object):
         else:
             flag = (select>=0)
 
+
         if has_property(self.obj, 'gas', 'sfr'):
             sfr = get_property(self.obj, 'sfr', 'gas')[flag].to(sfr_unit)
-        elif has_property(self.obj, 'gas', 'sfr_swift'):
-            sfr = get_property(self.obj, 'sfr_swift', 'gas')[flag].to(sfr_unit)
         else:
             mylog.warning('SFRs not found in snapshot, all SFRs set to 0')
 
@@ -185,24 +185,31 @@ class DataManager(object):
             gZ  = get_property(self.obj, 'metallicity', 'gas')[flag]
         elif has_property(self.obj, 'gas', 'met_tng'):
             gZ  = get_property(self.obj, 'met_tng', 'gas')[flag]  # for Illustris, array of mets
-        elif has_property(self.obj, 'gas', 'met_swift'):
-            gZ  = get_property(self.obj, 'met_swift', 'gas')[flag]  # for Swift, array of 9 elements
         else:
             mylog.warning('Metallicity not found: setting all gas to solar=0.0134')
             gZ = 0.0134*np.ones(self.obj.simulation.nstar,dtype=MY_DTYPE)
 
         if has_property(self.obj, 'gas', 'nh'):            
             gfHI  = get_property(self.obj, 'nh', 'gas')[flag]
+            if self.obj.simulation.ds_type == 'SwiftDataset':
+                gm  = get_property(self.obj, 'mass', 'gas')[flag]
+                gfHI /= gm
         else:
             mylog.warning('HI fractions not found in snapshot, will compute later')
 
         if has_property(self.obj, 'gas', 'fh2'):            
             gfH2  = get_property(self.obj, 'fh2', 'gas')[flag]
+            if self.obj.simulation.ds_type == 'SwiftDataset':
+                gm  = get_property(self.obj, 'mass', 'gas')[flag]
+                gfH2 /= gm
         else:
             mylog.warning('H2 fractions not found in snapshot, will compute later')
 
         if has_property(self.obj, 'gas', 'temperature'):
-            gT  = get_property(self.obj, 'temperature', 'gas')[flag].to(self.obj.units['temperature'])
+            try:
+                gT  = get_property(self.obj, 'temperature', 'gas')[flag].to(self.obj.units['temperature'])
+            except: # in some simulation formats T is dimensionless, so set units explicitly
+                gT  = self.obj.yt_dataset.arr(get_property(self.obj, 'temperature', 'gas')[flag].d, self.obj.units['temperature'])
 
         if has_property(self.obj, 'gas', 'hsml'):
             ghsml  = get_property(self.obj, 'hsml', 'gas')[flag].to(self.obj.units['length'])

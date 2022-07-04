@@ -70,21 +70,20 @@ def fubar_halo(obj):
         mylog.warning('No valid halos found! Aborting member search')
         return  
     get_group_properties(halos,halos.obj.halo_list)  # compute halo properties
-
-    # Find galaxies, or load galaxy membership info
     if not obj.simulation.baryons_present:  # if no baryons, we're done
         return
-    fof6d_flag = True
-    if 'fof6d' in obj._kwargs and not obj._kwargs['fof6d']:  # fof6d for galaxies/clouds not requested
-        mylog.warning('fof6d not requested, and no other galaxy finder available! Aborting member search')
-        return 
-    if 'fof6d_file' in obj._kwargs and obj._kwargs['fof6d_file'] is not None:
-        fof6d_flag = halos.load_fof6dfile()  # load galaxy ID's from fof6d_file
-    if fof6d_flag:
-        halos.run_fof6d('galaxy')  # run fof6d on halos to find galaxies
-        halos.save_fof6dfile()  # save fof6d info
-        #snapname = ('%s/%s'%(obj.simulation.fullpath,obj.simulation.basename))
-        #nparts,gas_index,star_index,bh_index = run_fof_6d(snapname,16,0.02,1.0,nproc)
+
+    # Find galaxies, or load galaxy membership info
+    if 'galid' in obj._kwargs and 'rockstar' in obj._kwargs['galid']:
+        halos.load_rockstar_ids('bottomid')
+        halos.obj.rockstar_flag = 2
+    else:   # if unspecified use fof6d for galaxies/clouds 
+        fof6d_flag = True
+        if 'fof6d_file' in obj._kwargs and obj._kwargs['fof6d_file'] is not None:
+            fof6d_flag = halos.load_fof6dfile()  # load galaxy ID's from fof6d_file
+        if fof6d_flag:
+            halos.run_fof6d('galaxy')  # run fof6d on halos to find galaxies
+            halos.save_fof6dfile()  # save fof6d info
 
     # Process galaxies
     galaxies = fof6d(obj,'galaxy')  #instantiate a fof6d object
@@ -128,7 +127,10 @@ def reset_global_particle_IDs(obj):
     for ip,p in enumerate(obj.data_manager.ptypes):
         if not has_ptype(obj, p):
             continue
-        count = len(get_property(obj, 'mass', p))
+        if p == 'bh':
+            count = len(get_property(obj, 'bhmass', p))  # some data formats (eg SWIFT) don't have mass for BH
+        else:
+            count = len(get_property(obj, 'mass', p))
         if p == 'gas': 
             offset[ip+1] = offset[ip] + obj.simulation.ngas
             obj.simulation.ngas = count
