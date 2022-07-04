@@ -439,6 +439,8 @@ cdef void nogil_radial_quants(int ig, long long istart, long long iend, int ndim
 def get_group_gas_properties(group,grp_list):
     # collect particle IDs 
     from caesar.group import collate_group_ids
+    from caesar.property_manager import ISM_NH_THRESHOLD
+
     ngroup, grpids, gid_bins = collate_group_ids(grp_list,'gas',group.nparttype['gas'])
 
     cdef:
@@ -450,6 +452,7 @@ def get_group_gas_properties(group,grp_list):
         float[:]   gZ = group.obj.data_manager.gZ[grpids]
         float[:]   gtemp = group.obj.data_manager.gT[grpids]
         float[:]   gfH2 = group.obj.data_manager.gfH2[grpids]
+        float[:]   gfHI = group.obj.data_manager.gfHI[grpids]
         float[:]   mdust = group.obj.data_manager.dustmass[grpids]
         # general variables
         int ng = ngroup
@@ -457,11 +460,13 @@ def get_group_gas_properties(group,grp_list):
         int ig
         long long i,istart,iend
         double XH = group.obj.simulation.XH
+        float ism_thresh = ISM_NH_THRESHOLD
         # Things to compute
         float[:]   grp_mass = np.zeros(ngroup,dtype=MY_DTYPE)  # total mass
-        float[:]   grp_mH2 = np.zeros(ngroup,dtype=MY_DTYPE)  # total mass
+        float[:]   grp_mH2 = np.zeros(ngroup,dtype=MY_DTYPE)  # H2 mass
+        float[:]   grp_mHI = np.zeros(ngroup,dtype=MY_DTYPE)  # H1 mass
         float[:]   grp_mdust = np.zeros(ngroup,dtype=MY_DTYPE)  # dust mass
-        float[:]   grp_mnonsf = np.zeros(ngroup,dtype=MY_DTYPE)  # mass of non-SF gas
+        float[:]   grp_mism = np.zeros(ngroup,dtype=MY_DTYPE)  # mass of gas with nH<ISM_NH_THRESHOLD
         float[:]   grp_sfr = np.zeros(ngroup,dtype=MY_DTYPE)  # SFR
         float[:]   grp_Zm = np.zeros(ngroup,dtype=MY_DTYPE)  # mass-weighted metallicity
         float[:]   grp_Zsfr = np.zeros(ngroup,dtype=MY_DTYPE)  # SFR-weighted metallicity
@@ -477,28 +482,31 @@ def get_group_gas_properties(group,grp_list):
         for i in range(istart,iend):
             grp_mass[ig] += gm[i]
             grp_mH2[ig] += XH*gm[i]*gfH2[i]
-            grp_mdust[ig] += mdust[i]
+            grp_mHI[ig] += XH*gm[i]*gfHI[i]
+            if gnh[i] >= ism_thresh:
+                grp_mism[ig] += gm[i]
+                grp_mdust[ig] += mdust[i]
             grp_sfr[ig] += gsfr[i]
             grp_Zm[ig] += gZ[i]*gm[i]
             grp_Zsfr[ig] += gZ[i]*gsfr[i]
             grp_Tm[ig] /= gm[i]*gtemp[i]
-            if gsfr[i] == 0.:
-                grp_mnonsf[ig] += gm[i]
+            if gnh[i] < ism_thresh:
                 grp_Zcgm[ig] += gm[i]*gZ[i]
                 grp_Tcgm[ig] += gm[i]*gtemp[i]
                 grp_ZTcgm[ig] += gm[i]*gtemp[i]*gZ[i]
         grp_Zm[ig] /= grp_mass[ig]
         if grp_sfr[ig]>0: 
             grp_Zsfr[ig] /= grp_sfr[ig]
-        if grp_mnonsf[ig] > 0:
-            grp_Zcgm[ig] /= grp_mnonsf[ig]
-            grp_Tcgm[ig] /= grp_mnonsf[ig]
+        if grp_mass[ig] - grp_mism[ig] > 0:
+            grp_Zcgm[ig] /= grp_mass[ig] - grp_mism[ig];
+            grp_Tcgm[ig] /= grp_mass[ig] - grp_mism[ig];
             grp_ZTcgm[ig] /= grp_Tcgm[ig]
             grp_TZcgm[ig] /= grp_Zcgm[ig]
 
     for ig in range(ng):
         grp_list[ig].sfr = group.obj.yt_dataset.quan(grp_sfr[ig], '%s/%s' % (group.obj.units['mass'],group.obj.units['time']))
         grp_list[ig].masses['H2'] = group.obj.yt_dataset.quan(grp_mH2[ig], group.obj.units['mass'])
+        grp_list[ig].masses['HI'] = group.obj.yt_dataset.quan(grp_mHI[ig], group.obj.units['mass'])
         grp_list[ig].metallicities = dict(
             mass_weighted = group.obj.yt_dataset.quan(grp_Zm[ig], ''),
             sfr_weighted  = group.obj.yt_dataset.quan(grp_Zsfr[ig], ''),

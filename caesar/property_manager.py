@@ -1,7 +1,8 @@
 import numpy as np
-from yt.funcs import mylog
+from caesar.utils import memlog
 
 MY_DTYPE = np.float32
+ISM_NH_THRESHOLD = 0.13  # in protons per cm^3
 
 # Field name aliases
 particle_data_aliases = {
@@ -11,6 +12,7 @@ particle_data_aliases = {
     'rho':'density',
     'hsml':'smoothing_length',
     'sfr':'StarFormationRate',
+    'sfr_swift':'StarFormationRates',  
     'mass':'particle_mass',
     'u':'thermal_energy',
     'temp':'Temperature',
@@ -21,11 +23,14 @@ particle_data_aliases = {
     'fh2':'FractionH2',
     'metallicity':'metallicity',
     'met_tng':'GFM_Metallicity',  # for Illustris/TNG
+    'met_swift':'MetalMassFractions',  # for Swift
     'aform':'StellarFormationTime',
     'aform_tng':'GFM_StellarFormationTime',  # for Illustris/TNG
+    'aform_swift':'BirthScaleFactors',  # for Swift
     'bhmdot':'BH_Mdot',
     'bhmass':'BH_Mass',
     'haloid':'HaloID',
+    'haloid_swift':'FOFGroupIDs',  # for Swift
     'dustmass':'Dust_Masses'
 }
 
@@ -60,6 +65,7 @@ ptype_aliases = dict(
     OWLSDataset       = {'gas':'PartType0','star':'PartType4','dm':'PartType1','bh':'PartType5','dm2':'PartType2','dm3':'PartType3'},
     GizmoDataset      = {'gas':'PartType0','star':'PartType4','dm':'PartType1','dm2':'PartType2', 'bh':'PartType5','dust':'PartType3','dm3':'PartType3'},
     ArepoHDF5Dataset  = {'gas':'PartType0','star':'PartType4','dm':'PartType1','dm2':'PartType2', 'bh':'PartType5','tracer':'PartType3'},
+    SwiftDataset  = {'gas':'PartType0','star':'PartType4','dm':'PartType1','dm2':'PartType2', 'bh':'PartType5','tracer':'PartType3'},
 	# comment by Qi: maybe add a [Simba's offspring]-Dataset
     TipsyDataset      = {'gas':'Gas','star':'Stars','dm':'DarkMatter'},
     ARTDataset        = {'gas':'gas','star':'stars','dm':'darkmatter'},
@@ -257,7 +263,7 @@ class DatasetType(object):
             import pygadgetreader as pygr
         except:
             return self.dd[ptype, prop].astype(MY_DTYPE)
-        snapfile = ('%s/%s'%(self.ds.fullpath,self.ds.basename))
+        snapfile = ('%s/%s'%(self.ds.directory,self.ds.basename))
         # set up units coming out of pygr
         prop_unit = {'mass':'Msun', 'pos':'kpccm', 'vel':'km/s', 'pot':'Msun * kpccm**2 / s**2', 'rho':'g / cm**3', 'sfr':'Msun / yr', 'u':'K', 'Dust_Masses':'Msun', 'bhmass':'Msun', 'bhmdot':'Msun / yr', 'hsml':'kpccm'}
 
@@ -280,7 +286,7 @@ class DatasetType(object):
         data = pygr.readsnap(snapfile, prop, ptype, units=1, suppress=1) * hfact
 
         # set to doubles
-        if prop == 'HaloID' or prop == 'particle_index':  # this fixes a bug in our Gizmo, that HaloID is output as a float!
+        if prop == 'HaloID' or prop == 'particle_index' or prop == 'pid':  # this fixes a bug in our Gizmo, that HaloID is output as a float!
             data = data.astype(np.int64)
         else:
             data = data.astype(np.float32)
@@ -377,8 +383,8 @@ def get_property(obj, requested_prop, requested_ptype):
     return obj._ds_type.get_property(requested_ptype, requested_prop)
 
 
-def get_high_density_gas_indexes(obj):
-    """Returns the indexes of gas with densities above 0.13 protons/cm^3.
+def get_high_density_gas_indexes(obj, nH_thresh=ISM_NH_THRESHOLD, return_flag=0):
+    """Returns the indexes of gas with densities specified nH threshold in protons/cm^3.
 
     Parameters
     ----------
@@ -391,14 +397,14 @@ def get_high_density_gas_indexes(obj):
         Index array of high density gas.
 
     """
-    nH_thresh = 0.13
-
     rho  = get_property(obj, 'rho', 'gas').in_cgs()
     rho /= 1.67262178e-24      # to atoms/cm^3
     rho *= obj.simulation.XH   # to hydrogen atoms / cm^3
 
-    indexes = np.where(rho >= nH_thresh)[0]
-    return indexes
+    if return_flag == 1:
+        return np.where(rho >= nH_thresh, 1, 0)
+    else:
+        return np.where(rho >= nH_thresh)[0]
 
 def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
     """This function concats all of the valid particle/field types
@@ -427,8 +433,6 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
             continue
         if not has_property(obj, p, 'pot'):
             obj.load_pot = False
-    #if not obj.load_pot:
-    #    mylog.warning('Potential not found in snapshot!')
 
     pos  = np.empty((0,3),dtype=MY_DTYPE)
     vel  = np.empty((0,3),dtype=MY_DTYPE)
@@ -473,7 +477,6 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
 
         ptype   = np.append(ptype,   np.full(nparts, ptype_ints[p], dtype=np.int32), axis=0)
         indexes = np.append(indexes, np.arange(0, count, dtype=np.int64)[flag])
-        #indexes = np.append(indexes, np.arange(0, nparts, dtype=np.int64))
 
     if obj.load_haloid:
         return dict(pos=pos,vel=vel,pot=pot,mass=mass,haloid=haloid,ptype=ptype,indexes=indexes)
@@ -510,6 +513,7 @@ def get_haloid(obj, ptypes, offset=-1):
         else: 
             data = []
         haloid.append(data)
+    haloid = np.asarray(haloid)
 
-    return np.asarray(haloid)
+    return haloid
 
