@@ -76,7 +76,7 @@ class fof6d:
                             all_haloids = np.append(all_haloids,idlist)
                         self.obj.data_manager.haloid = all_haloids[all_haloids>=0]
                         print(len(np.unique(self.obj.data_manager.haloid)))
-                        self.obj.rockstar_parents = np.array(hf['catalog'])
+                        self.obj.rockstar_parents = np.flip(np.array(hf['catalog']), axis=1)
                     elif 'bottom' in id_flag:
                         all_tags_fof6d = np.empty(0,dtype=np.int64)
                         for ip,p in enumerate(self.obj.data_manager.ptypes):  # read bottom subhaloid for each ptype
@@ -86,7 +86,7 @@ class fof6d:
                         print(np.unique(self.obj.data_manager.haloid))
                         print(np.unique(self.tags_fof6d))
                         print(len(self.tags_fof6d[self.tags_fof6d==3101080]),np.unique(self.tags_fof6d[self.obj.data_manager.haloid==3101080]))
-                        self.obj.rockstar_parents = np.array(hf['catalog'])
+                        self.obj.rockstar_parents = np.flip(np.array(hf['catalog']), axis=1)
             elif id_flag == 'bin':
                 from pygadgetreader import readrockstar
                 from caesar.property_manager import get_property, ptype_aliases
