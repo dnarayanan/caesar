@@ -5,7 +5,7 @@ from caesar.property_manager import ptype_ints, has_property
 #from caesar.group_funcs import get_periodic_r,get_virial_mr
 
 MINIMUM_STARS_PER_GALAXY = 16  # set a bit below 32 so we capture all galaxies above a given Mstar, rather than a given Nstar.
-MINIMUM_DM_PER_HALO      = 32
+MINIMUM_DM_PER_HALO      = 24
 MINIMUM_GAS_PER_CLOUD = 16
 
 group_types = dict(
@@ -97,7 +97,7 @@ class Group(object):
     def _valid(self):
         """Check against the minimum number of particles to see if
         this object is 'valid'."""
-        if self.obj_type == 'halo' and self.ndm+self.nstar < MINIMUM_DM_PER_HALO:
+        if self.obj_type == 'halo' and self.ngas+self.ndm+self.nstar < MINIMUM_DM_PER_HALO:
             return False
         elif self.obj_type == 'galaxy' and self.nstar < MINIMUM_STARS_PER_GALAXY:
             return False

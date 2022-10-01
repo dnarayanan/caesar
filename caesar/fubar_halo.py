@@ -2,7 +2,7 @@ import numpy as np
 import h5py
 from caesar.group import group_types
 from caesar.property_manager import get_property, get_particles_for_FOF, get_high_density_gas_indexes
-from caesar.property_manager import ptype_ints
+from caesar.property_manager import ptype_ints, has_property
 from caesar.utils import calculate_local_densities
 from caesar.fof6d import run_fof_6d
 
@@ -128,7 +128,10 @@ def reset_global_particle_IDs(obj):
         if not has_ptype(obj, p):
             continue
         if p == 'bh':
-            count = len(get_property(obj, 'bhmass', p))  # some data formats (eg SWIFT) don't have mass for BH
+            if has_property(obj,p,'bhmass'):
+                count = len(get_property(obj, 'bhmass', p))  # some data formats (eg SWIFT) don't have mass for BH
+            else:
+                count = len(get_property(obj, 'mass', p))
         else:
             count = len(get_property(obj, 'mass', p))
         if p == 'gas': 
