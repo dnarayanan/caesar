@@ -270,7 +270,7 @@ class DatasetType(object):
             (requested_prop == 'pos' or requested_prop == 'vel')):
             data = self._get_gas_grid_posvel(requested_prop)
         else:
-            if self.ds_type == 'GizmoDataset' or self.ds_type == None:  # assumes this has Simba units, which is fairly standard
+            if self.ds_type == 'GizmoDataset' or self.ds_type == 'GadgetDataset' or self.ds_type == None:  # Note yt doesn't work properly for the particle IDs for Gadget snapshot, additional twist is needed in lower function and pygadgetreader
                 data = self._get_simba_property(requested_ptype,requested_prop)
             else:
                 data = self.dd[ptype, prop].astype(MY_DTYPE)
@@ -295,7 +295,7 @@ class DatasetType(object):
         elif prop == 'rho':
             hfact = self.ds.hubble_constant**2
         else:
-            hfact = 1.
+            hfact = 1
 
         # deal with differences in pygr vs. yt/caesar naming
         if ptype == 'bh': ptype = 'bndry'
@@ -305,10 +305,17 @@ class DatasetType(object):
         if ptype == 'dm3': ptype = 'bulge'
 
         # read in the data
+        if (self.ds_type == 'GadgetDataset'):  #need to retweek the names for G2.
+            if prop == 'metallicity':
+                prop =  'Z'
+            if prop == 'aform' or prop == 'StellarFormationTime':
+                prop = 'age'
         data = pygr.readsnap(snapfile, prop, ptype, units=1, suppress=1) * hfact
 
         # set to doubles
-        if prop == 'HaloID' or prop == 'particle_index' or prop == 'pid':  # this fixes a bug in our Gizmo, that HaloID is output as a float!
+        if prop == 'HaloID' or prop == 'haloid':
+            data = data.astype(np.uint32)
+        elif prop == 'particle_index' or prop == 'pid':  # this fixes a bug in our Gizmo, that HaloID is output as a float!
             data = data.astype(np.int64)
         else:
             data = data.astype(np.float32)
@@ -471,7 +478,10 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
             continue
      
         if p == 'bh':
-            count = len(get_property(obj, 'bhmass', p))
+            if has_property(obj, 'bh', 'bhmass'):
+                count = len(get_property(obj, 'bhmass', p))
+            else:
+                count = len(get_property(obj, 'mass', p))
         else:
             count = len(get_property(obj, 'mass', p))
         if isinstance(select,str) and select == 'all': 
@@ -486,7 +496,10 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
         vel  = np.append(vel, data.d, axis=0)
         
         if p == 'bh':
-            data = obj.yt_dataset.arr(get_property(obj, 'bhmass', 'bh').d[flag]*1e10, 'Msun/h').to(obj.units['mass'])
+            if has_property(obj, 'bh', 'bhmass'):
+                data = obj.yt_dataset.arr(get_property(obj, 'bhmass', 'bh').d[flag]*1e10, 'Msun/h').to(obj.units['mass'])
+            else:
+                data = obj.yt_dataset.arr(get_property(obj, 'mass', 'bh').d[flag]*1e10, 'Msun/h').to(obj.units['mass'])
         else:
             data = get_property(obj, 'mass', p).to(obj.units['mass'])[flag]
         mass = np.append(mass, data.d, axis=0)

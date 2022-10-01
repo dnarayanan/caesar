@@ -17,7 +17,7 @@ import h5py
 from yt.funcs import mylog
 from caesar.utils import memlog
 from caesar.property_manager import MY_DTYPE, get_property,has_ptype,ptype_ints
-from caesar.group import MINIMUM_STARS_PER_GALAXY
+from caesar.group import MINIMUM_STARS_PER_GALAXY, MINIMUM_DM_PER_HALO
 
 class fof6d:
 
@@ -98,15 +98,57 @@ class fof6d:
                 tmpp=[] #particle ID, particle type, halo_ID
                 Nh=0
                 for i in hid_info.keys():
-                    if hid_info[i].shape[0]>20:
+                    if hid_info[i].shape[0]>=MINIMUM_DM_PER_HALO or hid_info[i][hid_info[i][:,1]==4].shape[0]>=MINIMUM_STARS_PER_GALAXY:
                         tmppd=np.zeros((hid_info[i].shape[0],3),dtype=np.int64)
                         tmppd[:,:2]=hid_info[i]
                         tmppd[:,2]=np.int64(i)
                         tmpp.extend(tmppd.tolist())
                         Nh+=1
-                hid_info=np.asarray(tmpp)
-                if len(np.unique(hid_info[:,0])) != hid_info.shape[0]:
-                    print('!!Warning!! Still dumplicated particle IDs !!', Nh, len(np.unique(hid_info[:,0])), hid_info.shape[0])
+                tmpp=np.asarray(tmpp)
+                uniq_hid, uq_counts = np.unique(tmpp[:,0], return_counts=True)
+                if uniq_hid.size != tmpp.shape[0]:
+                    memlog('!!Warning!! dumplicated particle IDs in different halos!! removing them', Nh, len(np.unique(tmpp[:,0])), tmpp.shape[0])
+                    # need to exclude these dumplicated particles 
+                    dmp_id = uniq_hid[uq_counts>1] # particle ID dumplicated
+                    for i in dmp_id:
+                        dmp_halos = tmpp[tmpp[:,0]==i,2]
+                        if len(dmp_halos) != 2:
+                            memlog('Found more halos than expected',dmp_id, dmp_halos)
+                            dmp_halos=np.sort(dmp_halos)
+                            for j in dmp_halos[:-1]:
+                                hid_info[str(j)]=np.delete(hid_info[str(j)], hid_info[str(j)][:,0]==i, axis=0)
+                        else:
+                            com,x_ind,y_ind = np.intersect1d(hid_info[str(np.min(dmp_halos))][:,0], hid_info[str(np.max(dmp_halos))][:,0], return_indices=True)
+                            hid_info[str(np.min(dmp_halos))]=np.delete(hid_info[str(np.min(dmp_halos))], x_ind, axis=0) #delete the particles in higher HID
+                    tmpp=[] #particle ID, particle type, halo_ID
+                    Nh=0
+                    for i in hid_info.keys():
+                        if hid_info[i].shape[0]>=MINIMUM_DM_PER_HALO or hid_info[i][hid_info[i][:,1]==4].shape[0]>=MINIMUM_STARS_PER_GALAXY:
+                            tmppd=np.zeros((hid_info[i].shape[0],3),dtype=np.int64)
+                            tmppd[:,:2]=hid_info[i]
+                            tmppd[:,2]=np.int64(i)
+                            tmpp.extend(tmppd.tolist())
+                            Nh+=1
+                    hid_info=np.asarray(tmpp) # replace hid_info
+                    memlog('!!Update on the new halo information', len(np.unique(hid_info[:,0])), hid_info.shape[0])
+                    # method 2, a little bit slow for manipulate much large array
+                    # while uniq_hid.size != hid_info.shape[0]:
+                    #     # find the two halos share the same particle!
+                    #     dmp_id = uniq_hid[uq_counts>1][0] # only the first one
+                    #     dmp_halos = hid_info[hid_info[:,0]==dmp_id,2]
+                    #     if len(dmp_halos) != 2:
+                    #         raise ValueError('Found more halos than expected',dmp_id, dmp_halos)
+                    #     idh1 = hid_info[:,2] == np.min(dmp_halos)  # ids to be removed in this halo 
+                    #     idh2 = hid_info[:,2] == np.max(dmp_halos) 
+                    #     com,x_ind,y_ind = np.intersect1d(hid_info[idh1,2], hid_info[idh2,2], return_indices=True)
+                    #     idh2 = idh1[idh1]
+                    #     idh2[x_ind]=False 
+                    #     idh1[idh1] = ~idh2
+                    #     hid_info = np.delete(hid_info, idh1, axis=0)
+                    #     uniq_hid, uq_counts = np.unique(hid_info[:,0], return_counts=True)
+                else:
+                    hid_info=np.copy(tmpp)
+                    np.delete(tmpp)
                 
                 # Now load the simulation particle IDs # map back to the position 
                 self.haloid = []
@@ -117,8 +159,7 @@ class fof6d:
                         data = get_property(self.obj, 'pid', p).d.astype(np.int64)
                         tmpp = np.zeros(len(data),dtype=np.int64)-1
                         tmppd=hid_info[hid_info[:,1]==ptype_ints[p]]
-                        com,x_ind, y_ind = np.intersect1d(data,tmppd[:,0],return_indices=True)
-                        #tmpp = tmppd[y_ind,2][np.argsort(x_ind)]
+                        com, x_ind, y_ind = np.intersect1d(data,tmppd[:,0],return_indices=True)
                         tmpp[x_ind] = tmppd[y_ind,2]
                         nhid += len(com)
                         pids.extend(tmpp[tmpp>=0])
@@ -180,7 +221,6 @@ class fof6d:
 
     def plist_init(self,parent=None):
         # set up particle lists 
-        from caesar.group import MINIMUM_DM_PER_HALO,MINIMUM_STARS_PER_GALAXY
         if self.obj_type == 'halo' or parent is None:
             grpid = self.obj.data_manager.haloid - 1
             if len(grpid[grpid>=0]) < MINIMUM_DM_PER_HALO:
@@ -193,7 +233,6 @@ class fof6d:
                 return False
 
         # sort by grpid
-        from caesar.property_manager import ptype_ints
         self.nparttot = len(grpid)
         self.nparttype = {}
         for p in self.obj.data_manager.ptypes:
@@ -325,6 +364,8 @@ class fof6d:
                     parent.obj.halo_list[ihalo].galaxy_index_list.append(ngrp)
                     ngrp += 1
                 grp_list.append(mygrp)
+            #else:
+            #    print('Not selected halo -- ', self.grouplist[igrp] + 1, 'with ngas: ',len(mygrp.glist), 'nstar:', len(mygrp.slist),'ndm:',len(mygrp.dmlist))
 
         if self.obj_type == 'halo': 
             self.obj.halo_list = grp_list

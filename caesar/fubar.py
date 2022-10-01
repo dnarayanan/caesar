@@ -2,7 +2,7 @@ import numpy as np
 import h5py
 from caesar.group import create_new_group, group_types
 from caesar.property_manager import get_property, get_high_density_gas_indexes
-from caesar.property_manager import ptype_ints
+from caesar.property_manager import ptype_ints, has_property
 from caesar.utils import calculate_local_densities
 from caesar.fof6d import run_fof_6d
 
@@ -321,7 +321,12 @@ def get_mean_interparticle_separation(obj):
     if has_ptype(obj, 'star'):
         smass = get_property(obj, 'mass', 'star').to('code_mass')
     if obj.data_manager.blackholes and has_ptype(obj, 'bh'):
-        bhmass= obj.yt_dataset.arr(get_property(obj, 'bhmass', 'bh').d * 1.e10, 'Msun').to('code_mass')
+        if has_property(obj, 'bh', 'bhmass'):
+            bhmass= obj.yt_dataset.arr(get_property(obj, 'bhmass', 'bh').d * 1.e10, 'Msun').to('code_mass')
+        elif has_property(obj, 'bh', 'mass'):
+            bhmass= obj.yt_dataset.arr(get_property(obj, 'mass', 'bh').d * 1.e10, 'Msun').to('code_mass')
+        else:
+            mylog.info('Warnnig: No bh mass!!')
     if obj.data_manager.dust and has_ptype(obj, 'dust'):
         dustmass= get_property(obj, 'mass', 'dust').to('code_mass')        
     bmass = np.sum(gmass) + np.sum(smass) + np.sum(bhmass) + np.sum(dustmass)
