@@ -107,13 +107,13 @@ class fof6d:
                 tmpp=np.asarray(tmpp)
                 uniq_hid, uq_counts = np.unique(tmpp[:,0], return_counts=True)
                 if uniq_hid.size != tmpp.shape[0]:
-                    memlog('!!Warning!! dumplicated particle IDs in different halos!! removing them', Nh, len(np.unique(tmpp[:,0])), tmpp.shape[0])
+                    memlog('!!Warning!! dumplicated particle IDs in different halos!! removing them %d, %d %d' % (Nh, len(np.unique(tmpp[:,0])), tmpp.shape[0]))
                     # need to exclude these dumplicated particles 
                     dmp_id = uniq_hid[uq_counts>1] # particle ID dumplicated
                     for i in dmp_id:
                         dmp_halos = tmpp[tmpp[:,0]==i,2]
                         if len(dmp_halos) != 2:
-                            memlog('Found more halos than expected',dmp_id, dmp_halos)
+                            #print('Found more halos than expected',dmp_id, dmp_halos)
                             dmp_halos=np.sort(dmp_halos)
                             for j in dmp_halos[:-1]:
                                 hid_info[str(j)]=np.delete(hid_info[str(j)], hid_info[str(j)][:,0]==i, axis=0)
@@ -130,7 +130,7 @@ class fof6d:
                             tmpp.extend(tmppd.tolist())
                             Nh+=1
                     hid_info=np.asarray(tmpp) # replace hid_info
-                    memlog('!!Update on the new halo information', len(np.unique(hid_info[:,0])), hid_info.shape[0])
+                    memlog('!!Update on the new halo information number of particles: %d, %d' % (len(np.unique(hid_info[:,0])), hid_info.shape[0]))
                     # method 2, a little bit slow for manipulate much large array
                     # while uniq_hid.size != hid_info.shape[0]:
                     #     # find the two halos share the same particle!
