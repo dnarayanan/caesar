@@ -107,19 +107,20 @@ class fof6d:
                 tmpp=np.asarray(tmpp)
                 uniq_hid, uq_counts = np.unique(tmpp[:,0], return_counts=True)
                 if uniq_hid.size != tmpp.shape[0]:
-                    memlog('!!Warning!! dumplicated particle IDs in different halos!! removing them %d, %d %d' % (Nh, len(np.unique(tmpp[:,0])), tmpp.shape[0]))
-                    # need to exclude these dumplicated particles 
-                    dmp_id = uniq_hid[uq_counts>1] # particle ID dumplicated
-                    for i in dmp_id:
-                        dmp_halos = tmpp[tmpp[:,0]==i,2]
-                        if len(dmp_halos) != 2:
-                            #print('Found more halos than expected',dmp_id, dmp_halos)
-                            dmp_halos=np.sort(dmp_halos)
-                            for j in dmp_halos[:-1]:
-                                hid_info[str(j)]=np.delete(hid_info[str(j)], hid_info[str(j)][:,0]==i, axis=0)
+                    memlog('!!Warning!! duplicated particle IDs in different halos!! removing them %d, %d %d' % (Nh, len(np.unique(tmpp[:,0])), tmpp.shape[0]))
+                    # need to exclude these duplicated particles 
+                    dmp_id = uniq_hid[uq_counts>1] # particle ID duplicated
+                    while len(dmp_id)>0:
+                        dmp_halos = tmpp[tmpp[:,0] == dmp_id[0],2]
+                        if len(dmp_halos) < 2:
+                            raise ValueError('Duplicated ID only belongs to one halo?', len(dmp_halos))
                         else:
-                            com,x_ind,y_ind = np.intersect1d(hid_info[str(np.min(dmp_halos))][:,0], hid_info[str(np.max(dmp_halos))][:,0], return_indices=True)
-                            hid_info[str(np.min(dmp_halos))]=np.delete(hid_info[str(np.min(dmp_halos))], x_ind, axis=0) #delete the particles in higher HID
+                            dmp_halos=np.sort(dmp_halos)  # exclude duplicated particles in lower halo id number (massive, possible host, halos)
+                            for j in dmp_halos[:-1]:
+                                com,x_ind,y_ind = np.intersect1d(hid_info[str(j)][:,0], hid_info[str(dmp_halos[-1])][:,0], return_indices=True) #compare and remove all duplicated IDs
+                                hid_info[str(j)]=np.delete(hid_info[str(j)], x_ind, axis=0) #delete the particles in lower HID
+                                com_p,x_ind_p,y_ind_p = np.intersect1d(dmp_id, com, return_indices=True)
+                                dmp_id = np.delete(dmp_id, x_ind_p) # delete all the duplicated particles in dmp_id
                     tmpp=[] #particle ID, particle type, halo_ID
                     Nh=0
                     for i in hid_info.keys():
