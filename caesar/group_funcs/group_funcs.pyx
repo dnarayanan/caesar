@@ -494,14 +494,15 @@ def get_group_gas_properties(group,grp_list):
                 grp_Zcgm[ig] += gm[i]*gZ[i]
                 grp_Tcgm[ig] += gm[i]*gtemp[i]
                 grp_ZTcgm[ig] += gm[i]*gtemp[i]*gZ[i]
+                grp_TZcgm[ig] += gm[i]*gtemp[i]*gZ[i]
         grp_Zm[ig] /= grp_mass[ig]
         if grp_sfr[ig]>0: 
             grp_Zsfr[ig] /= grp_sfr[ig]
         if grp_mass[ig] - grp_mism[ig] > 0:
-            grp_Zcgm[ig] /= grp_mass[ig] - grp_mism[ig];
-            grp_Tcgm[ig] /= grp_mass[ig] - grp_mism[ig];
             grp_ZTcgm[ig] /= grp_Tcgm[ig]
             grp_TZcgm[ig] /= grp_Zcgm[ig]
+            grp_Zcgm[ig] /= grp_mass[ig] - grp_mism[ig];
+            grp_Tcgm[ig] /= grp_mass[ig] - grp_mism[ig];
 
     for ig in range(ng):
         grp_list[ig].sfr = group.obj.yt_dataset.quan(grp_sfr[ig], '%s/%s' % (group.obj.units['mass'],group.obj.units['time']))
@@ -560,9 +561,9 @@ def get_group_star_properties(group,grp_list):
             if sage[i] < 0.1:  # last 100 Myr 
                 grp_sfr100[ig] += sm[i]
         if grp_mass[ig] > 0:
+            grp_ageZ[ig] /= grp_Zm[ig]
             grp_Zm[ig] /= grp_mass[ig]
             grp_age[ig] /= grp_mass[ig]
-            grp_ageZ[ig] /= grp_Zm[ig]
 
     for ig in range(ng):
         grp_list[ig].metallicities['stellar'] = group.obj.yt_dataset.quan(grp_Zm[ig], '')
