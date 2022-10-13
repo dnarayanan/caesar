@@ -178,6 +178,8 @@ class DataManager(object):
 
         if has_property(self.obj, 'gas', 'sfr'):
             sfr = get_property(self.obj, 'sfr', 'gas')[flag].to(sfr_unit)
+            if self.obj.simulation.ds_type == 'SwiftDataset':
+                sfr = self.obj.yt_dataset.arr(np.where(sfr.d>0, sfr.d, 0.), sfr_unit)
         else:
             mylog.warning('SFRs not found in snapshot, all SFRs set to 0')
 
