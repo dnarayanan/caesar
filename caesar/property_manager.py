@@ -497,9 +497,11 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
         
         if p == 'bh':
             if has_property(obj, 'bh', 'bhmass'):
-                data = obj.yt_dataset.arr(get_property(obj, 'bhmass', 'bh').d[flag]*1e10, 'Msun/h').to(obj.units['mass'])
+                data = get_property(obj, 'bhmass', 'bh').to(obj.units['mass'])[flag]
+                # obj.yt_dataset.arr(get_property(obj, 'bhmass', 'bh').d[flag]*1e10, 'Msun/h').to(obj.units['mass'])
             else:
-                data = obj.yt_dataset.arr(get_property(obj, 'mass', 'bh').d[flag]*1e10, 'Msun/h').to(obj.units['mass'])
+                data = get_property(obj, 'mass', 'bh').to(obj.units['mass'])[flag]
+                # obj.yt_dataset.arr(get_property(obj, 'mass', 'bh').d[flag]*1e10, 'Msun/h').to(obj.units['mass'])
         else:
             data = get_property(obj, 'mass', p).to(obj.units['mass'])[flag]
         mass = np.append(mass, data.d, axis=0)
