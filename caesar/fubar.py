@@ -325,7 +325,7 @@ def get_mean_interparticle_separation(obj):
             bhmass= get_property(obj, 'bhmass', 'bh').to('code_mass')
             #obj.yt_dataset.arr(get_property(obj, 'bhmass', 'bh').d, 'Msun').to('code_mass')
         elif has_property(obj, 'bh', 'mass'):
-            bhmass= get_property(obj, 'mass', 'bh')to('code_mass')
+            bhmass= get_property(obj, 'mass', 'bh').to('code_mass')
             # obj.yt_dataset.arr(get_property(obj, 'mass', 'bh').d, 'Msun').to('code_mass')
         else:
             mylog.info('Warnnig: No bh mass!!')

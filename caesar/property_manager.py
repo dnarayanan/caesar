@@ -287,10 +287,10 @@ class DatasetType(object):
             return self.dd[ptype, prop].astype(MY_DTYPE)
         snapfile = ('%s/%s'%(self.ds.directory,self.ds.basename))
         # set up units coming out of pygr
-        prop_unit = {'mass':'Msun', 'pos':'kpccm', 'vel':'km/s', 'pot':'Msun * kpccm**2 / s**2', 'rho':'g / cm**3', 'sfr':'Msun / yr', 'u':'K', 'Dust_Masses':'Msun', 'bhmass':'Msun', 'bhmdot':'Msun / yr', 'hsml':'kpccm'}
+        prop_unit = {'mass':'Msun', 'pos':'kpccm', 'vel':'km/s', 'pot':'Msun * kpccm**2 / s**2', 'rho':'g / cm**3', 'sfr':'Msun / yr', 'u':'K', 'Dust_Masses':'Msun', 'bhmass':'Msun', 'BH_Mass':'Msun', 'bhmdot':'Msun / yr', 'hsml':'kpccm'}
 
         # damn you little h!
-        if prop == 'mass' or prop == 'pos':
+        if prop == 'mass' or prop == 'bhmass' or prop == 'pos':
             hfact = 1./self.ds.hubble_constant
         elif prop == 'rho':
             hfact = self.ds.hubble_constant**2
