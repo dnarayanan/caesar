@@ -849,7 +849,7 @@ def collate_group_ids(grp_list,part_type,ntot):
     elif part_type == 'dm': suffix = 'dmlist'
     elif part_type == 'dm2': suffix = 'dm2list'
     elif part_type == 'dm3': suffix = 'dm3list'
-    print("[group.py/collate_group_ids:] if you see an error with dlist here, you likely have set dust==True in member_search while there are no dust particles in the simulation.  this error would like be best as an exception thrown, but desika doesnt know how to code.")
+    #if you see an error with dlist here, you likely have set dust==True in member_search while there are no dust particles in the simulation.  this error would like be best as an exception thrown, but desika doesnt know how to code."
     elif part_type == 'dust': suffix='dlist'
 
 
