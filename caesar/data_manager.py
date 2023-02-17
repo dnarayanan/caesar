@@ -287,10 +287,13 @@ class DataManager(object):
             flag = (select>=0)
 
         if has_property(self.obj, 'bh', 'bhmass'):
-            self.bhmass     = self.obj.yt_dataset.arr(get_property(self.obj, 'bhmass', 'bh').d[flag]*1e10, 'Msun/h').to(self.obj.units['mass'])  # I don't know how to convert this automatically
+            self.bhmass     = get_property(self.obj, 'bhmass', 'bh')[flag].to(self.obj.units['mass'])
+            # self.obj.yt_dataset.arr(get_property(self.obj, 'bhmass', 'bh').d[flag]*1e10, 'Msun/h').to(self.obj.units['mass'])  # I don't know how to convert this automatically
             self.use_bhmass = True
         elif has_property(self.obj, 'bh', 'mass'):
-            self.bhmass     = self.obj.yt_dataset.arr(get_property(self.obj, 'mass', 'bh').d[flag]*1e10, 'Msun/h').to(self.obj.units['mass'])  # I don't know how to convert this automatically
+            
+            self.bhmass     = get_property(self.obj, 'mass', 'bh')[flag].to(self.obj.units['mass'])
+            # self.obj.yt_dataset.arr(get_property(self.obj, 'mass', 'bh').d[flag]*1e10, 'Msun/h').to(self.obj.units['mass'])  # I don't know how to convert this automatically
             self.use_bhmass = True
         else:
             mylog.warning('No black holes found')

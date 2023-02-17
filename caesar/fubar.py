@@ -322,9 +322,11 @@ def get_mean_interparticle_separation(obj):
         smass = get_property(obj, 'mass', 'star').to('code_mass')
     if obj.data_manager.blackholes and has_ptype(obj, 'bh'):
         if has_property(obj, 'bh', 'bhmass'):
-            bhmass= obj.yt_dataset.arr(get_property(obj, 'bhmass', 'bh').d * 1.e10, 'Msun').to('code_mass')
+            bhmass= get_property(obj, 'bhmass', 'bh').to('code_mass')
+            #obj.yt_dataset.arr(get_property(obj, 'bhmass', 'bh').d, 'Msun').to('code_mass')
         elif has_property(obj, 'bh', 'mass'):
-            bhmass= obj.yt_dataset.arr(get_property(obj, 'mass', 'bh').d * 1.e10, 'Msun').to('code_mass')
+            bhmass= get_property(obj, 'mass', 'bh').to('code_mass')
+            # obj.yt_dataset.arr(get_property(obj, 'mass', 'bh').d, 'Msun').to('code_mass')
         else:
             mylog.info('Warnnig: No bh mass!!')
     if obj.data_manager.dust and has_ptype(obj, 'dust'):
