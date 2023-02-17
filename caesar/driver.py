@@ -35,15 +35,25 @@ class Snapshot(object):
         self.snapnum  = snapnum
         self.snap     = '%s/%s%03d.%s' % (snapdir, snapname, snapnum, extension)
 
-    def set_output_information(self, ds, prefix='caesar_', suffix='hdf5'):
+    def set_output_information(self, ds, snapdirformat, prefix='caesar_', suffix='hdf5'):
         """Set the name of the CAESAR output file."""
         if ds.cosmological_simulation == 0:
             time = 't%0.3f' % ds.current_time
         else:
             time = 'z%0.3f' % ds.current_redshift
-                
+            
+
         self.outdir   = '%s/Groups' % ds.fullpath
-        self.outfile  = '%s/%s%s%03d.%s' % (self.outdir, prefix, self.snapname.replace('snap_',''), self.snapnum,suffix)
+        if snapdirformat==False:
+            self.outfile  = '%s/%s%s%03d.%s' % (self.outdir, prefix, self.snapname.replace('snap_',''), self.snapnum,suffix)
+        else:
+            #strip off the annoying snapdir so that all the caesar
+            #files can be in one place.  if you don't like this,
+            #remove this line :) i get it...it's janky code.  but you
+            #know.
+            snapdir_str = 'snapdir_'+str(self.snapnum).zfill(3)+"/"
+            self.outdir=self.outdir.replace(snapdir_str+"Groups","/Groups")
+            self.outfile  = '%s/%s%s%03d.%s' % (self.outdir, prefix,self.snapname.replace(snapdir_str,''), self.snapnum,suffix)
 
     def _make_output_dir(self):
         """If output directory is not present, create it."""
@@ -51,16 +61,18 @@ class Snapshot(object):
             try:
                 os.makedirs(self.outdir)
             except:
+                print("\n\n\n\n\n")
+                print(self.outdir)
                 pass
             
-    def member_search(self, skipran, **kwargs):
+    def member_search(self, skipran, snapdirformat, **kwargs):
         """Perform the member_search() method on this snapshot."""
         if not os.path.isfile(self.snap):
             mylog.warning('%s NOT found, skipping' % self.snap)
             return
         
         ds = yt.load(self.snap)
-        self.set_output_information(ds)
+        self.set_output_information(ds,snapdirformat)
 
         if os.path.isfile(self.outfile) and skipran:
             mylog.warning('%s FOUND, skipping' % self.outfile)
@@ -69,7 +81,7 @@ class Snapshot(object):
         self._make_output_dir()
 
         obj = caesar.CAESAR(ds)
-        obj.member_search(**kwargs)
+        obj.member_search(snapdirformat,**kwargs)
         obj.save(self.outfile)
 
         obj = None
@@ -94,7 +106,7 @@ def print_art():
 
         
 def drive(snapdirs, snapname, snapnums, progen=False, skipran=False,
-          member_search=True, extension='hdf5', caesar_prefix='caesar_', **kwargs):
+          member_search=True, extension='hdf5', caesar_prefix='caesar_', snapdirformat=False, **kwargs):
     """Driver function for running ``CAESAR`` on multiple snapshots.
 
     Can utilize mpi4py to run analysis in parallel given that ``MPI`` 
@@ -115,6 +127,12 @@ def drive(snapdirs, snapname, snapnums, progen=False, skipran=False,
         A single integer, a list of integers, or an array of integers.
         These are the snapshot numbers you would like to run CAESAR
         on.
+    
+    snapdirformat : boolean 
+        If set, then looks for files in formati snapdir_001/snapshot_001.0.hdf5 
+    instead of direct snapshots (such as snapshot_001.hdf5).  default is to False.
+
+
     progen : boolean, optional
         Perform most massive progenitor search.  Defaults to False.
     skipran : boolean, optional
@@ -184,6 +202,7 @@ def drive(snapdirs, snapname, snapnums, progen=False, skipran=False,
     
     if isinstance(snapdirs, str):
         snapdirs = [snapdirs]
+    
     if isinstance(snapnums, int):
         snapnums = [int]
     
@@ -202,14 +221,22 @@ def drive(snapdirs, snapname, snapnums, progen=False, skipran=False,
     if rank == 0: print_art()
 
     snaps = []
-    for snapdir in snapdirs:
-        for snapnum in snapnums:
-            snaps.append(Snapshot(snapdir, snapname, snapnum, extension))
-        
+
+    if snapdirformat == False:
+        for snapdir in snapdirs:
+            for snapnum in snapnums:
+                snaps.append(Snapshot(snapdir, snapname, snapnum, extension))
+    else:
+        for snapdir in snapdirs:
+            for snapnum in snapnums:
+                tempsnapname = 'snapdir_'+str(snapnum).zfill(3)+'/'+snapname
+                tempext = '0.'+extension
+                snaps.append(Snapshot(snapdir, tempsnapname, snapnum, tempext))
+
     if member_search:
         rank_snaps = snaps[rank::nprocs]
         for snap in rank_snaps:
-            snap.member_search(skipran, **kwargs)
+            snap.member_search(skipran, snapdirformat, **kwargs)
 
     if progen:
         caesar.progen.run_progen(snapdirs, snapname, snapnums, prefix=caesar_prefix, suffix=extension, **kwargs)
