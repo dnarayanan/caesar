@@ -436,6 +436,43 @@ cdef void nogil_radial_quants(int ig, long long istart, long long iend, int ndim
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
+
+
+def get_group_dust_properties(group,grp_list):
+    # collect particle IDs
+    from caesar.group import collate_group_ids
+    from caesar.property_manager import ISM_NH_THRESHOLD
+
+    ngroup, grpids, did_bins = collate_group_ids(grp_list,'dust',group.nparttype['dust'])
+
+    cdef:
+        ## gas quantities
+        long long[:] hid_bins = did_bins   # starting indexes of particle IDs in each group
+        float[:]   dm = group.obj.data_manager.mass[grpids]
+
+        # general variables#
+        int ng = ngroup
+        int my_nproc = group.nproc
+        int ig
+        long long i,istart,iend
+ #       double XH = group.obj.simulation.XH
+ #       float ism_thresh = ISM_NH_THRESHOLD
+
+        # Things to compute
+        float[:]   grp_mass = np.zeros(ngroup,dtype=MY_DTYPE)  # total mass
+
+    for ig in prange(ng,nogil=True,schedule='dynamic',num_threads=my_nproc):
+        istart = hid_bins[ig]
+        iend = hid_bins[ig+1]
+        for i in range(istart,iend):
+            grp_mass[ig] += dm[i]
+
+    for ig in range(ng):
+        grp_list[ig].masses['dust'] = group.obj.yt_dataset.quan(grp_mass[ig], group.obj.units['mass'])
+
+    return
+
+
 def get_group_gas_properties(group,grp_list):
     # collect particle IDs 
     from caesar.group import collate_group_ids

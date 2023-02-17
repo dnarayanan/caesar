@@ -793,11 +793,13 @@ def create_new_group(obj, group_type):
 
 def get_group_properties(self,grp_list):
 
-    from caesar.group_funcs import get_group_overall_properties,get_group_gas_properties,get_group_star_properties,get_group_bh_properties
+    from caesar.group_funcs import get_group_overall_properties,get_group_gas_properties,get_group_star_properties,get_group_bh_properties,get_group_dust_properties
 
     get_group_overall_properties(self,grp_list)
     if 'gas' in self.obj.data_manager.ptypes: get_group_gas_properties(self,grp_list)
     if 'star' in self.obj.data_manager.ptypes: get_group_star_properties(self,grp_list)
+    if 'dust' in self.obj.data_manager.ptypes: get_group_dust_properties(self,grp_list)
+
     if (self.obj.data_manager.blackholes):
         if (self.obj.data_manager.blackholes) & has_property(self.obj, 'bh', 'bhmdot'):
             get_group_bh_properties(self,grp_list)
@@ -847,6 +849,10 @@ def collate_group_ids(grp_list,part_type,ntot):
     elif part_type == 'dm': suffix = 'dmlist'
     elif part_type == 'dm2': suffix = 'dm2list'
     elif part_type == 'dm3': suffix = 'dm3list'
+    #if you see an error with dlist here, you likely have set dust==True in member_search while there are no dust particles in the simulation.  this error would like be best as an exception thrown, but desika doesnt know how to code."
+    elif part_type == 'dust': suffix='dlist'
+
+
     ngroup = len(grp_list)
     grpids = np.zeros(ntot,dtype=np.int64)
     gid_bins = np.zeros(ngroup+1,dtype=np.int64)
