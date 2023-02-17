@@ -76,6 +76,7 @@ class DataManager(object):
                 self.ptypes.append('dm3')
                 self.dm3 = True
                 print(ptype_aliases[self.obj._ds_type.ds_type]['dm3'], 'is assumed as low resolution particles')
+
         print('The particle types will be loaded: ', [ptype_aliases[self.obj._ds_type.ds_type][i] for i in self.ptypes])
 
         
