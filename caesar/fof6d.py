@@ -187,7 +187,7 @@ class fof6d:
                         pids.extend(tmpp[tmpp>=0])
                         self.haloid.append(tmpp)
                 memlog('Total halo particle IDs = %d'%(nhid))
-                self.haloid = np.asarray(self.haloid)         # all particles   
+                self.haloid = np.asarray(self.haloid, dtype=object)         # all particles   
                 self.obj.data_manager.haloid = np.asarray(pids) # only halo particles
         else:
             mylog.warning("With haloid='AHF' you must also specify a haloid_file containing halo[+subhalo] IDs.")

@@ -101,7 +101,8 @@ def get_IC_pos(group, ic_ds, radius_type,search_factor=2.5, return_mask=False):
     
     """    
     from caesar.property_manager import ptype_aliases, get_property, DatasetType
-    from caesar.periodic_kdtree import PeriodicCKDTree
+    # from caesar.periodic_kdtree import PeriodicCKDTree
+    from scipy.spatial import cKDTree
 
     ic_ds_type = ic_ds.__class__.__name__
     if ic_ds_type not in ptype_aliases:
@@ -136,9 +137,9 @@ def get_IC_pos(group, ic_ds, radius_type,search_factor=2.5, return_mask=False):
     dmpids = get_property(obj.obj, 'pid', 'dm').d
     dmpos  = get_property(obj.obj, 'pos', 'dm').d
     
-    dm_TREE = PeriodicCKDTree(bounds, dmpos)
+    dm_TREE = cKDTree(dmpos, boxsize=box)
 
-    valid = dm_TREE.query_ball_point(search_params['pos'], search_params['r'])
+    valid = dm_TREE.query_ball_point(search_params['pos'], search_params['r'], workers=obj.nproc)
     search_params['ids'] = dmpids[valid]
 
     ic_ds_type = DatasetType(ic_ds)
@@ -205,20 +206,21 @@ def construct_lowres_tree(group, lowres):
             lr_pos  = np.append(lr_pos,  cur_pos.d, axis=0)
             lr_mass = np.append(lr_mass, cur_mass.d, axis=0)
     
-    from caesar.periodic_kdtree import PeriodicCKDTree
+    # from caesar.periodic_kdtree import PeriodicCKDTree
+    from scipy.spatial import cKDTree
     box    = obj.simulation.boxsize.to(pos_unit)
     bounds = np.array([box,box,box])
 
     obj._lowres = dict(
-        TREE   = PeriodicCKDTree(bounds, lr_pos),
+        TREE   = cKDTree(lr_pos, boxsize=box),
         MASS   = lr_mass,
         ptypes = lowres
     )
 
 
 def all_object_contam_check(obj):
-    if obj._ds_type.ds_type != 'GizmoDataset' and obj._ds_type.ds_type != 'GadgetHDF5Dataset':
-        return
+    # if obj._ds_type.ds_type != 'GizmoDataset' and obj._ds_type.ds_type != 'GadgetHDF5Dataset':
+    #     return
     if not 'lowres' in obj._kwargs or obj._kwargs['lowres'] is None:
         return        
 

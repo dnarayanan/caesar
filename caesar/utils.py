@@ -70,8 +70,8 @@ def calculate_local_densities(obj, group_list):
         return
     
     try:
-        from scipy.spatial import KDTree, cKDTree
-        from caesar.periodic_kdtree import PeriodicCKDTree
+        from scipy.spatial import cKDTree
+        # from caesar.periodic_kdtree import PeriodicCKDTree
         #mylog.info('Calculating local densities')
     except:
         mylog.warning('Could not import scipy.spatial! '   \
@@ -84,7 +84,7 @@ def calculate_local_densities(obj, group_list):
     box  = obj.simulation.boxsize
     box  = np.array([box,box,box])
     
-    TREE = PeriodicCKDTree(box, pos)
+    TREE = cKDTree(pos, boxsize=obj.simulation.boxsize)
 
     if 'search_radius' in obj._kwargs:
         if isinstance(obj._kwargs['search_radius'],(int,float)):
@@ -98,7 +98,7 @@ def calculate_local_densities(obj, group_list):
         group.local_number_density = {}
         for search_radius in obj.simulation.search_radius:
             search_volume = 4.0/3.0 * np.pi * search_radius**3
-            inrange = TREE.query_ball_point(group.pos, search_radius.d)
+            inrange = TREE.query_ball_point(group.pos, search_radius.d, workers=obj.nproc)
             total_mass = obj.yt_dataset.quan(np.sum(mass[inrange]), obj.units['mass'])
             rname = str(int(search_radius.d))
             group.local_mass_density[rname] = total_mass / search_volume
