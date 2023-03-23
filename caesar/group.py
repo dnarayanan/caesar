@@ -672,7 +672,7 @@ class Group(object):
         pprint(pdict)
         pdict = None
 
-    def contamination_check(self, lowres=[2,3,5], nproc=nproc, search_factor=1.0,
+    def contamination_check(self, lowres=[2,3,5], nproc=1, search_factor=1.0,
                             printer=True):
         """Check for low resolution particle contamination.
 
