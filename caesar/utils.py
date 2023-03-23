@@ -24,7 +24,7 @@ def rotator(vals, ALPHA=0, BETA=0):
     --------
     >>> rotated_pos = rotator(positions, 32.3, 55.2)
 
-    """    
+    """
     c  = np.cos(ALPHA)
     s  = np.sin(ALPHA)
     Rx = np.array([
@@ -40,9 +40,9 @@ def rotator(vals, ALPHA=0, BETA=0):
         [0.0,1.0,0.0],
         [  s,0.0,  c]
     ])
-    
+
     # one value to rotate
-    if len(np.shape(vals)) == 1:    
+    if len(np.shape(vals)) == 1:
         if ALPHA != 0:
             vals = np.dot(Rx, vals)
         if BETA != 0:
@@ -52,7 +52,7 @@ def rotator(vals, ALPHA=0, BETA=0):
     else:
         from .group_funcs import rotator as rotator_cython
         rotator_cython(np.asarray(vals), Rx, Ry, ALPHA, BETA)
-        
+
     return vals
 
 
@@ -68,7 +68,7 @@ def calculate_local_densities(obj, group_list):
     """
     if len(group_list) == 0:
         return
-    
+
     try:
         from scipy.spatial import cKDTree
         # from caesar.periodic_kdtree import PeriodicCKDTree
@@ -83,6 +83,9 @@ def calculate_local_densities(obj, group_list):
     mass = np.array([i.masses['total'] for i in group_list])
     box  = obj.simulation.boxsize
     box  = np.array([box,box,box])
+    for i in range(3):
+        pos[pos[:,i]>box[i], i] -= box[i]
+        pos[pos[:,i]<0, i] += box[i]
     
     TREE = cKDTree(pos, boxsize=obj.simulation.boxsize)
 
@@ -107,7 +110,7 @@ def calculate_local_densities(obj, group_list):
 
 def info_printer(obj, group_type, top):
     """General method to print data.
-    
+
     Parameters
     ----------
     obj : :class:`main.CAESAR`
@@ -125,7 +128,7 @@ def info_printer(obj, group_type, top):
         group_list = obj.galaxies
     elif group_type == 'cloud':
         group_list = obj.clouds
-        
+
     nobjs = len(group_list)
     if top > nobjs:
         top = nobjs
@@ -164,7 +167,7 @@ def info_printer(obj, group_type, top):
             if o.halo is not None: phm, phid = o.halo.masses['total'], o.halo.GroupID
             output += ' %04d  %0.2e  %0.2e  %0.2e  %0.2e  %0.2e  %s\t|  %0.2e  %d \n' % \
                       (o.GroupID, o.masses['stellar'], o.masses['gas'],
-                       o.sfr, o.radii['total_half_mass'], 
+                       o.sfr, o.radii['total_half_mass'],
                        o.local_number_density['1000'], o.central,
                        phm, phid)
             cnt += 1
@@ -184,5 +187,5 @@ def info_printer(obj, group_type, top):
             if cnt > top: break
 
 
-            
+
     print(output)

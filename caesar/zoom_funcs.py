@@ -15,11 +15,11 @@ def write_IC_mask(group, ic_ds, filename, search_factor, radius_type='total',pri
         The filename of which to write the mask to.  If a full path is
         not supplied then it will be written in the current directory.
     search_factor : float, optional
-        How far from the center to select DM particles 
+        How far from the center to select DM particles
         (defaults to 2.5)
     print_extents : bool, optional
         Print MUSIC extents for cuboid after mask creation
-    
+
     Examples
     --------
     >>> import yt
@@ -33,8 +33,8 @@ def write_IC_mask(group, ic_ds, filename, search_factor, radius_type='total',pri
     >>>
     >>> obj = caesar.load('caesar_my_snapshot.hdf5', ds)
     >>> obj.galaxies[0].write_IC_mask(ic_ds, 'mymask.txt')
-    
-    """    
+
+    """
 
     ic_dmpos = get_IC_pos(group, ic_ds,radius_type, search_factor=search_factor,
                           return_mask=True)
@@ -74,14 +74,14 @@ def write_IC_mask(group, ic_ds, filename, search_factor, radius_type='total',pri
 
         if xext >= 0.5 or yext >= 0.5 or zext >= 0.5:
             mylog.warning('REGION EXTENDS MORE THAN HALF OF YOUR VOLUME')
-            
-        
+
+
 def get_IC_pos(group, ic_ds, radius_type,search_factor=2.5, return_mask=False):
     """Get the initial dark matter positions of a ``CAESAR`` halo.
 
     If called on a galaxy, it will return the IC DM positions of the
     parent halo.
-    
+
     Parameters
     ----------
     group : :class:`group.Group`
@@ -91,15 +91,15 @@ def get_IC_pos(group, ic_ds, radius_type,search_factor=2.5, return_mask=False):
     search_factor : float, optional
         How far from the center to select DM particles (defaults to 2.5).
     return_mask : bool, optional
-        Return initial condition positions from 0-->1 rather than raw 
+        Return initial condition positions from 0-->1 rather than raw
         data.  Useful for writing a MUSIC mask file.
-    
+
     Returns
     -------
     ic_dmpos : np.ndarray
         DM positions of this object in the initial condition file.
-    
-    """    
+
+    """
     from caesar.property_manager import ptype_aliases, get_property, DatasetType
     # from caesar.periodic_kdtree import PeriodicCKDTree
     from scipy.spatial import cKDTree
@@ -117,7 +117,7 @@ def get_IC_pos(group, ic_ds, radius_type,search_factor=2.5, return_mask=False):
                         'incorrectly and WILL cause problems with '\
                         'the matching process. (%s vs %s)' %
                         (str(ic_ds.length_unit), str(group.obj.yt_dataset.length_unit)))
-        
+
     if group.obj_type == 'halo':
         obj = group
     elif group.obj_type == 'galaxy':
@@ -130,13 +130,16 @@ def get_IC_pos(group, ic_ds, radius_type,search_factor=2.5, return_mask=False):
         pos = obj.pos.in_units('code_length').d,
         r   = obj.radii[radius_type].in_units('code_length').d * search_factor,
     )
-        
+
     box    = ic_ds.domain_width[0].d
-    bounds = np.array([box,box,box])
+    box = np.array([box,box,box])
 
     dmpids = get_property(obj.obj, 'pid', 'dm').d
     dmpos  = get_property(obj.obj, 'pos', 'dm').d
-    
+    for i in range(3):
+        pos[pos[:,i]>box[i], i] -= box[i]
+        pos[pos[:,i]<0, i] += box[i]
+
     dm_TREE = cKDTree(dmpos, boxsize=box)
 
     valid = dm_TREE.query_ball_point(search_params['pos'], search_params['r'], workers=obj.nproc)
@@ -158,7 +161,7 @@ def get_IC_pos(group, ic_ds, radius_type,search_factor=2.5, return_mask=False):
                (nmatches, obj.obj_type, obj.GroupID, ic_ds.basename))
     mylog.info('Returning %0.2f%% of the total DM from the sim' %
                (float(nmatches)/float(len(ic_dmpids)) * 100.0))
-    
+
     matched_pos = ic_dmpos[matches]
 
 
@@ -190,13 +193,13 @@ def construct_lowres_tree(group, lowres):
         return
     mylog.info('Gathering low-res particles and constructing tree')
     from caesar.property_manager import get_property
-    
+
     lr_pos  = np.empty((0,3))
     lr_mass = np.empty(0)
 
     pos_unit  = group.pos.units
     mass_unit = group.masses['total'].units
-    
+
     for p in lowres:
         ptype = 'PartType%d' % p
         if ptype in obj.yt_dataset.particle_fields_by_type:
@@ -205,11 +208,14 @@ def construct_lowres_tree(group, lowres):
 
             lr_pos  = np.append(lr_pos,  cur_pos.d, axis=0)
             lr_mass = np.append(lr_mass, cur_mass.d, axis=0)
-    
+
     # from caesar.periodic_kdtree import PeriodicCKDTree
     from scipy.spatial import cKDTree
     box    = obj.simulation.boxsize.to(pos_unit)
-    bounds = np.array([box,box,box])
+    box = np.array([box,box,box])
+    for i in range(3):
+        pos[pos[:,i]>box[i], i] -= box[i]
+        pos[pos[:,i]<0, i] += box[i]
 
     obj._lowres = dict(
         TREE   = cKDTree(lr_pos, boxsize=box),
@@ -222,12 +228,12 @@ def all_object_contam_check(obj):
     # if obj._ds_type.ds_type != 'GizmoDataset' and obj._ds_type.ds_type != 'GadgetHDF5Dataset':
     #     return
     if not 'lowres' in obj._kwargs or obj._kwargs['lowres'] is None:
-        return        
+        return
 
     lowres = obj._kwargs['lowres']
     if not isinstance(lowres, list):
-        raise Exception('lowres must be a list!')    
-    
+        raise Exception('lowres must be a list!')
+
     mylog.info('Checking all objects for contamination.  Lowres Types: %s' % lowres)
     if hasattr(obj, 'halos'):
         for h in obj.halos:
@@ -238,4 +244,3 @@ def all_object_contam_check(obj):
                 g.contamination = -1
             else:
                 g.contamination = g.halo.contamination
-        
