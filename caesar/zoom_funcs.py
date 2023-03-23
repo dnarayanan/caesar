@@ -137,12 +137,12 @@ def get_IC_pos(group, ic_ds, radius_type,search_factor=2.5, return_mask=False):
     dmpids = get_property(obj.obj, 'pid', 'dm').d
     dmpos  = get_property(obj.obj, 'pos', 'dm').d
     for i in range(3):
-        pos[pos[:,i]>box[i], i] -= box[i]
-        pos[pos[:,i]<0, i] += box[i]
+        dmpos[dmpos[:,i]>box[i], i] -= box[i]
+        dmpos[dmpos[:,i]<0, i] += box[i]
 
     dm_TREE = cKDTree(dmpos, boxsize=box)
 
-    valid = dm_TREE.query_ball_point(search_params['pos'], search_params['r'], workers=obj.nproc)
+    valid = dm_TREE.query_ball_point(search_params['pos'], search_params['r'])
     search_params['ids'] = dmpids[valid]
 
     ic_ds_type = DatasetType(ic_ds)
@@ -229,6 +229,10 @@ def all_object_contam_check(obj):
     #     return
     if not 'lowres' in obj._kwargs or obj._kwargs['lowres'] is None:
         return
+    if not 'nproc' in obj._kwargs or obj._kwargs['nproc'] is None:
+        nproc = 1
+    else:
+        nproc = obj._kwargs['nproc']
 
     lowres = obj._kwargs['lowres']
     if not isinstance(lowres, list):
@@ -237,7 +241,7 @@ def all_object_contam_check(obj):
     mylog.info('Checking all objects for contamination.  Lowres Types: %s' % lowres)
     if hasattr(obj, 'halos'):
         for h in obj.halos:
-            h.contamination_check(lowres, printer=False)
+            h.contamination_check(lowres, nproc=nproc, printer=False)
     if hasattr(obj, 'galaxies'):
         for g in obj.galaxies:
             if g.halo is None:

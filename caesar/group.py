@@ -43,7 +43,7 @@ category_mapper = dict(
 )
 
 class GroupProperty(object):
-    """Class to return default values for the quantities held in 
+    """Class to return default values for the quantities held in
     the category_mapper dictionaries."""
     def __init__(self, source_dict, name):
         self.name = name
@@ -71,19 +71,19 @@ class GroupList(object):
 class Group(object):
     """Parent class for halo and galaxy and halo objects."""
     glist = GroupList('glist')
-    slist = GroupList('slist')    
+    slist = GroupList('slist')
 
     mass        = GroupProperty(category_mapper['mass'],   'mass')
     radius      = GroupProperty(category_mapper['radius'], 'radius')
     sigma       = GroupProperty(category_mapper['sigma'],  'sigma')
     temperature = GroupProperty(category_mapper['temperature'], 'temperature')
     metallicity = GroupProperty(category_mapper['metallicity'], 'metallicity')
-    
+
     def __init__(self,obj):
         self.obj = obj
 
         self.masses = {}
-        self.radii = {} 
+        self.radii = {}
         self.temperatures = {}
         self.velocity_dispersions = {}
         self.rotation = {}
@@ -115,7 +115,7 @@ class Group(object):
         """Helper method to delete a dict key."""
         if k in d:
             del d[k]
-            
+
     def _remove_dm_references(self):
         """Galaxies/clouds do not have DM, so remove references."""
         if self.obj_type != 'galaxy' or not self._valid:
@@ -129,7 +129,7 @@ class Group(object):
         if 'dm2' in self.obj.data_manager.ptypes: self._delete_key(self.masses,'dm2')
         if 'dm3' in self.obj.data_manager.ptypes: self._delete_key(self.masses,'dm3')
         self._delete_key(self.velocity_dispersions,'dm')
-            
+
     def _cleanup(self):
         """ cleanup function to delete attributes no longer needed """
         self._delete_attribute('global_indexes')
@@ -143,9 +143,9 @@ class Group(object):
         if 'dm3' in self.obj.data_manager.ptypes: self._delete_attribute('__dm3list')
 
     def _process_group(self):
-        """Process each group after creation.  This entails 
+        """Process each group after creation.  This entails
         calculating the total mass, iteratively unbinding (if enabled),
-        then calculating more masses, radial quants, virial quants, 
+        then calculating more masses, radial quants, virial quants,
         velocity dispersions, angular quants, and final gas quants.
         """
         self._assign_local_data()
@@ -154,7 +154,7 @@ class Group(object):
             self._calculate_total_mass()
             self._calculate_center_of_mass_quantities()
             self._unbind()  # iterative procedure
-            
+
             if self._valid:
                 self._calculate_masses()
                 self._calculate_radial_quantities()
@@ -168,9 +168,9 @@ class Group(object):
 
         self._cleanup()
 
-        
+
     def _assign_local_data(self):
-        """Assign glist/slist/dmlist/bhlist/dlist for this group.  
+        """Assign glist/slist/dmlist/bhlist/dlist for this group.
 		Also sets the ngas/nstar/ndm/nbh/ndust attributes."""
         ptypes  = self.obj.data_manager.ptype[self.global_indexes]
         indexes = self.obj.data_manager.indexes[self.global_indexes]
@@ -190,7 +190,7 @@ class Group(object):
         if 'dm3' in self.obj.data_manager.ptypes: self.dm3list = indexes[np.where(ptypes == ptype_ints['dm3'])[0]]
         self.bhlist = indexes[np.where(ptypes == ptype_ints['bh'])[0]]
         self.dlist  = indexes[np.where(ptypes == ptype_ints['dust'])[0]]
-        
+
         self.ngas  = len(self.glist)
         self.nstar = len(self.slist)
         self.ndm   = len(self.dmlist)
@@ -205,7 +205,7 @@ class Group(object):
     def _calculate_total_mass(self):
         """Calculate the total mass of the object."""
         self.masses['total'] = self.obj.yt_dataset.quan(np.sum(self.obj.data_manager.mass[self.global_indexes]), self.obj.units['mass'])
-        
+
     def _calculate_masses(self):
         """Calculate various total masses."""
         mass_dm     = np.sum(self.obj.data_manager.mass[self.obj.data_manager.dmlist[self.dmlist]])
@@ -240,7 +240,7 @@ class Group(object):
         if self.obj.simulation.ndust > 0:
             mass_dust = np.sum(self.obj.data_manager.mass[self.obj.data_manager.dlist][self.dlist])
             self.masses['dust']  = self.obj.yt_dataset.quan(mass_dust, self.obj.units['mass'])
-        
+
         if self.obj.simulation.ndust <= 0:
             try:
                 mass_dust    = np.sum(self.obj.data_manager.dustmass[self.obj.data_manager.glist[self.glist]])
@@ -318,9 +318,9 @@ class Group(object):
                 ptype_ints['dust']:[],
             }
         if not hasattr(self, 'unbind_iterations'):
-            self.unbind_iterations = 0        
+            self.unbind_iterations = 0
         self.unbind_iterations += 1
-        
+
         cmpos = (self.pos.to('kpc')).d
         ppos  = self.obj.yt_dataset.arr(self.obj.data_manager.pos[self.global_indexes], self.obj.units['length'])
         ppos  = (ppos.to('kpc')).d
@@ -338,7 +338,7 @@ class Group(object):
         v2 = ( (pvels[:,0] - cmvel[0])**2 +
                (pvels[:,1] - cmvel[1])**2 +
                (pvels[:,2] - cmvel[2])**2 )
-        
+
         energy = -(mass * self.obj.simulation.G.d * (init_mass - mass) / r) + (0.5 * mass * v2)
 
         positive = np.where(energy > 0)[0]
@@ -349,8 +349,8 @@ class Group(object):
                 self.unbound_indexes[self.obj.data_manager.ptype[global_index]].append(self.obj.data_manager.index[global_index])
                 del self.global_indexes[i]
 
-            self._assign_local_data()                        
-            if not self._valid: return            
+            self._assign_local_data()
+            if not self._valid: return
             self._calculate_total_mass()
             self._calculate_center_of_mass_quantities()
             self._unbind()
@@ -360,19 +360,19 @@ class Group(object):
         self.sfr = self.obj.yt_dataset.quan(0.0, '%s/%s' % (self.obj.units['mass'],self.obj.units['time']))
         self.metallicities = dict(
             mass_weighted = self.obj.yt_dataset.quan(0.0, ''),
-            sfr_weighted  = self.obj.yt_dataset.quan(0.0, '')            
+            sfr_weighted  = self.obj.yt_dataset.quan(0.0, '')
         )
         self.temperatures['mass_weighted'] = self.obj.yt_dataset.quan(0.0, self.obj.units['temperature'])
         self.temperatures['sfr_weighted']  = self.obj.yt_dataset.quan(0.0, self.obj.units['temperature'])
         if self.ngas == 0:
             return
 
-        gas_mass = self.obj.data_manager.mass[self.__glist]        
+        gas_mass = self.obj.data_manager.mass[self.__glist]
         gas_sfr  = self.obj.data_manager.gsfr[self.glist].d
         gas_Z    = self.obj.data_manager.gZ[self.glist].d
         gas_T    = self.obj.data_manager.gT[self.glist].d
-        
-        gas_mass_sum = np.sum(gas_mass)    
+
+        gas_mass_sum = np.sum(gas_mass)
         gas_sfr_sum  = np.sum(gas_sfr)
 
         #moved this here to avoid many galaxies set with sfr = 1 if they really have sfr = 0
@@ -380,12 +380,12 @@ class Group(object):
 
         if gas_sfr_sum == 0:
             gas_sfr_sum = 1.0
-        
+
         self.metallicities = dict(
             mass_weighted = self.obj.yt_dataset.quan(np.sum(gas_Z * gas_mass) / gas_mass_sum, ''),
             sfr_weighted  = self.obj.yt_dataset.quan(np.sum(gas_Z * gas_sfr ) / gas_sfr_sum,  '')
         )
-        
+
         self.temperatures['mass_weighted'] = self.obj.yt_dataset.quan(np.sum(gas_T * gas_mass) / gas_mass_sum, self.obj.units['temperature'])
         self.temperatures['sfr_weighted']  = self.obj.yt_dataset.quan(np.sum(gas_T * gas_sfr ) / gas_sfr_sum,  self.obj.units['temperature'])
 
@@ -420,12 +420,12 @@ class Group(object):
 
 
     def _calculate_virial_quantities(self):
-        """Calculates virial quantities such as r200, circular velocity, 
+        """Calculates virial quantities such as r200, circular velocity,
         and virial temperature."""
-        sim      = self.obj.simulation        
+        sim      = self.obj.simulation
         critical_density = sim.critical_density   # in Msun/kpc^3 PHYSICAL
         mass     = self.masses['total'].to('Msun')
-      
+
         # Mika Rafieferantsoa's virial quantity computation
         pmass = self.obj.yt_dataset.arr(self.obj.data_manager.mass[self.global_indexes], self.obj.units['mass'])
         pmass = pmass.to('Msun')
@@ -454,7 +454,7 @@ class Group(object):
         #print('radii:',collectMasses,collectRadii,self.radii['r200c'],self.radii['r500c'],self.masses['m200c'],self.masses['m500c'],collectMasses[1]/self.masses['m200c'],collectMasses[2]/self.masses['m500c'])
         # eq 1 of Mo et al 2002
         self.radii['r200'] = (sim.G * mass / (100.0 * sim.Om_z * sim.H_z**2))**(1./3.)
-        
+
         # eq 1 of Mo et al 2002
         vc = (np.sqrt( sim.G * mass / self.radii['r200'] )).to('km/s')
 
@@ -466,7 +466,7 @@ class Group(object):
         self.radii['r200c']  = self.radii['r200c'].to(self.obj.units['length'])
         self.radii['r500c']  = self.radii['r500c'].to(self.obj.units['length'])
         self.radii['r2500c']  = self.radii['r2500c'].to(self.obj.units['length'])
-        self.radii['r200']   = self.radii['r200'].to(self.obj.units['length'])        
+        self.radii['r200']   = self.radii['r200'].to(self.obj.units['length'])
         vc = vc.to(self.obj.units['velocity'])
         vT = vT.to(self.obj.units['temperature'])
 
@@ -477,7 +477,7 @@ class Group(object):
                 self.masses[k] = self.obj.yt_dataset.quan(self.masses[k], self.obj.units['mass'])
             else:
                 self.masses[k] = self.masses[k].to(self.obj.units['mass'])
-        
+
 
         self.virial_quantities = dict(
             #radius = self.radii['virial'],
@@ -501,17 +501,17 @@ class Group(object):
         ptypes = self.obj.data_manager.ptype[self.global_indexes]
         v = self.obj.data_manager.vel[self.global_indexes]
         m = self.obj.data_manager.mass[self.global_indexes]
-        
+
         self.velocity_dispersions['all']     = get_sigma(v,m)
         self.velocity_dispersions['dm']      = get_sigma(v[ ptypes == ptype_ints['dm']],m[ ptypes == ptype_ints['dm']])
         self.velocity_dispersions['baryon']  = get_sigma(v[(ptypes == ptype_ints['gas']) | (ptypes == ptype_ints['star'])],m[(ptypes == ptype_ints['gas']) | (ptypes == ptype_ints['star'])])
         self.velocity_dispersions['gas']     = get_sigma(v[ ptypes == ptype_ints['gas']],m[ ptypes == ptype_ints['gas']])
         self.velocity_dispersions['stellar'] = get_sigma(v[ ptypes == ptype_ints['star']],m[ ptypes == ptype_ints['star']])
         #if np.log10(self.masses['total'])>12: print 'sigma',np.log10(self.masses['total']),self.velocity_dispersions['all'],self.velocity_dispersions['dm'],self.velocity_dispersions['gas'],self.velocity_dispersions['stellar']
-        
+
         for k,v in six.iteritems(self.velocity_dispersions):
             self.velocity_dispersions[k] = self.obj.yt_dataset.quan(v, self.obj.units['velocity'])
-            
+
     def _calculate_angular_quantities(self):
         """Calculate angular momentum, spin, max_vphi and max_vr."""
         pos  = self.obj.yt_dataset.arr(self.obj.data_manager.pos[self.global_indexes],  self.obj.units['length'])
@@ -521,7 +521,7 @@ class Group(object):
 
         px = mass * vel[:,0]
         py = mass * vel[:,1]
-        pz = mass * vel[:,2]        
+        pz = mass * vel[:,2]
         x  = (pos[:,0] - self.pos[0]).to('km')
         y  = (pos[:,1] - self.pos[1]).to('km')
         z  = (pos[:,2] - self.pos[2]).to('km')
@@ -530,11 +530,11 @@ class Group(object):
         Ly = np.sum( z*px - x*pz )
         Lz = np.sum( x*py - y*px )
         L  = np.sqrt(Lx**2 + Ly**2 + Lz**2)
-        
+
         #self.angular_momentum        = self.obj.yt_dataset.quan(L, Lx.units)
         self.angular_momentum_vector = self.obj.yt_dataset.arr([Lx.d,Ly.d,Lz.d], Lx.units)
 
-        
+
         # Bullock spin or lambda prime
         #self.spin = self.angular_momentum / (1.4142135623730951 *
         if self.virial_quantities['r200'] > 0:
@@ -547,7 +547,7 @@ class Group(object):
 
         PHI   = np.arctan2(Ly.d,Lx.d)
         THETA = np.arccos(Lz.d/L.d)
-        
+
         ex = np.sin(THETA) * np.cos(PHI)
         ey = np.sin(THETA) * np.sin(PHI)
         ez = np.cos(THETA)
@@ -568,14 +568,14 @@ class Group(object):
 
         self.max_vphi = self.obj.yt_dataset.quan(np.max(vphi), self.obj.units['velocity'])
         self.max_vr   = self.obj.yt_dataset.quan(np.max(vr)  , self.obj.units['velocity'])
-            
+
     def _calculate_radial_quantities(self):
         """ Calculate various component radii and half radii """
         from caesar.group_funcs import get_half_mass_radius, get_full_mass_radius
-        
+
         r = np.empty(len(self.global_indexes), dtype=np.float64)
         get_periodic_r(self.obj.simulation.boxsize.d, self.pos.d, self.obj.data_manager.pos[self.global_indexes], r)
-        
+
         rsort = np.argsort(r)
         r     = r[rsort]
         mass  = self.obj.data_manager.mass[self.global_indexes][rsort]
@@ -588,10 +588,10 @@ class Group(object):
             stellar = [ptype_ints['star']],
             dm      = [ptype_ints['dm']],
         )
-        
+
         half_masses = {}
         for k,v in six.iteritems(self.masses):
-            half_masses[k] = 0.5 * v            
+            half_masses[k] = 0.5 * v
 
         for k,v in six.iteritems(radial_categories):
             if k == 'dm' and self.obj_type == 'galaxy': continue
@@ -601,7 +601,7 @@ class Group(object):
 
             full_r = get_full_mass_radius(r[::-1], ptype[::-1], binary)
             self.radii[k] = self.obj.yt_dataset.quan(full_r, self.obj.units['length'])
-            
+
             half_r = get_half_mass_radius(mass, r, ptype, half_masses[k], binary)
             self.radii['%s_half_mass' % k] = self.obj.yt_dataset.quan(half_r, self.obj.units['length'])
 
@@ -614,15 +614,15 @@ class Group(object):
         ic_ds : yt dataset
             The initial condition dataset via ``yt.load()``.
         filename : str
-            The filename of which to write the mask to.  If a full 
-            path is not supplied then it will be written in the 
+            The filename of which to write the mask to.  If a full
+            path is not supplied then it will be written in the
             current directory.
         search_factor : float, optional
             How far from the center to select DM particles. Default is
             2.5
         print_extents : bool, optional
             Print MUSIC extents for cuboid after mask creation
-    
+
         Examples
         --------
         >>> import yt
@@ -636,26 +636,26 @@ class Group(object):
         >>>
         >>> obj = caesar.load('caesar_my_snapshot.hdf5', ds)
         >>> obj.galaxies[0].write_IC_mask(ic_ds, 'mymask.txt')
-        
-        """ 
+
+        """
         from caesar.zoom_funcs import write_IC_mask
         write_IC_mask(self, ic_ds, filename, search_factor,radius_type=radius_type)
-            
+
     def vtk_vis(self, rotate=False):
         """Method to render this group's points via VTK.
 
         Parameters
         ----------
         rotate : boolean
-            Align angular momentum vector with the z-axis before 
+            Align angular momentum vector with the z-axis before
             rendering?
 
         Notes
         -----
         Opens up a pyVTK window; you must have VTK installed to use
-        this method.  It is easiest to install via 
+        this method.  It is easiest to install via
         ``conda install vtk``.
-        
+
         """
         self.obj.data_manager.load_particle_data()
         from caesar.vtk_funcs import group_vis
@@ -672,11 +672,11 @@ class Group(object):
         pprint(pdict)
         pdict = None
 
-    def contamination_check(self, lowres=[2,3,5], search_factor=1.0,
+    def contamination_check(self, lowres=[2,3,5], nproc=nproc, search_factor=1.0,
                             printer=True):
         """Check for low resolution particle contamination.
 
-        This method checks for low-resolution particles within 
+        This method checks for low-resolution particles within
         ``search_factor`` of the maximum halo radius.  When this
         method is called on a galaxy, it refers to the parent halo.
 
@@ -708,21 +708,21 @@ class Group(object):
             ID   = 'Halo %d' % self.GroupID
         elif self.obj_type == 'galaxy':
             if self.halo == None:
-                raise Exception('Galaxy %d has no halo!' % self.GroupID)                
+                raise Exception('Galaxy %d has no halo!' % self.GroupID)
             halo = self.halo
             ID   = "Galaxy %d's halo (ID %d)" % (self.GroupID, halo.GroupID)
-        
+
         r = halo.virial_quantities['r200c'].d * search_factor
 
-        result  = self.obj._lowres['TREE'].query_ball_point(halo.pos.d, r)
+        result  = self.obj._lowres['TREE'].query_ball_point(halo.pos.d, r, workers=nproc)
         ncontam = len(result)
         lrmass  = np.sum(self.obj._lowres['MASS'][result])
 
         self.contamination = lrmass / halo.virial_quantities['m200c'].d
-        
+
         if not printer:
             return
-        
+
         if ncontam > 0:
             mylog.warning('%s has %0.2f%% mass contamination ' \
                           '(%d LR particles with %0.2e % s)' %
@@ -730,17 +730,17 @@ class Group(object):
                            lrmass, halo.masses['total'].units))
         else:
             mylog.info('%s has NO contamination!' % ID)
-            
+
 class Galaxy(Group):
     """Galaxy class which has the central boolean."""
-    obj_type = 'galaxy'    
+    obj_type = 'galaxy'
     def __init__(self,obj):
         super(Galaxy, self).__init__(obj)
         self.central = False
         self.halo = None
         self.clouds = []
         self.cloud_index_list = np.array([])
-        
+
 class Halo(Group):
     """Halo class which has the dmlist attribute, and child boolean."""
     obj_type = 'halo'
@@ -757,7 +757,7 @@ class Halo(Group):
 
 class Cloud(Group):
     """Cloud class which has the central boolean."""
-    obj_type = 'cloud'    
+    obj_type = 'cloud'
     def __init__(self,obj):
         super(Cloud, self).__init__(obj)
         self.central = False
@@ -765,7 +765,7 @@ class Cloud(Group):
         self.halo = None
 
 def create_new_group(obj, group_type):
-    """Simple function to create a new instance of a specified 
+    """Simple function to create a new instance of a specified
     :class:`group.Group`.
 
     Parameters
@@ -812,7 +812,7 @@ def get_group_properties(self,grp_list):
         self.obj.halos = self.obj.halo_list
         self.obj.nhalos = len(self.obj.halo_list)
     if (self.obj_type == 'galaxy') and (len(grp_list) > 0):
-        # compute some extra quantities for galaxies 
+        # compute some extra quantities for galaxies
         from caesar.hydrogen_mass_calc import get_HIH2_masses,_get_aperture_masses,_get_aperture_quan
         if 'aperture' in self.obj._kwargs: aperture = float(self.obj._kwargs['aperture'])
         else: aperture = 30   # this is the default in units of obj.units['length']
