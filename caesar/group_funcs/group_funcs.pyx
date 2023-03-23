@@ -28,10 +28,10 @@ ctypedef struct part_struct:  # structure to hold particle info for particles wi
     float x[3]  # positions with respect to center
     int t  # type
     #long long i  # index, for sorting purposes
- 
+
 @cython.cdivision(True)
 @cython.wraparound(False)
-@cython.boundscheck(False)    
+@cython.boundscheck(False)
 cdef int isin(int val, int[:] arr) nogil:
     cdef int i
     cdef int size = len(arr)
@@ -91,9 +91,9 @@ cdef void nogil_CoM_quants(int ig, float[:,:] pos, float[:,:] vel, float[:] mass
         grp_pos[ig,ip] /= grp_mtot[ig]
         grp_vel[ig,ip] /= grp_mtot[ig]
         # if the CoM pos ends up outside the box, periodically wrap it back in
-        if grp_pos[ig,ip] > Lbox: 
+        if grp_pos[ig,ip] > Lbox:
             grp_pos[ig,ip] -= Lbox
-        if grp_pos[ig,ip] < -Lbox: 
+        if grp_pos[ig,ip] < -0:
             grp_pos[ig,ip] += Lbox
     for i in range(istart,iend):
         if isin(ptype[i], group_ptypes): # only selected types for calculation
@@ -104,7 +104,7 @@ cdef void nogil_CoM_quants(int ig, float[:,:] pos, float[:,:] vel, float[:] mass
         grp_minpotpos[ig,ip] = pos[minpotpart,ip]  # position of minimum potential particle, of any type
         grp_minpotvel[ig,ip] = vel[minpotpart,ip]  # velocity of minimum potential particle, of any type
 
-    return 
+    return
 
 
 @cython.cdivision(True)
@@ -124,7 +124,7 @@ cdef void nogil_load_partinfo(float[:] mass, float[:,:] pos, float[:,:] vel, int
     cdef int ip
     cdef long long i,j
     cdef float dx[3]
-    
+
     for i in range(istart,iend):
         j = i - istart
         pinfo[j].r = 0.
@@ -162,10 +162,10 @@ cdef float nogil_half_mass_radius(part_struct *pinfo, float mtarget, int ip, int
     cdef int i,ngp
     cdef double cumulative_mass = 0.0
     cdef float r = 0.0
-   
+
     ngp = len(group_ptypes)
     for i in range(npart):
-        if (ip==ngp+1) | ((ip==ngp) & (pinfo[i].t!=1) & (pinfo[i].t!=2)) | ((ip<ngp) & (pinfo[i].t==group_ptypes[ip])):   
+        if (ip==ngp+1) | ((ip==ngp) & (pinfo[i].t!=1) & (pinfo[i].t!=2)) | ((ip<ngp) & (pinfo[i].t==group_ptypes[ip])):
             cumulative_mass += pinfo[i].m
             if cumulative_mass >= mtarget:
                 r = pinfo[i].r
@@ -191,13 +191,13 @@ cdef float nogil_velocity_dispersions(part_struct *pinfo, int ip, int[:] group_p
     cdef int i, idim, ngp, npt=0
     cdef double mtot=0., vdisp = 0.
     cdef double vcom[3]
-   
+
     # first find center-of-mass velocity for this particle type
     for idim in range(ndim):
         vcom[idim] = 0.
     ngp = len(group_ptypes)
     for i in range(npart):
-        if (ip==ngp+1) | ((ip==ngp) & (pinfo[i].t!=1) & (pinfo[i].t!=2)) | ((ip<ngp) & (pinfo[i].t==group_ptypes[ip])):   
+        if (ip==ngp+1) | ((ip==ngp) & (pinfo[i].t!=1) & (pinfo[i].t!=2)) | ((ip<ngp) & (pinfo[i].t==group_ptypes[ip])):
             mtot += pinfo[i].m
             for idim in range(ndim):
                 vcom[idim] += pinfo[i].m * pinfo[i].v[idim]
@@ -208,7 +208,7 @@ cdef float nogil_velocity_dispersions(part_struct *pinfo, int ip, int[:] group_p
         vcom[idim] /= mtot
     # compute dispersion around CoM velocity
     for i in range(npart):
-        if (ip==ngp+1) | ((ip==ngp) & (pinfo[i].t!=1) & (pinfo[i].t!=2)) | ((ip<ngp) & (pinfo[i].t==group_ptypes[ip])):   
+        if (ip==ngp+1) | ((ip==ngp) & (pinfo[i].t!=1) & (pinfo[i].t!=2)) | ((ip<ngp) & (pinfo[i].t==group_ptypes[ip])):
             for idim in range(ndim):
                 vdisp += (pinfo[i].v[idim] - vcom[idim])**2
     vdisp = c_sqrt(vdisp/npt)
@@ -247,7 +247,7 @@ cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] gro
     # count particles of this type to see if we have enough
     rz = 0.
     for i in range(npart):
-        if (ip==ngp+1) | ((ip==ngp) & (pinfo[i].t!=1) & (pinfo[i].t!=2)) | ((ip<ngp) & (pinfo[i].t==group_ptypes[ip])):   
+        if (ip==ngp+1) | ((ip==ngp) & (pinfo[i].t!=1) & (pinfo[i].t!=2)) | ((ip<ngp) & (pinfo[i].t==group_ptypes[ip])):
             npt += 1
         rz += pinfo[i].x[0]
     if npt < 3:  # not enough particles of this type to compute angular quants
@@ -255,7 +255,7 @@ cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] gro
 
     for i in range(npart):
         # select particle type to do: default is to do all
-        if (ip==ngp+1) | ((ip==ngp) & (pinfo[i].t!=1) & (pinfo[i].t!=2)) | ((ip<ngp) & (pinfo[i].t==group_ptypes[ip])):   
+        if (ip==ngp+1) | ((ip==ngp) & (pinfo[i].t!=1) & (pinfo[i].t!=2)) | ((ip<ngp) & (pinfo[i].t==group_ptypes[ip])):
             npt += 1
             # load info for desired particle type
             for idim in range(3):
@@ -269,7 +269,7 @@ cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] gro
     # compute rotation angles, which rotates the galaxy to line up the z-dir with L
     Lmag = c_sqrt(L[0]*L[0]+L[1]*L[1]+L[2]*L[2])
     phi = c_atan2(L[1],L[0])
-    theta = c_acos(L[2]/Lmag) 
+    theta = c_acos(L[2]/Lmag)
     e[0] = c_sin(theta) * c_cos(phi)
     e[1] = c_sin(theta) * c_sin(phi)
     e[2] = c_cos(theta)
@@ -280,7 +280,7 @@ cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] gro
     # compute bulge-to-total ratio based on kinematic decomposition
     for i in range(npart):
         # select particle type to do: default is to do all
-        if (ip==ngp+1) | ((ip==ngp) & (pinfo[i].t!=1) & (pinfo[i].t!=2)) | ((ip<ngp) & (pinfo[i].t==group_ptypes[ip])):   
+        if (ip==ngp+1) | ((ip==ngp) & (pinfo[i].t!=1) & (pinfo[i].t!=2)) | ((ip<ngp) & (pinfo[i].t==group_ptypes[ip])):
             # load info for desired particle type
             v2 = 0.
             for idim in range(3):
@@ -351,7 +351,7 @@ cdef void nogil_virial_quants(part_struct *pinfo, double[:] Densities, int npart
 @cython.wraparound(False)
 @cython.boundscheck(False)
 cdef void nogil_rotator(float *vector, float ALPHA, float BETA) nogil:
-    """Rotate a vector through rotator angles ALPHA, BETA, which are the yaw and pitch angles.  
+    """Rotate a vector through rotator angles ALPHA, BETA, which are the yaw and pitch angles.
     See https://en.wikipedia.org/wiki/Rotation_matrix
 
     vector : 3-dim vector you want to rotate (usually pos's or vel's)
@@ -368,7 +368,7 @@ cdef void nogil_rotator(float *vector, float ALPHA, float BETA) nogil:
         vcopy[i] = vector[i]
     c = c_cos(ALPHA)
     s = c_sin(ALPHA)
-    
+
     if ALPHA != 0:  # this rotates around x-axis ("yaw"), so x doesn't change
         vector[1] = c*vcopy[1] - s*vcopy[2]
         vector[2] = s*vcopy[1] + c*vcopy[2]
@@ -380,7 +380,7 @@ cdef void nogil_rotator(float *vector, float ALPHA, float BETA) nogil:
         vector[0] = c*vcopy[0] - s*vcopy[2]
         vector[2] = s*vcopy[0] + c*vcopy[2]
 
-    return 
+    return
 
 @cython.cdivision(True)
 @cython.wraparound(False)
@@ -404,7 +404,7 @@ cdef void nogil_radial_quants(int ig, long long istart, long long iend, int ndim
             mtarget = 0.
             for i in range(nptypes):
                 mtarget += grp_mass[ig,i]
-        elif ip == nptypes:  # second-to-last value stores baryonic radii 
+        elif ip == nptypes:  # second-to-last value stores baryonic radii
             mtarget = 0.
             for i in range(nptypes):
                 if group_ptypes[i] == 1 or group_ptypes[i] == 2: continue  # skip DM particles
@@ -474,7 +474,7 @@ def get_group_dust_properties(group,grp_list):
 
 
 def get_group_gas_properties(group,grp_list):
-    # collect particle IDs 
+    # collect particle IDs
     from caesar.group import collate_group_ids
     from caesar.property_manager import ISM_NH_THRESHOLD
 
@@ -507,7 +507,7 @@ def get_group_gas_properties(group,grp_list):
         float[:]   grp_sfr = np.zeros(ngroup,dtype=MY_DTYPE)  # SFR
         float[:]   grp_Zm = np.zeros(ngroup,dtype=MY_DTYPE)  # mass-weighted metallicity
         float[:]   grp_Zsfr = np.zeros(ngroup,dtype=MY_DTYPE)  # SFR-weighted metallicity
-        float[:]   grp_Tm = np.zeros(ngroup,dtype=MY_DTYPE)  # mass-weighted temperature 
+        float[:]   grp_Tm = np.zeros(ngroup,dtype=MY_DTYPE)  # mass-weighted temperature
         float[:]   grp_Tcgm = np.zeros(ngroup,dtype=MY_DTYPE)  # mass-weighted CGM temperature (excluding SF gas)
         float[:]   grp_Zcgm = np.zeros(ngroup,dtype=MY_DTYPE)  # mass-weighted CGM metallicity (excluding SF gas)
         float[:]   grp_TZcgm = np.zeros(ngroup,dtype=MY_DTYPE)  # metal-weighted CGM temperature (excluding SF gas)
@@ -533,7 +533,7 @@ def get_group_gas_properties(group,grp_list):
                 grp_ZTcgm[ig] += gm[i]*gtemp[i]*gZ[i]
                 grp_TZcgm[ig] += gm[i]*gtemp[i]*gZ[i]
         grp_Zm[ig] /= grp_mass[ig]
-        if grp_sfr[ig]>0: 
+        if grp_sfr[ig]>0:
             grp_Zsfr[ig] /= grp_sfr[ig]
         if grp_mass[ig] - grp_mism[ig] > 0:
             grp_ZTcgm[ig] /= grp_Tcgm[ig]
@@ -565,7 +565,7 @@ def get_group_gas_properties(group,grp_list):
 @cython.wraparound(False)
 @cython.boundscheck(False)
 def get_group_star_properties(group,grp_list):
-    # collect particle IDs 
+    # collect particle IDs
     from caesar.group import collate_group_ids
     ngroup, grpids, gid_bins = collate_group_ids(grp_list,'star',group.nparttype['star'])
 
@@ -595,7 +595,7 @@ def get_group_star_properties(group,grp_list):
             grp_Zm[ig] += sZ[i]*sm[i]
             grp_age[ig] += sage[i]*sm[i]
             grp_ageZ[ig] += sage[i]*sm[i]*sZ[i]
-            if sage[i] < 0.1:  # last 100 Myr 
+            if sage[i] < 0.1:  # last 100 Myr
                 grp_sfr100[ig] += sm[i]
         if grp_mass[ig] > 0:
             grp_ageZ[ig] /= grp_Zm[ig]
@@ -617,7 +617,7 @@ def get_group_star_properties(group,grp_list):
 @cython.boundscheck(False)
 def get_group_bh_properties(group,grp_list):
 
-    # collect particle IDs 
+    # collect particle IDs
     from caesar.group import collate_group_ids
     ngroup, grpids, gid_bins = collate_group_ids(grp_list,'bh',group.nparttype['bh'])
 
@@ -668,7 +668,7 @@ def get_group_bh_properties(group,grp_list):
 @cython.boundscheck(False)
 def get_group_overall_properties(group,grp_list):
     """Calculate physical properties of a set of objects in a fof6d group.
-    Computes properties, assigns to Caesar object, and fills the associated caesar 
+    Computes properties, assigns to Caesar object, and fills the associated caesar
         object list (e.g. halo_list/galaxy_list/cloud_list).  No return value.
 
     Parameters
@@ -730,9 +730,9 @@ def get_group_overall_properties(group,grp_list):
         float[:,:] grp_vel = np.zeros((ngroup,ndim),dtype=MY_DTYPE)  # CoM velocities
         float[:,:] grp_minpotpos = np.zeros((ngroup,ndim),dtype=MY_DTYPE)  # position of minimum potential
         float[:,:] grp_minpotvel = np.zeros((ngroup,ndim),dtype=MY_DTYPE)  # velocity of minimum potential
-        float[:,:] grp_R20 = np.zeros((ngroup,nptypes+2),dtype=MY_DTYPE)  # 80% mass-enclosing radius 
+        float[:,:] grp_R20 = np.zeros((ngroup,nptypes+2),dtype=MY_DTYPE)  # 80% mass-enclosing radius
         float[:,:] grp_Rhalf = np.zeros((ngroup,nptypes+2),dtype=MY_DTYPE)  # half-mass radius
-        float[:,:] grp_R80 = np.zeros((ngroup,nptypes+2),dtype=MY_DTYPE)  # 80% mass-enclosing radius 
+        float[:,:] grp_R80 = np.zeros((ngroup,nptypes+2),dtype=MY_DTYPE)  # 80% mass-enclosing radius
         float[:,:] grp_vdisp = np.zeros((ngroup,nptypes+2),dtype=MY_DTYPE)  # velocity dispersions
         float[:,:,:] grp_L = np.zeros((ngroup,nptypes+2,7),dtype=MY_DTYPE)  # holds angular quants (Lx,Ly,Lz,ALPHA,BETA,B/T,kappa_rot)
         float[:,:] grp_mvir = np.zeros((ngroup,nDens),dtype=MY_DTYPE)  # virial masses like M500, M2500, ...
@@ -753,7 +753,7 @@ def get_group_overall_properties(group,grp_list):
         # compute masses and particle counts
         for ip in range(nptypes):
             for i in range(istart,iend):
-                if ptype[i] == group_ptypes[ip]: 
+                if ptype[i] == group_ptypes[ip]:
                     grp_mass[ig,ip] += mass[i]
                     # grp_count[ig,ip] += 1
             grp_mtot[ig] += grp_mass[ig,ip]
@@ -770,7 +770,7 @@ def get_group_overall_properties(group,grp_list):
     # assign quantities to groups, with units
     from caesar.property_manager import has_ptype
     L_units = 'Msun * kpccm * km/s'
-    r200_fact = (200*group.obj.simulation.Om_z*1.3333333*np.pi*group.obj.simulation.critical_density.in_units('Msun/kpccm**3'))**(-1./3.)  
+    r200_fact = (200*group.obj.simulation.Om_z*1.3333333*np.pi*group.obj.simulation.critical_density.in_units('Msun/kpccm**3'))**(-1./3.)
     G_in_simunits = group.obj.simulation.G.to('(km**2 * kpc)/(Msun * s**2)')  # so we get vcirc in km/s
     ds = group.obj.yt_dataset
     if not group.obj.load_pot:
@@ -893,7 +893,7 @@ def append_bh(
         for j in range(npart):
             dx    = periodic(gal_pos[i,0] - p_pos[j,0], halfbox, boxsize)
             dy    = periodic(gal_pos[i,1] - p_pos[j,1], halfbox, boxsize)
-            dz    = periodic(gal_pos[i,2] - p_pos[j,2], halfbox, boxsize)        
+            dz    = periodic(gal_pos[i,2] - p_pos[j,2], halfbox, boxsize)
             r2    = dx*dx + dy*dy + dz*dz
             #if (r2 > gal_R[i]*gal_R[i]): continue
             if (r2 > gal_R2): continue
@@ -903,11 +903,11 @@ def append_bh(
             else:
                 dx    = periodic(gal_pos[p_group_id[j],0] - p_pos[j,0], halfbox, boxsize)
                 dy    = periodic(gal_pos[p_group_id[j],1] - p_pos[j,1], halfbox, boxsize)
-                dz    = periodic(gal_pos[p_group_id[j],2] - p_pos[j,2], halfbox, boxsize)        
+                dz    = periodic(gal_pos[p_group_id[j],2] - p_pos[j,2], halfbox, boxsize)
                 r2old = dx*dx + dy*dy + dz*dz
                 if (gal_mass[i]/r2) > (gal_mass[p_group_id[j]]/r2old):
                     p_group_id[j] = i
-              
+
 
 @cython.cdivision(True)
 @cython.wraparound(False)
@@ -942,10 +942,10 @@ def get_periodic_r(
     for i in range(0,n):
         dx = periodic(center[0] - pos[i,0], halfbox, boxsize)
         dy = periodic(center[1] - pos[i,1], halfbox, boxsize)
-        dz = periodic(center[2] - pos[i,2], halfbox, boxsize)        
+        dz = periodic(center[2] - pos[i,2], halfbox, boxsize)
 
         r[i] = sqrt(dx*dx + dy*dy + dz*dz)
-        
+
 cdef double periodic(double x, double halfbox, double boxsize):
     if x < -halfbox:
         x += boxsize
@@ -1002,7 +1002,7 @@ def get_virial_mr(
 def rotator(
         np.ndarray[np.float64_t, ndim=2] vals,
         np.ndarray[np.float64_t, ndim=2] Rx,
-        np.ndarray[np.float64_t, ndim=2] Ry,        
+        np.ndarray[np.float64_t, ndim=2] Ry,
         double ALPHA, double BETA
 ):
     """Rotate a number of vectors around ALPHA, BETA
@@ -1011,7 +1011,7 @@ def rotator(
     ----------
     vals : np.ndarray
         Nx3 np.ndarray of values you want to rotate.
-    Rx : np.ndarray 
+    Rx : np.ndarray
         3x3 array used for the first rotation about ALPHA.
         The dot product is taken against each value:
         vals[i] = np.dot(Rx, vals[i])
@@ -1040,19 +1040,19 @@ def rotator(
     cdef double beta_s = Ry[2,0]
 
     cdef double x, y, z
-    
+
     for i in range(0,n):
         if ALPHA != 0:
             y = vals[i,1]
             z = vals[i,2]
-            
+
             vals[i,1] = alpha_c * y - alpha_s * z
             vals[i,2] = alpha_s * y + alpha_c * z
-            
+
         if BETA != 0:
             x = vals[i,0]
             z = vals[i,2]
-            
+
             vals[i,0] = beta_c * x - beta_s * z
             vals[i,2] = beta_s * x + beta_c * z
 
@@ -1088,7 +1088,7 @@ def get_half_mass_radius(
     cdef int n = len(mass)
     cdef double cumulative_mass = 0.0
     cdef double r = 0.0
-    
+
     for i in range(0,n):
         if ((1<<ptype[i]) & (binary)) > 0:
             cumulative_mass += mass[i]
@@ -1123,14 +1123,14 @@ def get_full_mass_radius(
     Notes
     -----
     This function iterates forward through the array, so it
-    is advisable to reverse the radii & ptype arrays before 
+    is advisable to reverse the radii & ptype arrays before
     passing them via np.ndarray[::-1].
 
     """
     cdef int i
     cdef int n = len(radii)
     cdef double r = 0.0
-    
+
     for i in range(0,n):
         if ((1<<ptype[i]) & (binary)) > 0:
             r = radii[i]

@@ -68,7 +68,7 @@ class fof6d:
                     import gzip
                     with gzip.open(haloid_file) as f:
                         lines = f.readlines()
-                else:        
+                else:
                     with open(haloid_file) as f:
                         lines = f.readlines()
 
@@ -77,8 +77,8 @@ class fof6d:
                 else:
                     haloid_file=haloid_file.replace('particles','halos')
                 halo_info=np.loadtxt(haloid_file,usecols=(0,1),dtype=np.int64) #hid, host hid
-                
-                if 'AHF_use_subhalos' not in self.obj._kwargs:  #only use particles in distinct halo. this is default. 
+
+                if 'AHF_use_subhalos' not in self.obj._kwargs:  #only use particles in distinct halo. this is default.
                     nhalos=int(lines[0])
                     hpp=1 # halo particle numbers and halo ID position
                     hid_info=[] #particle ID, particle type, halo_ID as keys fillup with the information from AHF particle file
@@ -95,7 +95,7 @@ class fof6d:
                     hid_info = np.asarray(hid_info)
                     uniq_hid, uq_counts = np.unique(hid_info[:,0], return_counts=True)
                     if uniq_hid.size != hid_info.shape[0]:
-                        memlog('!!Warning!! duplicated particle IDs in different halos!! removing them %d, %d' % (uniq_hid.size , hid_info.shape[0]))      
+                        memlog('!!Warning!! duplicated particle IDs in different halos!! removing them %d, %d' % (uniq_hid.size , hid_info.shape[0]))
                 else: # use subhalo inforamtion as well, but very pain to remove these duplicated particles!!!!
                     nhalos=int(lines[0])
                     hpp=1 # halo particle numbers and halo ID position
@@ -106,7 +106,7 @@ class fof6d:
                         hid_info[str(hid)]=np.loadtxt(lines[hpp:hpp+npt],dtype=int)
                         hpp+=npt
                         # hid_info.extend(tmpd.tolist())
-                        
+
                     #exclude subhalo particles in host halo!!
                     idsh=np.where(halo_info[:,1]>0)[0]
                     for i in idsh:
@@ -128,7 +128,7 @@ class fof6d:
                     uniq_hid, uq_counts = np.unique(tmpp[:,0], return_counts=True)
                     if uniq_hid.size != tmpp.shape[0]:
                         memlog('!!Warning!! duplicated particle IDs in different halos!! removing them %d, %d %d' % (Nh, len(np.unique(tmpp[:,0])), tmpp.shape[0]))
-                        # need to exclude these duplicated particles 
+                        # need to exclude these duplicated particles
                         dmp_id = uniq_hid[uq_counts>1] # particle ID duplicated
                         while len(dmp_id)>0:
                             dmp_halos = tmpp[tmpp[:,0] == dmp_id[0],2]
@@ -159,25 +159,25 @@ class fof6d:
                         #     dmp_halos = hid_info[hid_info[:,0]==dmp_id,2]
                         #     if len(dmp_halos) != 2:
                         #         raise ValueError('Found more halos than expected',dmp_id, dmp_halos)
-                        #     idh1 = hid_info[:,2] == np.min(dmp_halos)  # ids to be removed in this halo 
-                        #     idh2 = hid_info[:,2] == np.max(dmp_halos) 
+                        #     idh1 = hid_info[:,2] == np.min(dmp_halos)  # ids to be removed in this halo
+                        #     idh2 = hid_info[:,2] == np.max(dmp_halos)
                         #     com,x_ind,y_ind = np.intersect1d(hid_info[idh1,2], hid_info[idh2,2], return_indices=True)
                         #     idh2 = idh1[idh1]
-                        #     idh2[x_ind]=False 
+                        #     idh2[x_ind]=False
                         #     idh1[idh1] = ~idh2
                         #     hid_info = np.delete(hid_info, idh1, axis=0)
                         #     uniq_hid, uq_counts = np.unique(hid_info[:,0], return_counts=True)
                     else:
                         hid_info=np.copy(tmpp)
                         np.delete(tmpp)
-                
-                # Now load the simulation particle IDs # map back to the position 
+
+                # Now load the simulation particle IDs # map back to the position
                 self.haloid = []
                 pids = []
                 nhid = 0
-                memlog('Reading simulation data IDs and mapping halo particle to them')  
+                memlog('Reading simulation data IDs and mapping halo particle to them')
                 for p in self.obj.data_manager.ptypes:
-                    if has_ptype(self.obj, p): 
+                    if has_ptype(self.obj, p):
                         data = get_property(self.obj, 'pid', p).d.astype(np.int64)
                         tmpp = np.zeros(len(data),dtype=np.int64)-1
                         tmppd=hid_info[hid_info[:,1]==ptype_ints[p]]
@@ -187,12 +187,12 @@ class fof6d:
                         pids.extend(tmpp[tmpp>=0])
                         self.haloid.append(tmpp)
                 memlog('Total halo particle IDs = %d'%(nhid))
-                self.haloid = np.asarray(self.haloid, dtype=object)         # all particles   
+                self.haloid = np.asarray(self.haloid, dtype=object)         # all particles
                 self.obj.data_manager.haloid = np.asarray(pids) # only halo particles
         else:
             mylog.warning("With haloid='AHF' you must also specify a haloid_file containing halo[+subhalo] IDs.")
             sys.exit()
-        
+
     def run_caesar_fof(self,obj):
         from caesar.fubar import get_mean_interparticle_separation,get_b,fof
         LL = get_mean_interparticle_separation(self.obj) * get_b(self.obj, 'halo')
@@ -234,7 +234,7 @@ class fof6d:
         self.obj.data_manager.haloid = haloid
         if haloid_file is not None:
             memlog('Writing 3D FOF Halo IDs to %s' % haloid_file)
-            with h5py.File(haloid_file,'w') as hf:  
+            with h5py.File(haloid_file,'w') as hf:
                 hf.create_dataset('all_haloids',data=haloid, compression=1)
                 for ip,p in enumerate(self.obj.data_manager.ptypes):  # write haloid arrays for each ptype
                     haloid_out = self.haloid[ip]
@@ -242,7 +242,7 @@ class fof6d:
                 hf.close()
 
     def plist_init(self,parent=None):
-        # set up particle lists 
+        # set up particle lists
         if self.obj_type == 'halo' or parent is None:
             grpid = self.obj.data_manager.haloid - 1
             if len(grpid[grpid>=0]) < MINIMUM_DM_PER_HALO:
@@ -274,7 +274,7 @@ class fof6d:
         from caesar.group import group_types
 
         # initialize fof6d parameter
-        self.fof_LL = self.MIS * get_b(self.obj, target_type)  
+        self.fof_LL = self.MIS * get_b(self.obj, target_type)
         self.vel_LL = 1.0
         self.kerneltab = kernel_table(self.fof_LL)
         self.nHlim = nHlim  # only include gas above this nH limit (atoms/cm^3)
@@ -323,7 +323,7 @@ class fof6d:
 
         if ngrp != ngs:
             memlog('WARNING!! total galaxies number do not agree: %d, %d'%(ngs,ngrp))
-        # collect overall tags 
+        # collect overall tags
         self.tags_fof6d = np.zeros(self.nparttot,dtype=np.int64) - 1
         for igrp in range(len(grp_tags)):
             self.tags_fof6d[g_inds[igrp]] = grp_tags[igrp]
@@ -341,7 +341,7 @@ class fof6d:
         ngrp = 0
         zero_marker = 0
         for igrp in range(len(self.grouplist)):
-            if self.grouplist[igrp] < 0: 
+            if self.grouplist[igrp] < 0:
                 zero_marker = 1  # if there are particles with tag=-1, these will be in igrp=0 within hid_bins. In this case, group_parents should start their numbering at 1, since igrp=0 is not a valid object.  This should only happen for galaxies/clouds, not halos
                 continue
             mygrp = create_new_group(self.obj, self.obj_type)
@@ -352,23 +352,24 @@ class fof6d:
             mygrp.global_indexes = my_indexes
             offset = 0
             for ip,p in enumerate(self.obj.data_manager.ptypes):
+                mygrp.ngas = mygrp.nstar = mygrp.nbh = mygrp.ndust = mygrp.ndm = mygrp.ndm2 = mygrp.ndm3 = 0
                 if not has_ptype(self.obj, p): continue
-                if p == 'gas': 
+                if p == 'gas':
                     mygrp.glist = my_indexes[my_ptype==ptype_ints[p]]-offset
                     mygrp.ngas = len(mygrp.glist)
-                elif p == 'star': 
+                elif p == 'star':
                     mygrp.slist = my_indexes[my_ptype==ptype_ints[p]]-offset
                     mygrp.nstar = len(mygrp.slist)
-                elif p == 'bh': 
+                elif p == 'bh':
                     mygrp.bhlist = my_indexes[my_ptype==ptype_ints[p]]-offset
                     mygrp.nbh = len(mygrp.bhlist)
-                elif p == 'dust': 
+                elif p == 'dust':
                     mygrp.dlist = my_indexes[my_ptype==ptype_ints[p]]-offset
                     mygrp.ndust = len(mygrp.dlist)
-                elif p == 'dm': 
+                elif p == 'dm':
                     mygrp.dmlist = my_indexes[my_ptype==ptype_ints[p]]-offset
                     mygrp.ndm = len(mygrp.dmlist)
-                elif p == 'dm2': 
+                elif p == 'dm2':
                     mygrp.dm2list = my_indexes[my_ptype==ptype_ints[p]]-offset
                     mygrp.ndm2 = len(mygrp.dm2list)
                 elif p == 'dm3':
@@ -380,7 +381,7 @@ class fof6d:
                 if self.obj_type == 'halo':
                     if self.obj._kwargs['haloid'] == 'AHF':
                         mygrp.AHF_haloID = self.grouplist[igrp] + 1 # recover to orginal ID, see line 156
-                if parent is not None: 
+                if parent is not None:
                     ihalo = parent.group_parents[igrp-zero_marker]
                     mygrp.parent_halo_index = ihalo
                     parent.obj.halo_list[ihalo].galaxy_index_list.append(ngrp)
@@ -389,15 +390,15 @@ class fof6d:
             #else:
             #    print('Not selected halo -- ', self.grouplist[igrp] + 1, 'with ngas: ',len(mygrp.glist), 'nstar:', len(mygrp.slist),'ndm:',len(mygrp.dmlist))
 
-        if self.obj_type == 'halo': 
+        if self.obj_type == 'halo':
             self.obj.halo_list = grp_list
             self.counts[self.obj_type] = len(self.obj.halo_list)
             self.obj.group_types.append(self.obj_type)
-        if self.obj_type == 'galaxy': 
+        if self.obj_type == 'galaxy':
             self.obj.galaxy_list = grp_list
             self.counts[self.obj_type] = len(self.obj.galaxy_list)
             self.obj.group_types.append(self.obj_type)
-        if self.obj_type == 'cloud': 
+        if self.obj_type == 'cloud':
             self.obj.cloud_list = grp_list
             self.counts[self.obj_type] = len(self.obj.cloud_list)
             self.obj.group_types.append(self.obj_type)
@@ -449,7 +450,7 @@ class fof6d:
             if parent.obj_type == 'galaxy':
                 self.obj.galaxy_list[ih].cloud_index_list = np.empty(0, dtype=np.int32)
             for igrp in group_nums[group_nums>=0]:
-                if parent.obj_type == 'halo': 
+                if parent.obj_type == 'halo':
                     mygrp.parent_halo_index = ih
                     if self.obj_type == 'galaxy':
                         self.obj.halo_list[ih].galaxy_index_list = np.append(self.obj.halo_list[ih].galaxy_index_list,self.counts[target_type])
@@ -512,7 +513,7 @@ def fof6d_halo(nparthalo,npart,pos,vel,minstars,Lbox,fof_LL,vel_LL,kerneltab):
     myhaloID = np.zeros(npart,dtype=np.int32)  # fof6d doing one halo at a time; arbitrarily assign to halo 0
     for idir in range(len(mypos)):  # sort in each direction, find groups within sorted list
         if len(groups) > 0: groups = fof_sorting_old(groups,mypos,myvel,myhaloID,pindex,fof_LL,Lbox,idir,mingrp=minstars)
-    if len(groups) == 0: 
+    if len(groups) == 0:
         return fof6d_tags,0  # found no valid groups after sorting
     fof6d_results = [None]*len(groups)
     for igrp in range(len(groups)):
@@ -545,7 +546,7 @@ def fof6d_main(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,mingrp,fof_LL,vel_L
     neigh.fit(poslist)  # do neighbor finding
     nlist = neigh.radius_neighbors(poslist)  # get neighbor properties (radii, indices)
 
-    # compute velocity criterion for neighbors, based on local velocity dispersion 
+    # compute velocity criterion for neighbors, based on local velocity dispersion
     if vel_LL is not None:
         LLinv = 1./fof_LL
         sigma = np.zeros(nactive)
@@ -585,7 +586,7 @@ def fof6d_main(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,mingrp,fof_LL,vel_L
             galmin = np.unique(galind_ngb[galind_ngb>=0])  # find sorted, unique indices of neighbors' gals
             galind[nlist[1][densest]] = min(galmin)  # put all neighbors in lowest-# galaxy
             for i in range(1,len(galmin)):  # link all other galaxies to lowest
-                if linked[galmin[i]]==-1: 
+                if linked[galmin[i]]==-1:
                     linked[galmin[i]] = min(galmin)  # link all other galaxies to lowest index one
                 else:
                     linked[galmin[i]] = min(linked[galmin[i]],min(galmin))  # connect all other galaxies to lowest index
@@ -604,13 +605,13 @@ def fof6d_main(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,mingrp,fof_LL,vel_L
     # assign indices of particles to FOF groups having more than mingrp particles
     pcount,bin_edges = np.histogram(galind,bins=galcount)  # count particles in each galaxy
     for i in range(iend-istart):  # set indices of particles in groups with <mingrp members to -1
-        if pcount[galind[i]] < mingrp: galind[i] = -1  
+        if pcount[galind[i]] < mingrp: galind[i] = -1
     if len(galind[galind>=0])==0: return 0,galind  # if there are no valid groups left, return
     galind_unique = np.unique(galind[galind>=0])  # find unique groups
     galind_inv = np.zeros(max(galind_unique)+1,dtype=int)
     for i in range(len(galind_unique)):
         galind_inv[galind_unique[i]] = i  # create mapping from original groups to unique set
-    for i in range(iend-istart): 
+    for i in range(iend-istart):
         if galind[i]>=0: galind[i] = galind_inv[galind[i]] # re-assign group indices sequentially
     galcount = max(galind)+1
     #raw_input('press ENTER to continue')
@@ -650,7 +651,7 @@ def fof_sorting(groups,pos,vel,haloID,pindex,fof_LL,Lbox,mingrp,idir):
         oldpos = pos[idir][istart]
         groups[grpcount][0] = istart  # set start of new group to be same as for old group
         for i in range(istart,iend):
-            if periodic(pos[idir][i],oldpos,Lbox) > fof_LL or i == iend-1:  
+            if periodic(pos[idir][i],oldpos,Lbox) > fof_LL or i == iend-1:
                 groups[grpcount][1] = i  # set end of old group to be i
                 groups.append([i,i])  # add new group, starting at i; second index is a dummy that will be overwritten when the end of the group is found
                 grpcount += 1
@@ -660,7 +661,7 @@ def fof_sorting(groups,pos,vel,haloID,pindex,fof_LL,Lbox,mingrp,idir):
     oldgroups = groups[:]
     groups = []
     for igrp in range(len(oldgroups)):
-        istart = oldgroups[igrp][0]  
+        istart = oldgroups[igrp][0]
         iend = oldgroups[igrp][1]
         if iend-istart >= mingrp: groups.append(oldgroups[igrp])
     return groups
@@ -737,7 +738,7 @@ nproc = 1
 
 # FOF options
 mingrp = 16
-LL_factor = 0.02  # linking length is this times the mean interparticle spacing 
+LL_factor = 0.02  # linking length is this times the mean interparticle spacing
 vel_LL = 1.0  # velocity space linking length factor, multiplies local velocity dispersion
 
 #=========================================================
@@ -762,10 +763,10 @@ def loadsnap(snap,t0):
     gsfr = pygr.readsnap(snap,'sfr','gas',units=1)[gas_select]
     gtemp = pygr.readsnap(snap,'u','gas',units=1)[gas_select]  # temperature in K
     # Apply additional selection criteria on gas
-    dense_gas_select = ((gnh>0.13)&((gtemp<1.e5)|(gsfr>0))) # dense, cool, or SF gas only 
+    dense_gas_select = ((gnh>0.13)&((gtemp<1.e5)|(gsfr>0))) # dense, cool, or SF gas only
     gas_select[gas_select>0] = (gas_select[gas_select>0] & dense_gas_select)
 
-    # load in selected gas 
+    # load in selected gas
     gpos = pygr.readsnap(snap,'pos','gas',units=1)[gas_select]/h  # positions in ckpc
     gvel = pygr.readsnap(snap,'vel','gas',units=1,suppress=1)[gas_select] # vel in physical km/s
     ghalo = np.array(pygr.readsnap(snap,'HaloID','gas'),dtype=int)[gas_select]  # Halo ID of gas; 0=not in halo
@@ -784,7 +785,7 @@ def loadsnap(snap,t0):
         bvel = pygr.readsnap(snap,'vel','bndry',units=1,suppress=1)[bh_select] # BH vels in physical km/s
         bhalo = np.array(pygr.readsnap(snap,'HaloID','bndry'),dtype=int)[bh_select]  # Halo ID of BHs
         nbhtot = np.uint64(len(bpos))
-    except: 
+    except:
         print('fof6d : Creating one fake BH particle at origin (not in a halo) to avoid crash.')
         bpos = [[0,0,0]]
         bvel = [[0,0,0]]
@@ -794,7 +795,7 @@ def loadsnap(snap,t0):
     pos = np.vstack((gpos,spos,bpos)).T  # transpose gives pos[0] as list of x positions, pos[1] as y, etc
     vel = np.vstack((gvel,svel,bvel)).T  # same for vel
     haloID = np.concatenate((ghalo,shalo,bhalo))  # compile list of halo IDs
-    pindex = np.concatenate((pindex[gas_select],np.arange(ngastot,ngastot+nstartot+nbhtot,dtype=np.uint64))) 
+    pindex = np.concatenate((pindex[gas_select],np.arange(ngastot,ngastot+nstartot+nbhtot,dtype=np.uint64)))
     print('fof6d_old : Loaded %d (of %d) gas + %d stars + %g bh = %d total particles [t=%.2f s]'%(len(gpos),ngastot,len(spos),len(bpos),len(pindex),time.time()-t0))
     return pos,vel,haloID,pindex,ngastot,nstartot,nbhtot,gas_select
 
@@ -852,7 +853,7 @@ def fof6d_old(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,fof_LL,vel_LL=None,n
     neigh.fit(poslist)  # do neighbor finding
     nlist = neigh.radius_neighbors(poslist)  # get neighbor properties (radii, indices)
 
-    # compute velocity criterion for neighbors, based on local velocity dispersion 
+    # compute velocity criterion for neighbors, based on local velocity dispersion
     if vel_LL is not None:
         LLinv = 1./fof_LL
         sigma = np.zeros(nactive)
@@ -892,7 +893,7 @@ def fof6d_old(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,fof_LL,vel_LL=None,n
             galmin = np.unique(galind_ngb[galind_ngb>=0])  # find sorted, unique indices of neighbors' gals
             galind[nlist[1][densest]] = min(galmin)  # put all neighbors in lowest-# galaxy
             for i in range(1,len(galmin)):  # link all other galaxies to lowest
-                if linked[galmin[i]]==-1: 
+                if linked[galmin[i]]==-1:
                     linked[galmin[i]] = min(galmin)  # link all other galaxies to lowest index one
                 else:
                     linked[galmin[i]] = min(linked[galmin[i]],min(galmin))  # connect all other galaxies to lowest index
@@ -939,13 +940,13 @@ def fof6d_old(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,fof_LL,vel_LL=None,n
     # assign indices of particles to FOF groups having more than mingrp particles
     pcount,bin_edges = np.histogram(galind,bins=galcount)  # count particles in each galaxy
     for i in range(iend-istart):  # set indices of particles in groups with <mingrp members to -1
-        if pcount[galind[i]] < mingrp: galind[i] = -1  
+        if pcount[galind[i]] < mingrp: galind[i] = -1
     if len(galind[galind>=0])==0: return 0,galind  # if there are no valid groups left, return
     galind_unique = np.unique(galind[galind>=0])  # find unique groups
     galind_inv = np.zeros(max(galind_unique)+1,dtype=int)
     for i in range(len(galind_unique)):
         galind_inv[galind_unique[i]] = i  # create mapping from original groups to unique set
-    for i in range(iend-istart): 
+    for i in range(iend-istart):
         if galind[i]>=0: galind[i] = galind_inv[galind[i]] # re-assign group indices sequentially
     galcount = max(galind)+1
     #raw_input('press ENTER to continue')
@@ -983,13 +984,13 @@ def sort_parts(pos,vel,haloID,pindex,istart,iend,idir0,key='pos'):
         sort_ind = np.argsort(haloID[istart:iend])  # sort by halo ID (idir0 is irrelevant)
     idir1 = (idir0+1)%3  # these are the other two directions
     idir2 = (idir0+2)%3
-    pos[idir0][istart:iend] = pos[idir0][istart:iend][sort_ind]  # keep all arrays likewise sorted 
+    pos[idir0][istart:iend] = pos[idir0][istart:iend][sort_ind]  # keep all arrays likewise sorted
     pos[idir1][istart:iend] = pos[idir1][istart:iend][sort_ind]
     pos[idir2][istart:iend] = pos[idir2][istart:iend][sort_ind]
     vel[idir0][istart:iend] = vel[idir0][istart:iend][sort_ind]
     vel[idir1][istart:iend] = vel[idir1][istart:iend][sort_ind]
     vel[idir2][istart:iend] = vel[idir2][istart:iend][sort_ind]
-    haloID[istart:iend] = haloID[istart:iend][sort_ind]  
+    haloID[istart:iend] = haloID[istart:iend][sort_ind]
     pindex[istart:iend] = pindex[istart:iend][sort_ind]  # keep particle indices in the same order
 
 def fof_sorting_old(groups,pos,vel,haloID,pindex,fof_LL,Lbox,idir,mingrp=16):
@@ -1006,7 +1007,7 @@ def fof_sorting_old(groups,pos,vel,haloID,pindex,fof_LL,Lbox,idir,mingrp=16):
         oldpos = pos[idir][istart]
         groups[grpcount][0] = istart  # set start of new group to be same as for old group
         for i in range(istart,iend):
-            if periodic(pos[idir][i],oldpos,Lbox) > fof_LL or i == iend-1:  
+            if periodic(pos[idir][i],oldpos,Lbox) > fof_LL or i == iend-1:
                 groups[grpcount][1] = i  # set end of old group to be i
                 groups.append([i,i])  # add new group, starting at i; second index is a dummy that will be overwritten when the end of the group is found
                 grpcount += 1
@@ -1016,7 +1017,7 @@ def fof_sorting_old(groups,pos,vel,haloID,pindex,fof_LL,Lbox,idir,mingrp=16):
     oldgroups = groups[:]
     groups = []
     for igrp in range(len(oldgroups)):
-        istart = oldgroups[igrp][0]  
+        istart = oldgroups[igrp][0]
         iend = oldgroups[igrp][1]
         if iend-istart >= mingrp: groups.append(oldgroups[igrp])
     return groups
@@ -1044,7 +1045,7 @@ def fofrad_old(snap,nproc,mingrp,LL_factor,vel_LL):
     groups = []
     hstart = 0
     for i in range(1,len(haloID)):  # set up groups[]
-        if haloID[i] == 0: 
+        if haloID[i] == 0:
             hstart = i
             continue
         if haloID[i]>haloID[i-1] and haloID[i-1]>0:
@@ -1069,23 +1070,23 @@ def fofrad_old(snap,nproc,mingrp,LL_factor,vel_LL):
         npart_par = 2000 # optimization: groups with > this # of parts done via Parallel()
         igpar = []
         igser = []
-        for igrp in range(len(groups)):  
+        for igrp in range(len(groups)):
             if groups[igrp][1]-groups[igrp][0] > npart_par:
                 igpar.append(igrp)
-            else: 
+            else:
                 igser.append(igrp)
         igpar = np.array(igpar,dtype=int)
         print('fof6d : Doing %d groups with npart<%d on single core [t=%.2f s]'%(len(igser),npart_par,time.time()-t0))
         for igrp in igser: results[igrp] = fof6d_old(igrp,groups,pos.T[groups[igrp][0]:groups[igrp][1]],vel.T[groups[igrp][0]:groups[igrp][1]],kerneltab,t0,Lbox,fof_LL,vel_LL)
         print('\nfof6d : Doing %d groups with npart>%d on %d cores (progressbar approximate) [t=%.2f s]'%(len(igpar),npart_par,nproc,time.time()-t0))
-        if len(igpar)>0: 
+        if len(igpar)>0:
             from joblib import Parallel, delayed
             results_par = Parallel(n_jobs=nproc)(delayed(fof6d)(igrp,groups,pos.T[groups[igrp][0]:groups[igrp][1]],vel.T[groups[igrp][0]:groups[igrp][1]],kerneltab,t0,Lbox,fof_LL,vel_LL) for igrp in igpar)
 
         for i in range(len(igpar)): results[igpar[i]] = results_par[i]
     else:
         print('fof6d : Doing %d groups on single core [t=%.2f s]'%(len(groups),time.time()-t0))
-        for igrp in range(len(groups)): 
+        for igrp in range(len(groups)):
             results[igrp] = fof6d_old(igrp,groups,pos.T[groups[igrp][0]:groups[igrp][1]],vel.T[groups[igrp][0]:groups[igrp][1]],kerneltab,t0,Lbox,fof_LL,vel_LL)
 
     # insert galaxy IDs into particle lists
@@ -1095,7 +1096,7 @@ def fofrad_old(snap,nproc,mingrp,LL_factor,vel_LL):
         istart = groups[igrp][0]  # starting particle index for group igrp
         iend = groups[igrp][1]
         galindex[istart:iend] = np.where(result[1]>=0,result[1]+nfof,-1)  # for particles in groups, increment group ID with counter (nfof)
-        #if nfof<1 and len(result[1][result[1]>=0])>0: 
+        #if nfof<1 and len(result[1][result[1]>=0])>0:
         #        print 'inserting IDs',igrp,nfof,result[0],groups[igrp][1]-groups[igrp][0]
         #        for igal in range(result[0]):
         #            print 'galaxies found:',igal+nfof,len(result[1][result[1]==igal]),np.mean(posgrp[result[1]==igal].T[0]),np.mean(posgrp[result[1]==igal].T[1]),np.mean(posgrp[result[1]==igal].T[2])
@@ -1109,7 +1110,7 @@ def fofrad_old(snap,nproc,mingrp,LL_factor,vel_LL):
         for ifof in range(nfof):
             sgrp = spos[ifof==sindex]
             sgrp = sgrp.T
-            if ifof<2: 
+            if ifof<2:
                 print('final check',ifof,np.mean(sgrp[0]),np.mean(sgrp[1]),np.mean(sgrp[2]),max(sgrp[0])-min(sgrp[0]),max(sgrp[1])-min(sgrp[1]),max(sgrp[2])-min(sgrp[2]))
                 print (len(sgrp.T),sgrp.T)
 
@@ -1136,19 +1137,19 @@ def run_fof_6d(snapfile,mingrp,LL_factor,vel_LL,nproc):
     if nproc != 1:   # if multi-core, set up Parallel processing
         num_cores = multiprocessing.cpu_count()
         if nproc < 0: print('fof6d : Using %d cores (all but %d)'%(num_cores+nproc+1,-nproc-1) )
-        if nproc > 1: 
+        if nproc > 1:
             print('progen : Using %d of %d cores'%(nproc,num_cores))
         else: print('progen : Using single core')
         if nproc>8: print('fof6d : FYI you are using nproc=%d. nproc>8 tends to give minimal or negative benefit.'%nproc)
 
-    # find friends of friends groups 
+    # find friends of friends groups
     gas_index,star_index,bh_index,t0 = fofrad_old(snapfile,nproc,mingrp,LL_factor,vel_LL)   # returns galaxy indices for *all* gas, stars, bh
-    
+
 
     #return statements
     nparts = np.array([len(gas_index),len(star_index),len(bh_index)])
     return nparts,gas_index,star_index,bh_index
-    
+
     '''
     # output csv file to be read into Caesar
     outfile = '%s/Groups/fof6d_%03d.hdf5'%(BASEDIR,int(snapnum))
