@@ -351,8 +351,8 @@ class fof6d:
             my_pos = self.obj.data_manager.pos[my_indexes]
             mygrp.global_indexes = my_indexes
             offset = 0
+            mygrp.ngas = mygrp.nstar = mygrp.nbh = mygrp.ndust = mygrp.ndm = mygrp.ndm2 = mygrp.ndm3 = 0
             for ip,p in enumerate(self.obj.data_manager.ptypes):
-                mygrp.ngas = mygrp.nstar = mygrp.nbh = mygrp.ndust = mygrp.ndm = mygrp.ndm2 = mygrp.ndm3 = 0
                 if not has_ptype(self.obj, p): continue
                 if p == 'gas':
                     mygrp.glist = my_indexes[my_ptype==ptype_ints[p]]-offset
