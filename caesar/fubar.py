@@ -352,7 +352,7 @@ def get_mean_interparticle_separation(obj):
         Ob = Planck15.Ob0
     else:
         Om = obj.yt_dataset.cosmology.omega_matter
-        if obj.ds_type == 'ArepoHDF5Dataset':
+        if obj.yt_dataset.__class__.__name__ == 'ArepoHDF5Dataset':
             Ob = obj.yt_dataset.parameters['OmegaBaryon']
         else:
             Ob = (bmass / (bmass + dmmass) * Om).d
