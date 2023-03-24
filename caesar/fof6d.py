@@ -205,7 +205,7 @@ class fof6d:
                 self.haloid = []
                 for p in self.obj.data_manager.ptypes:  # read haloid arrays for each ptype
                     self.haloid.append(np.asarray(hf['haloids_%s'%p]))
-                self.haloid = np.array(self.haloid)
+                self.haloid = np.array(self.haloid, dtype=object)
                 hf.close()
                 return
         else:
