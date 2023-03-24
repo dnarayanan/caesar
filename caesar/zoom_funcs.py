@@ -214,8 +214,8 @@ def construct_lowres_tree(group, lowres):
     box    = obj.simulation.boxsize.to(pos_unit)
     box = np.array([box,box,box])
     for i in range(3):
-        pos[pos[:,i]>box[i], i] -= box[i]
-        pos[pos[:,i]<0, i] += box[i]
+        lr_pos[lr_pos[:,i]>box[i], i] -= box[i]
+        lr_pos[lr_pos[:,i]<0, i] += box[i]
 
     obj._lowres = dict(
         TREE   = cKDTree(lr_pos, boxsize=box),

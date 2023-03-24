@@ -205,7 +205,7 @@ class fof6d:
                 self.haloid = []
                 for p in self.obj.data_manager.ptypes:  # read haloid arrays for each ptype
                     self.haloid.append(np.asarray(hf['haloids_%s'%p]))
-                self.haloid = np.array(self.haloid)
+                self.haloid = np.array(self.haloid, dtype=object)
                 hf.close()
                 return
         else:
@@ -230,7 +230,7 @@ class fof6d:
                 datasel = np.empty(0,dtype=np.int64)
             self.haloid.append(data)
             haloid = np.append(haloid,datasel,axis=0)
-        self.haloid = np.asarray(self.haloid)
+        self.haloid = np.asarray(self.haloid, dtype=object)
         self.obj.data_manager.haloid = haloid
         if haloid_file is not None:
             memlog('Writing 3D FOF Halo IDs to %s' % haloid_file)
@@ -351,8 +351,8 @@ class fof6d:
             my_pos = self.obj.data_manager.pos[my_indexes]
             mygrp.global_indexes = my_indexes
             offset = 0
+            mygrp.ngas = mygrp.nstar = mygrp.nbh = mygrp.ndust = mygrp.ndm = mygrp.ndm2 = mygrp.ndm3 = 0
             for ip,p in enumerate(self.obj.data_manager.ptypes):
-                mygrp.ngas = mygrp.nstar = mygrp.nbh = mygrp.ndust = mygrp.ndm = mygrp.ndm2 = mygrp.ndm3 = 0
                 if not has_ptype(self.obj, p): continue
                 if p == 'gas':
                     mygrp.glist = my_indexes[my_ptype==ptype_ints[p]]-offset
