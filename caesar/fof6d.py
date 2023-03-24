@@ -230,7 +230,7 @@ class fof6d:
                 datasel = np.empty(0,dtype=np.int64)
             self.haloid.append(data)
             haloid = np.append(haloid,datasel,axis=0)
-        self.haloid = np.asarray(self.haloid)
+        self.haloid = np.asarray(self.haloid, dtype=object)
         self.obj.data_manager.haloid = haloid
         if haloid_file is not None:
             memlog('Writing 3D FOF Halo IDs to %s' % haloid_file)

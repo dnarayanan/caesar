@@ -43,7 +43,7 @@ def fof(obj, positions, LL, group_type=None):
     """Friends of friends.
 
     Perform 3D friends of friends via yt's ParticleContourTree method.
-    
+
     Parameters
     ----------
     obj : :class:`main.CAESAR`
@@ -56,8 +56,8 @@ def fof(obj, positions, LL, group_type=None):
     Returns
     -------
     group_tags : np.ndarray
-        Returns an integer array containing the GroupID that each 
-        particle belongs to.  GroupIDs of -1 mean the particle is 
+        Returns an integer array containing the GroupID that each
+        particle belongs to.  GroupIDs of -1 mean the particle is
         *not* grouped.
 
     """
@@ -65,11 +65,11 @@ def fof(obj, positions, LL, group_type=None):
     # only use DM for now
     #positions = positions[obj.data_manager.dmlist]
     ##################
-    
+
     #if group_type is not None:
     #    mylog.info('Performing 3D FOF on %d positions for %s identification' %
     #               (len(positions), group_type))
-                                                                             
+
     pct = ParticleContourTree(LL)
 
     pos = YTPositionArray(obj.yt_dataset.arr(positions, obj.units['length']))
@@ -81,8 +81,8 @@ def fof(obj, positions, LL, group_type=None):
         positions,
         np.arange(0,len(positions),dtype=np.int64),
         0,0
-    )    
-    
+    )
+
     return group_tags
 
     """  (PAY NO ATTENTION TO THE MAN BEHIND THE CURTAIN)
@@ -99,10 +99,10 @@ def fof(obj, positions, LL, group_type=None):
     print('running rs')
 
     ## REGULAR ROCKSTAR ##
-    velocities = obj.data_manager.vel[obj.data_manager.dmlist]    
+    velocities = obj.data_manager.vel[obj.data_manager.dmlist]
     pcounts = rgi.make_rockstar_fof(ind, group_tags, positions, velocities)
     #print('pcounts:',pcounts)
-    
+
     ## ROCKSTAR GALAXIES ##
     #velocities = obj.data_manager.vel
     #masses = obj.data_manager.mass
@@ -112,10 +112,10 @@ def fof(obj, positions, LL, group_type=None):
     rs_halos = rgi.return_halos()
 
     np.savez('rs_data.npz', halos=rs_halos, group_tags=group_tags)
-    
+
     import sys
     sys.exit()
-    
+
     ## common
     rs_halos   = rgi.return_halos()
     nhalos     = len(rs_halos['num_p'])
@@ -130,7 +130,7 @@ def fof(obj, positions, LL, group_type=None):
         #    continue
 
         # new FOF group
-        if halo['p_start'] == 0:            
+        if halo['p_start'] == 0:
             ## append the previous group to the list before starting a new one
             if tag_index > -1: fof_groups.append(fof_group)
             tag_index += 1
@@ -144,7 +144,7 @@ def fof(obj, positions, LL, group_type=None):
 
         if len(global_indexes) < halo['num_p']:
             print len(global_indexes), halo['num_p']
-        
+
         mymass = np.sum(masses[halo['p_start']:halo['p_start']+halo['num_p']])
         if mymass == 0 and halo['num_p'] != 0:
             #print global_indexes
@@ -155,8 +155,8 @@ def fof(obj, positions, LL, group_type=None):
         #if halo['num_p'] == halo['num_child_particles']:
         #    print halo['flags']
         #    tally += 1
-            
-        
+
+
         new_halo = RSHalo(grp_index, halo['pos_x'], halo['pos_y'], halo['pos_z'], local_indexes, np.sum(masses[local_indexes]))
         fof_group.halos.append(new_halo)
 
@@ -170,11 +170,11 @@ def fof(obj, positions, LL, group_type=None):
             else:
                 children.append(group.halos[i])
 
-    
-        
+
+
     parent_halos = []
     child_halos = []
-    
+
     nhalos = len(halos['num_p'])
     gti = -1
     fof_groups = []
@@ -183,7 +183,7 @@ def fof(obj, positions, LL, group_type=None):
         this_halo = halos[i]
         if this_halo['num_p'] == 0 or this_halo['num_p'] < 32:
             continue
-        
+
         if this_halo['p_start'] == 0:
             if gti > 0:
                 fof_groups.append(fof_group)
@@ -202,10 +202,10 @@ def fof(obj, positions, LL, group_type=None):
     for grp in fof_groups:
         grp_masses = [i.mass for i in grp.halos]
 
-        #num_p_halo = [i.num_p for i in grp.halos]        
+        #num_p_halo = [i.num_p for i in grp.halos]
         #maxnp = np.argmax(num_p_halo)
         maxnp = np.argmax(grp_masses)
-        
+
         for i in range(0,len(grp.halos)):
             h = grp.halos[i]
             if i == maxnp:
@@ -215,12 +215,12 @@ def fof(obj, positions, LL, group_type=None):
 
     parent_group_tags = np.full(len(positions),-1,dtype=np.int64)
     child_group_tags  = np.full(len(positions),-1,dtype=np.int64)
-                
+
     import caesar.vtk_vis as vtk
     v = vtk.vtk_render()
-    
+
     v.point_render(pos, color=[1,0,0],alpha=0.5)
-    
+
     xpos = [i.x for i in parent_halos]
     ypos = [i.y for i in parent_halos]
     zpos = [i.z for i in parent_halos]
@@ -234,15 +234,15 @@ def fof(obj, positions, LL, group_type=None):
     hpos = np.column_stack((xpos,ypos,zpos))
 
     v.point_render(hpos, color=[0,1,1],psize=3)
-    
+
     #for i in range(0,len(parents)):
     #    v.place_label(hpos[parents][i], '%d %d' % (num_p[parents][i], halos['num_child_particles'][i]))
 
     largest = np.argmax(halos['num_p'])
     halo_pos = np.column_stack((halos['pos_x'],halos['pos_y'],halos['pos_z']))
-    
+
     v.render(focal_point=halo_pos[largest])
-    
+
     return halos
     """
 
@@ -251,13 +251,13 @@ def fof(obj, positions, LL, group_type=None):
 def get_ptypes(obj, group_type):
     """Unused function."""
     ptypes = ['dm','gas','star']
-    
+
     if 'blackholes' in obj._kwargs and obj._kwargs['blackholes']:
         ptypes.append('bh')
 
     if 'dust' in obj._kwargs and obj._kwargs['dust']:
         ptypes.append('dust')
-    
+
     if group_type == 'galaxy':
         ptypes.remove('dm')
     if obj._ds_type.grid:
@@ -279,7 +279,7 @@ def get_mean_interparticle_separation(obj):
         Mean inter-particle separation used for calculating FOF's b
         parameter.
 
-    """    
+    """
     if hasattr(obj.simulation, 'mean_interparticle_separation'):
         return obj.simulation.mean_interparticle_separation
 
@@ -295,7 +295,7 @@ def get_mean_interparticle_separation(obj):
 
     UM = obj.yt_dataset.mass_unit.to('g/h')
 
-    
+
     G = GRAV / UL**3 * UM * UT**2  ## to system units
     Hubble = obj.yt_dataset.quan(3.2407789e-18, 'h/s') * UT
 
@@ -308,13 +308,13 @@ def get_mean_interparticle_separation(obj):
 #         dmmass2 = get_property(obj, 'mass', 'dm2').to('code_mass')
 #         ndm     += len(dmmass2)
 #         dmmass  += np.sum(dmmass2)
-    
+
 
     gmass  = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
     smass  = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
     bhmass = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
     dustmass = obj.yt_dataset.arr(np.array([0.0]), 'code_mass')
-    
+
     from caesar.property_manager import has_ptype
     if has_ptype(obj, 'gas'):
         gmass = get_property(obj, 'mass', 'gas').to('code_mass')
@@ -330,7 +330,7 @@ def get_mean_interparticle_separation(obj):
         else:
             mylog.info('Warnnig: No bh mass!!')
     if obj.data_manager.dust and has_ptype(obj, 'dust'):
-        dustmass= get_property(obj, 'mass', 'dust').to('code_mass')        
+        dustmass= get_property(obj, 'mass', 'dust').to('code_mass')
     bmass = np.sum(gmass) + np.sum(smass) + np.sum(bhmass) + np.sum(dustmass)
 
     """
@@ -341,7 +341,7 @@ def get_mean_interparticle_separation(obj):
     bhmass = DM.mass[DM.bhlist]
 
     ndm = len(dmmass)
-    
+
     dmmass = obj.yt_dataset.quan(np.sum(dmmass), obj.units['mass']).to('code_mass')
     bmass  = obj.yt_dataset.quan(np.sum(gmass) + np.sum(smass) + np.sum(bhmass), obj.units['mass']).to('code_mass')
     """
@@ -352,20 +352,23 @@ def get_mean_interparticle_separation(obj):
         Ob = Planck15.Ob0
     else:
         Om = obj.yt_dataset.cosmology.omega_matter
-        Ob = (bmass / (bmass + dmmass) * Om).d
-    
+        if obj.ds_type == 'ArepoHDF5Dataset':
+            Ob = obj.yt_dataset.parameters['OmegaBaryon']
+        else:
+            Ob = (bmass / (bmass + dmmass) * Om).d
+
     rhodm = ((Om - Ob) * 3.0 * Hubble**2 / (8.0 * np.pi * G)).d
     rhodm = obj.yt_dataset.quan(rhodm, 'code_mass/code_length**3')
-    
+
     mips  = ((dmmass / ndm / rhodm)**(1./3.)).to(obj.units['length'])
     efres = int(obj.simulation.boxsize.d / mips.d)
-    
+
     obj.simulation.omega_baryon = float(Ob)
     obj.simulation.effective_resolution = efres
     obj.simulation.mean_interparticle_separation = mips
 
     mylog.info('Calculated Omega_Baryon=%g and %d^3 effective resolution' % (Ob, efres))
-    
+
     return obj.simulation.mean_interparticle_separation
 
 
@@ -384,7 +387,7 @@ def get_b(obj, group_type):
     Returns
     -------
     b : float
-        Fraction of the mean interparticle separation used for FOF 
+        Fraction of the mean interparticle separation used for FOF
         linking length.
 
     """
@@ -397,18 +400,18 @@ def get_b(obj, group_type):
         if 'b_galaxy' in obj._kwargs and isinstance(obj._kwargs['b_galaxy'], (int, float)):
             b = float(obj._kwargs['b_galaxy'])
         else:
-            b *= 0.1  
+            b *= 0.1
 
     if group_type == 'cloud':
         if 'b_cloud' in obj._kwargs and isinstance(obj._kwargs['b_cloud'], (int, float)):
             b = float(obj._kwargs['b_cloud'])
         else:
             b *= 0.1 #BOBBY CONVERSATION: SET UP A CONFIG FILE THAT HAS A DEFAULT SET OF PARAMETERS -- WHETHER WE WANT TO RUN HALOS, GALAXIES ETC.  AND THEN HAVE THE CODE AUTMOATICALLY TURN ON CLOUDS IF WE SET -B_CLOUD linking lengths
-            
+
     mylog.info('Using b=%g for %s' % (b, group_types[group_type]))
     return b
-    
-    
+
+
 def fubar(obj, group_type, **kwargs):
     """Group finding procedure.
 
@@ -421,7 +424,7 @@ def fubar(obj, group_type, **kwargs):
     blackholes if included).
 
     For clouds we consider all gas particles.
-    
+
     Parameters
     ----------
     obj : :class:`main.CAESAR`
@@ -431,11 +434,11 @@ def fubar(obj, group_type, **kwargs):
         we find with FOF.
 
     """
- 
+
     #pdb.set_trace()
     pos = obj.data_manager.pos
 
-    unbind = False        
+    unbind = False
     unbind_str = 'unbind_%s' % group_types[group_type]
     if unbind_str in obj._kwargs and \
         isinstance(obj._kwargs[unbind_str], bool):
@@ -479,7 +482,7 @@ def fubar(obj, group_type, **kwargs):
                     hf.create_dataset('bh_index',data=bh_index, compression=1)
                     hf.close()
             #assert(obj.simulation.ngas == len(gas_index)) & (obj.simulation.nstar == len(star_index)) & (obj.simulation.nbh == len(bh_index)),'[fubar/fubar]: Assertion failed: Wrong number of particles in fof6d calculation'
-            
+
         elif ('fof6d_file' in obj._kwargs and obj._kwargs['fof6d_file'] is not None):
             # use galaxy info from fof6d hdf5 file
             fof6d_file = obj._kwargs['fof6d_file']
@@ -497,7 +500,7 @@ def fubar(obj, group_type, **kwargs):
             bh_indexes = hf['bh_index']
             fof_tags = np.concatenate((gas_indexes,star_indexes,bh_indexes))
 
-        else: 
+        else:
             # here we want to perform 3D FOF on high density gas + stars
             mylog.info('Groups based on YT 3DFOF')
             high_rho_indexes = get_high_density_gas_indexes(obj)
@@ -518,12 +521,12 @@ def fubar(obj, group_type, **kwargs):
         #don't run if there's no baryons
         if not obj.simulation.baryons_present:
             return
-            
+
         #also don't run if fofclouds isn't set
         if ('fofclouds' not in obj._kwargs) or (obj._kwargs['fofclouds'] == False):
             mylog.warning('No clouds: fofclouds either not set, or is set to false: not performing 3D group search for GMCs')
             return
-        
+
         # here we want to perform FOF on all gas
         pos = pos[obj.data_manager.glist]
         LL = get_mean_interparticle_separation(obj) * get_b(obj, group_type)
@@ -543,7 +546,7 @@ def fubar(obj, group_type, **kwargs):
             fof_tags = fof(obj, pos, LL, group_type=group_type, **kwargs)
         #print 'fof_tags',len(fof_tags[fof_tags>=0]),max(fof_tags),np.shape(fof_tags),fof_tags[fof_tags>=0]
 
-    else: 
+    else:
         mylog.warning('group-type %s not recognized'%group_type)
 
 
@@ -558,9 +561,9 @@ def fubar(obj, group_type, **kwargs):
     if len(groupings) == 0:
         mylog.warning('No %s found!' % group_types[group_type])
         return
-    
+
     tags = fof_tags
-        
+
     nparts = len(tags)
     for i in range(0,nparts):
         index = tag_sort[i]
@@ -586,16 +589,16 @@ def fubar(obj, group_type, **kwargs):
             continue
         group_list.append(v)
 
-        
-   
+
+
     mylog.info('Disregarding %d invalid %s (%d left)' % (n_invalid, group_types[group_type], len(group_list)))
-        
+
     # sort by mass
     group_list.sort(key = lambda x: x.masses['total'], reverse=True)
     for i in range(0,len(group_list)):
         group_list[i].GroupID = i
 
-        
+
     # initialize global lists
     glist  = np.full(obj.simulation.ngas,  -1, dtype=np.int32)
     slist  = np.full(obj.simulation.nstar, -1, dtype=np.int32)
@@ -604,7 +607,7 @@ def fubar(obj, group_type, **kwargs):
     if 'dm3' in obj.data_manager.ptypes: dm3list = np.full(obj.simulation.ndm3,   -1, dtype=np.int32)
     bhlist = np.full(obj.simulation.nbh,   -1, dtype=np.int32)
     dlist  = np.full(obj.simulation.ndust,  -1, dtype=np.int32)
-    
+
     for group in group_list:
         glist[group.glist]   = group.GroupID
         slist[group.slist]   = group.GroupID
@@ -613,10 +616,10 @@ def fubar(obj, group_type, **kwargs):
         if 'dm3' in obj.data_manager.ptypes: dm3list[group.dm3list] = group.GroupID
         bhlist[group.bhlist] = group.GroupID
         dlist[group.dlist]   = group.GroupID
-        
+
         if not hasattr(group, 'unbound_indexes'):
             continue
-        
+
         glist[group.unbound_indexes[ptype_ints['gas']]]  = -2
         slist[group.unbound_indexes[ptype_ints['star']]] = -2
         dmlist[group.unbound_indexes[ptype_ints['dm']]]  = -2
@@ -624,7 +627,7 @@ def fubar(obj, group_type, **kwargs):
         if 'dm3' in obj.data_manager.ptypes: dm3list[group.unbound_indexes[ptype_ints['dm3']]]  = -2
         bhlist[group.unbound_indexes[ptype_ints['bh']]]  = -2
         dlist[group.unbound_indexes[ptype_ints['dust']]]  = -2
-            
+
     setattr(obj.global_particle_lists, '%s_glist'  % group_type, glist)
     setattr(obj.global_particle_lists, '%s_slist'  % group_type, slist)
     setattr(obj.global_particle_lists, '%s_dmlist' % group_type, dmlist)
@@ -632,9 +635,9 @@ def fubar(obj, group_type, **kwargs):
     if 'dm3' in obj.data_manager.ptypes: setattr(obj.global_particle_lists, '%s_dm3list' % group_type, dm3list)
     setattr(obj.global_particle_lists, '%s_bhlist' % group_type, bhlist)
     setattr(obj.global_particle_lists, '%s_dlist'  % group_type, dlist)
-    
+
     calculate_local_densities(obj, group_list)
-    
+
     if group_type == 'halo':
         obj.halos  = group_list
         obj.nhalos = len(obj.halos)
