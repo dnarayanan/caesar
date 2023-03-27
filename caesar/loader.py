@@ -416,7 +416,7 @@ class Group:
             halo = self.halo
             ID = 'Galaxy {}\'s halo (ID {})'.format(self.GroupID, halo.GroupID)
 
-        r = halo.radii['virial'].d * search_factor
+        r = halo.radii['total_r20'].d * search_factor
 
         result = self.obj._lowres['TREE'].query_ball_point(halo.pos.d, r)
         ncontam = len(result)
@@ -428,8 +428,8 @@ class Group:
             return
 
         if ncontam > 0:
-            mylog.warning('{} has {0.2f}% mass contamination '
-                          '({} LR particles with {0.2e} {}s)'.format(
+            mylog.warning('{} has {}% mass contamination '
+                          '({} LR particles with {} {}s)'.format(
                               ID, self.contamination * 100.0, ncontam, lrmass,
                               halo.masses['total'].units))
         else:
