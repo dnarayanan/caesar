@@ -172,7 +172,7 @@ def get_IC_pos(group, ic_ds, radius_type,search_factor=2.5, return_mask=False):
     return matched_pos
 
 
-def construct_lowres_tree(group, lowres):
+def construct_lowres_tree(obj, lowres):
     """Construct a periodic KDTree for low-resolution particles.
 
     Parameters
@@ -188,7 +188,7 @@ def construct_lowres_tree(group, lowres):
     Assigns the dict ``_lowres`` to the :class:`main.CAESAR` object.
 
     """
-    obj = group.obj
+    # obj = group.obj
     if hasattr(obj, '_lowres') and obj._lowres['ptypes'] == lowres:
         return
     mylog.info('Gathering low-res particles and constructing tree')
@@ -197,17 +197,26 @@ def construct_lowres_tree(group, lowres):
     lr_pos  = np.empty((0,3))
     lr_mass = np.empty(0)
 
-    pos_unit  = group.pos.units
-    mass_unit = group.masses['total'].units
+    pos_unit  = obj.halos[0].pos.units
+    mass_unit = obj.halos[0].masses['total'].units
 
-    for p in lowres:
-        ptype = 'PartType%d' % p
-        if ptype in obj.yt_dataset.particle_fields_by_type:
-            cur_pos  = obj._ds_type.dd[ptype, 'particle_position'].to(pos_unit)
-            cur_mass = obj._ds_type.dd[ptype, 'particle_mass'].to(mass_unit)
+    for p in lowres:  # all low res particles to only build tree once
+        if (p==2) or (p=='dm2'):
+            cur_pos  = obj.data_manager.pos[obj.data_manager.dm2list]
+            cur_mass = obj.data_manager.mass[obj.data_manager.dm2list]
+        elif (p==3) or (p=='dm3'):
+            cur_pos  = obj.data_manager.pos[obj.data_manager.dm3list]
+            cur_mass = obj.data_manager.mass[obj.data_manager.dm3list]
+        else: 
+            mylog.error('It seems you are setting PartType%d as low resolution praticles, if so, please modify the code to proplerly load it!'%p)
+            
+        # ptype = 'PartType%d' % p
+        # if ptype in obj.yt_dataset.particle_fields_by_type:
+        #     cur_pos  = obj._ds_type.dd[ptype, 'particle_position'].to(pos_unit)
+        #     cur_mass = obj._ds_type.dd[ptype, 'particle_mass'].to(mass_unit)
 
-            lr_pos  = np.append(lr_pos,  cur_pos.d, axis=0)
-            lr_mass = np.append(lr_mass, cur_mass.d, axis=0)
+        lr_pos  = np.append(lr_pos,  cur_pos, axis=0)
+        lr_mass = np.append(lr_mass, cur_mass, axis=0)
 
     # from caesar.periodic_kdtree import PeriodicCKDTree
     from scipy.spatial import cKDTree
@@ -238,13 +247,15 @@ def all_object_contam_check(obj):
     if not isinstance(lowres, list):
         raise Exception('lowres must be a list!')
 
+    construct_lowres_tree(obj, lowres)
     mylog.info('Checking all objects for contamination.  Lowres Types: %s' % lowres)
     if hasattr(obj, 'halos'):
         for h in obj.halos:
-            h.contamination_check(lowres, nproc=nproc, printer=False)
+            h.contamination_check(obj._lowres, nproc=nproc, printer=False)
     if hasattr(obj, 'galaxies'):
         for g in obj.galaxies:
             if g.halo is None:
                 g.contamination = -1
             else:
-                g.contamination = g.halo.contamination
+                g.contamination_check(obj._lowres, nproc=nproc, printer=False)
+                # g.contamination = g.halo.contamination
