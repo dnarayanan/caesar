@@ -62,6 +62,9 @@ cython_extensions = [
               extra_link_args=[link_arg])
 ]
 
+for e in cython_extensions:
+    e.cython_directives = {'language_level': "3"} #all are Python-3
+
 
 setup(
     name='caesar',

@@ -43,14 +43,29 @@ class DataManager(object):
         
     def _determine_ptypes(self):
         """Determines what particle/field types to collect."""
-        self.ptypes = []
-        #if 'blackholes' in self.obj._kwargs and self.obj._kwargs['blackholes']:
+        self.ptypes = [] #mast follow the order in ptype_ints property manager
+        self.blackholes = self.dust = self.dm2 = False
         if ('Gas' in self.obj._ds_type.ds.particle_fields_by_type) or ('PartType0' in self.obj._ds_type.ds.particle_fields_by_type):
             self.ptypes.append('gas')
+        self.ptypes.append('dm')
+        
+        if hasattr(self.obj,'_kwargs') and 'dust' in self.obj._kwargs and self.obj._kwargs['dust']:
+            mylog.warning('Enabling active dust particles')
+            self.ptypes.append('dust')
+            self.dust = True
+        if hasattr(self.obj,'_kwargs') and 'lowres' in self.obj._kwargs:
+            if 2 in self.obj._kwargs['lowres']:
+                self.ptypes.append('dm2')
+                self.dm2 = True
+                print(ptype_aliases[self.obj._ds_type.ds_type]['dm2'], 'is assumed as low resolution particles')
+            if 3 in self.obj._kwargs['lowres']:
+                self.ptypes.append('dm3')
+                self.dm3 = True
+                print(ptype_aliases[self.obj._ds_type.ds_type]['dm3'], 'is assumed as low resolution particles')
+                    
         if ('Stars' in self.obj._ds_type.ds.particle_fields_by_type) or ('PartType4' in self.obj._ds_type.ds.particle_fields_by_type):
             self.ptypes.append('star')   
-        self.ptypes.append('dm')
-        self.blackholes = self.dust = self.dm2 = False
+
         if hasattr(self.obj,'_ds_type'):
             if 'PartType5' in self.obj._ds_type.ds.particle_fields_by_type:
                 if 'BH_Mdot' in self.obj._ds_type.ds.particle_fields_by_type['PartType5'] or 'StellarFormationTime' in self.obj._ds_type.ds.particle_fields_by_type['PartType5'] or 'SubgridMasses' in self.obj._ds_type.ds.particle_fields_by_type['PartType5']:
@@ -62,20 +77,6 @@ class DataManager(object):
                     self.blackholes = True
             else:
                 memlog('No black holes found')
-        if hasattr(self.obj,'_kwargs') and 'dust' in self.obj._kwargs and self.obj._kwargs['dust']:
-            mylog.warning('Enabling active dust particles')
-            self.ptypes.append('dust')
-            self.dust = True
-
-        if hasattr(self.obj,'_kwargs') and 'lowres' in self.obj._kwargs:
-            if 2 in self.obj._kwargs['lowres']:
-                self.ptypes.append('dm2')
-                self.dm2 = True
-                print(ptype_aliases[self.obj._ds_type.ds_type]['dm2'], 'is assumed as low resolution particles')
-            if 3 in self.obj._kwargs['lowres']:
-                self.ptypes.append('dm3')
-                self.dm3 = True
-                print(ptype_aliases[self.obj._ds_type.ds_type]['dm3'], 'is assumed as low resolution particles')
 
         print('The particle types will be loaded: ', [ptype_aliases[self.obj._ds_type.ds_type][i] for i in self.ptypes])
 
@@ -141,12 +142,11 @@ class DataManager(object):
         self.obj.simulation.ngas  = len(self.glist)
         self.obj.simulation.nstar = len(self.slist)
         self.obj.simulation.ndm   = len(self.dmlist)
-        ndm2 = ndm3 = 0
-        if 'dm2' in self.obj.data_manager.ptypes: self.obj.simulation.ndm2 = ndm2 = len(self.dm2list)
-        if 'dm3' in self.obj.data_manager.ptypes: self.obj.simulation.ndm3 = ndm3 = len(self.dm3list)
+        if 'dm2' in self.obj.data_manager.ptypes: self.obj.simulation.ndm2 = len(self.dm2list)
+        if 'dm3' in self.obj.data_manager.ptypes: self.obj.simulation.ndm3 = len(self.dm3list)
         self.obj.simulation.nbh   = len(self.bhlist)
         self.obj.simulation.ndust = len(self.dlist)
-        self.obj.simulation.ntot  = self.obj.simulation.ngas+self.obj.simulation.nstar+self.obj.simulation.ndm+ndm2+ndm3+self.obj.simulation.nbh+self.obj.simulation.ndust
+        self.obj.simulation.ntot  = self.obj.simulation.ngas+self.obj.simulation.nstar+self.obj.simulation.ndm+self.obj.simulation.ndm2+self.obj.simulation.ndm3+self.obj.simulation.nbh+self.obj.simulation.ndust
 
 
     def _load_gas_data(self,select='all'):
@@ -340,5 +340,3 @@ class DataManager(object):
         self._load_star_data()
         memlog('Loaded gas and star data')
         
-
-

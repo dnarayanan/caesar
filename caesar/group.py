@@ -672,7 +672,7 @@ class Group(object):
         pprint(pdict)
         pdict = None
 
-    def contamination_check(self, lowres=[2,3,5], nproc=1, search_factor=1.0,
+    def contamination_check(self, lowres_tree, nproc=1, search_factor=1.0,
                             printer=True):
         """Check for low resolution particle contamination.
 
@@ -700,25 +700,45 @@ class Group(object):
         """
         from yt.funcs import mylog
         from caesar.zoom_funcs import construct_lowres_tree
-
-        construct_lowres_tree(self, lowres)
+            
+        # construct_lowres_tree(self, lowres) tree will be build only once in zoom_funcs.py
 
         if self.obj_type == 'halo':
+            nlowres=0
+            for i in lowres_tree['ptypes']:
+                if i == 2:
+                    nlowres += self.ndm2
+                elif i == 3:
+                    nlowres += self.ndm3
+                else:
+                    mylog.warning(' the low resolution particle type = %d, is it a mistake?' %i)
+            if nlowres <=0:
+                self.contamination = 0
+                return 
+            
             halo = self
             ID   = 'Halo %d' % self.GroupID
+            r = halo.virial_quantities['r200c'].d * search_factor
+            cent=halo.pos.d
+            totalmass=halo.virial_quantities['m200c'].d
         elif self.obj_type == 'galaxy':
+            # we can not avoid contamination calculation like halo because low res dm particles are alway =0
             if self.halo == None:
                 raise Exception('Galaxy %d has no halo!' % self.GroupID)
             halo = self.halo
             ID   = "Galaxy %d's halo (ID %d)" % (self.GroupID, halo.GroupID)
+            r = self.radii['total_half_mass'].d * search_factor * 2
+            cent=self.pos.d
+            totalmass=self.masses['total'].d
 
-        r = halo.virial_quantities['r200c'].d * search_factor
+        if r<=0:
+            mylog.warning('%s has too small search radius = %e for object mass %e)' % (ID, r, totalmass))
 
-        result  = self.obj._lowres['TREE'].query_ball_point(halo.pos.d, r, workers=nproc)
+        result  = lowres_tree['TREE'].query_ball_point(cent, r, workers=nproc)
         ncontam = len(result)
-        lrmass  = np.sum(self.obj._lowres['MASS'][result])
+        lrmass  = np.sum(lowres_tree['MASS'][result])
 
-        self.contamination = lrmass / halo.virial_quantities['m200c'].d
+        self.contamination = lrmass / totalmass
 
         if not printer:
             return
@@ -799,7 +819,7 @@ def get_group_properties(self,grp_list):
     if 'gas' in self.obj.data_manager.ptypes: get_group_gas_properties(self,grp_list)
     if 'star' in self.obj.data_manager.ptypes: get_group_star_properties(self,grp_list)
     if 'dust' in self.obj.data_manager.ptypes: get_group_dust_properties(self,grp_list)
-
+    
     if (self.obj.data_manager.blackholes):
         if (self.obj.data_manager.blackholes) & has_property(self.obj, 'bh', 'bhmdot'):
             get_group_bh_properties(self,grp_list)

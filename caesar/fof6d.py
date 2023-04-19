@@ -97,33 +97,33 @@ class fof6d:
                     if uniq_hid.size != hid_info.shape[0]:
                         memlog('!!Warning!! duplicated particle IDs in different halos!! removing them %d, %d' % (uniq_hid.size , hid_info.shape[0]))
                 else: # use subhalo inforamtion as well, but very pain to remove these duplicated particles!!!!
-                    nhalos=int(lines[0])
                     hpp=1 # halo particle numbers and halo ID position
                     hid_info={} #particle ID, particle type, halo_ID as keys fillup with the information from AHF particle file
-                    for i in range(nhalos):
+                    for i in range(int(lines[0])):
                         npt,hid=[int(x) for x in lines[hpp].split()]
                         hpp+=1
                         hid_info[str(hid)]=np.loadtxt(lines[hpp:hpp+npt],dtype=int)
                         hpp+=npt
                         # hid_info.extend(tmpd.tolist())
 
-                    #exclude subhalo particles in host halo!!
-                    idsh=np.where(halo_info[:,1]>0)[0]
-                    for i in idsh:
-                        if halo_info[i,1] in halo_info[:,0]: # sometimes substructure ID doesn't exist
-                            com,x_ind,y_ind = np.intersect1d(hid_info[str(halo_info[i,1])][:,0], hid_info[str(halo_info[i,0])][:,0], return_indices=True)
-                            hid_info[str(halo_info[i,1])]=np.delete(hid_info[str(halo_info[i,1])], x_ind, axis=0)
+                    #exclude subhalo particles in host halo!!  subhalo simply excluded by its host haloid lower
+                    # idsh=np.where(halo_info[:,1]>0)[0]
+                    # for i in idsh:
+                    #     if halo_info[i,1] in halo_info[:,0]: # sometimes substructure ID doesn't exist
+                    #         com,x_ind,y_ind = np.intersect1d(hid_info[str(halo_info[i,1])][:,0], hid_info[str(halo_info[i,0])][:,0], return_indices=True)
+                    #         hid_info[str(halo_info[i,1])]=np.delete(hid_info[str(halo_info[i,1])], x_ind, axis=0)
 
                     # now put everything togather
                     tmpp=[] #particle ID, particle type, halo_ID
                     Nh=0
                     for i in hid_info.keys():
-                        if hid_info[i].shape[0]>=MINIMUM_DM_PER_HALO or hid_info[i][hid_info[i][:,1]==4].shape[0]>=MINIMUM_STARS_PER_GALAXY:
-                            tmppd=np.zeros((hid_info[i].shape[0],3),dtype=np.int64)
-                            tmppd[:,:2]=hid_info[i]
-                            tmppd[:,2]=np.int64(i)
-                            tmpp.extend(tmppd.tolist())
-                            Nh+=1
+                        if halo_info[halo_info[:,0]==np.int64(i),1]==0: # only distinctive halos
+                            if hid_info[i].shape[0]>=MINIMUM_DM_PER_HALO or hid_info[i][hid_info[i][:,1]==4].shape[0]>=MINIMUM_STARS_PER_GALAXY:
+                                tmppd=np.zeros((hid_info[i].shape[0],3),dtype=np.int64)
+                                tmppd[:,:2]=hid_info[i]
+                                tmppd[:,2]=np.int64(i)
+                                tmpp.extend(tmppd.tolist())
+                                Nh+=1
                     tmpp=np.asarray(tmpp)
                     uniq_hid, uq_counts = np.unique(tmpp[:,0], return_counts=True)
                     if uniq_hid.size != tmpp.shape[0]:
