@@ -213,7 +213,7 @@ class fof6d:
         memlog('Running 3D FOF to get Halo IDs, LL=%g'%LL)
         pos = np.empty((0,3),dtype=MY_DTYPE)
         ptype = np.empty(0,dtype=np.int32)
-        for ip,p in enumerate(self.obj.data_manager.ptypes):  # get positions
+        for p in self.obj.data_manager.ptypes:  # get positions
             if not has_ptype(self.obj, p): continue
             data = get_property(self.obj, 'pos', p).to(self.obj.units['length'])
             pos = np.append(pos, data.d, axis=0)
@@ -236,8 +236,8 @@ class fof6d:
             memlog('Writing 3D FOF Halo IDs to %s' % haloid_file)
             with h5py.File(haloid_file,'w') as hf:
                 hf.create_dataset('all_haloids',data=haloid, compression=1)
-                for ip,p in enumerate(self.obj.data_manager.ptypes):  # write haloid arrays for each ptype
-                    haloid_out = self.haloid[ip]
+                for p in elf.obj.data_manager.ptypes:  # write haloid arrays for each ptype
+                    haloid_out = self.haloid[ptype_ints[p]]
                     hf.create_dataset('haloids_%s'%p,data=haloid_out, compression=1)
                 hf.close()
 
@@ -352,7 +352,7 @@ class fof6d:
             mygrp.global_indexes = my_indexes
             offset = 0
             mygrp.ngas = mygrp.nstar = mygrp.nbh = mygrp.ndust = mygrp.ndm = mygrp.ndm2 = mygrp.ndm3 = 0
-            for ip,p in enumerate(self.obj.data_manager.ptypes):
+            for p in self.obj.data_manager.ptypes:
                 if not has_ptype(self.obj, p): continue
                 if p == 'gas':
                     mygrp.glist = my_indexes[my_ptype==ptype_ints[p]]-offset

@@ -457,7 +457,7 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
     """    
     # check if potential exists in snapshot for all particle types
     obj.load_pot = True
-    for ip,p in enumerate(ptypes):
+    for p in ptypes:
         if not has_ptype(obj, p):
             continue
         if not has_property(obj, p, 'pot'):
@@ -473,7 +473,8 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
     ptype   = np.empty(0,dtype=np.int32)
     indexes = np.empty(0,dtype=np.int64)
 
-    for ip,p in enumerate(ptypes):
+    for p in ptypes:
+        ip=ptype_ints[p]
         if not has_ptype(obj, p):
             continue
      
@@ -556,7 +557,6 @@ def get_haloid(obj, ptypes, offset=-1):
         else: 
             data = []
         haloid.append(data)
-    haloid = np.asarray(haloid)
+    haloid = np.asarray(haloid, dtype=object)
 
     return haloid
-
