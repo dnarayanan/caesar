@@ -816,13 +816,14 @@ def get_group_properties(self,grp_list):
     from caesar.group_funcs import get_group_overall_properties,get_group_gas_properties,get_group_star_properties,get_group_bh_properties,get_group_dust_properties
 
     get_group_overall_properties(self,grp_list)
-    if 'gas' in self.obj.data_manager.ptypes: get_group_gas_properties(self,grp_list)
-    if 'star' in self.obj.data_manager.ptypes: get_group_star_properties(self,grp_list)
-    if 'dust' in self.obj.data_manager.ptypes: get_group_dust_properties(self,grp_list)
-    
-    if (self.obj.data_manager.blackholes):
-        if (self.obj.data_manager.blackholes) & has_property(self.obj, 'bh', 'bhmdot'):
-            get_group_bh_properties(self,grp_list)
+    if self.obj_type == 'galaxy' or self.obj_type == 'cloud':
+        if 'gas' in self.obj.data_manager.ptypes: get_group_gas_properties(self,grp_list)
+        if 'star' in self.obj.data_manager.ptypes: get_group_star_properties(self,grp_list)
+        if 'dust' in self.obj.data_manager.ptypes: get_group_dust_properties(self,grp_list)
+        
+        if (self.obj.data_manager.blackholes):
+            if (self.obj.data_manager.blackholes) & has_property(self.obj, 'bh', 'bhmdot'):
+                get_group_bh_properties(self,grp_list)
 
     from caesar.utils import calculate_local_densities
     calculate_local_densities(self.obj, grp_list)
