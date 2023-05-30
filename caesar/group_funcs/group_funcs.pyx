@@ -697,12 +697,19 @@ def get_group_overall_properties(group,grp_list):
     # collect all the particle type integers for particles in this group
     # NOTE: this routine assumes gadget numbering: 0=gas, 1=DM, 2=DM2, 3=dust, 4=star, 5=BH
     pt_ints = []
+    cdef:
+        int[6] pt_rints = np.zeros(6, dtype=np.int32)- 1 # for reversed part type saving information
+    cn = 0
     for p in group.obj.data_manager.ptypes:
         if (group.obj_type in ['galaxy', 'cloud']):
             if p not in ['dm','dm2','dm3']:  # not DM informaiton for galaxies, see aperture calculation later
                 pt_ints.append(ptype_ints[p])
+                pt_rints[ptype_ints[p]] = cn
+                cn+=1
         else:
             pt_ints.append(ptype_ints[p])
+            pt_rints[ptype_ints[p]] = cn
+            cn+=1
 
     cdef:
         ## global quantities
@@ -754,16 +761,15 @@ def get_group_overall_properties(group,grp_list):
 
     ## loop over objects, calculate properties for each object
     for ig in prange(ng,nogil=True,schedule='dynamic',num_threads=my_nproc):
-    #for ig in range(ng):
         istart = hid_bins[ig]
         iend = hid_bins[ig+1]
 
         # compute masses and particle counts
-        for ip in range(nptypes):
-            for i in range(istart,iend):
-                if ptype[i] == group_ptypes[ip]:
-                    grp_mass[ig,ip] += mass[i]
-                    # grp_count[ig,ip] += 1
+        for i in range(istart,iend):
+            if pt_rints[ptype[i]] >= 0:
+                grp_mass[ig, pt_rints[ptype[i]]] += mass[i]
+                # grp_count[ig,ip] += 1
+        for ip in range(nptypes):  
             grp_mtot[ig] += grp_mass[ig,ip]
 
         # Center of mass quantities
@@ -787,11 +793,11 @@ def get_group_overall_properties(group,grp_list):
         mygroup = grp_list[ig]
         mygroup.masses['total'] = group.obj.yt_dataset.quan(grp_mtot[ig], group.obj.units['mass'])
         mbaryon = 0.
-        for ip,p in enumerate(group.obj.data_manager.ptypes):
+        for p in group.obj.data_manager.ptypes:
             if ptype_ints[p] in pt_ints:
-                mygroup.masses[list_types[p]] = group.obj.yt_dataset.quan(grp_mass[ig,ip], group.obj.units['mass'])
+                mygroup.masses[list_types[p]] = group.obj.yt_dataset.quan(grp_mass[ig, pt_rints[ptype_ints[p]]], group.obj.units['mass'])
                 if p is not 'dm' and p is not 'dm2' and p is not 'dm3':
-                    mbaryon += grp_mass[ig,ip]
+                    mbaryon += grp_mass[ig, pt_rints[ptype_ints[p]]]
         mygroup.masses['baryon'] = group.obj.yt_dataset.quan(mbaryon, group.obj.units['mass'])
         mygroup.pos = group.obj.yt_dataset.arr(grp_pos[ig], group.obj.units['length'])
         mygroup.vel = group.obj.yt_dataset.arr(grp_vel[ig], group.obj.units['velocity'])
