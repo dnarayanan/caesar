@@ -52,7 +52,6 @@ class fof6d:
         elif 'haloid' in self.obj._kwargs and 'AHF' in self.obj._kwargs['haloid']:
             self.load_ahf_id()
         else:
-            from caesar.property_manager import get_haloid
             memlog('No Halo ID source specified -- running FOF.  This is the yt 3D FOF for halos and our homegrown 6D FOF for galaxies ...')
             try:
                 self.run_caesar_fof(self.obj)
@@ -172,7 +171,7 @@ class fof6d:
                         np.delete(tmpp)
 
                 # Now load the simulation particle IDs # map back to the position
-                self.haloid = []
+                self.haloid = {}
                 pids = []
                 nhid = 0
                 memlog('Reading simulation data IDs and mapping halo particle to them')
@@ -185,9 +184,11 @@ class fof6d:
                         tmpp[x_ind] = tmppd[y_ind,2]
                         nhid += len(com)
                         pids.extend(tmpp[tmpp>=0])
-                        self.haloid.append(tmpp)
+                    else:
+                        tmpp = np.empty(0,dtype=np.int64)
+                    self.haloid[p] = tmpp
                 memlog('Total halo particle IDs = %d'%(nhid))
-                self.haloid = np.asarray(self.haloid, dtype=object)         # all particles
+                # self.haloid = np.asarray(self.haloid, dtype=object)         # all particles
                 self.obj.data_manager.haloid = np.asarray(pids) # only halo particles
         else:
             mylog.warning("With haloid='AHF' you must also specify a haloid_file containing halo[+subhalo] IDs.")
@@ -202,10 +203,10 @@ class fof6d:
                 memlog('Reading 3D FOF Halo IDs from %s'%haloid_file)
                 hf = h5py.File(haloid_file,'r')
                 self.obj.data_manager.haloid = np.asarray(hf['all_haloids'])
-                self.haloid = []
+                self.haloid = {}
                 for p in self.obj.data_manager.ptypes:  # read haloid arrays for each ptype
-                    self.haloid.append(np.asarray(hf['haloids_%s'%p]))
-                self.haloid = np.array(self.haloid, dtype=object)
+                    self.haloid[p]=np.asarray(hf['haloids_%s'%p])
+                # self.haloid = np.array(self.haloid, dtype=object)
                 hf.close()
                 return
         else:
@@ -213,13 +214,13 @@ class fof6d:
         memlog('Running 3D FOF to get Halo IDs, LL=%g'%LL)
         pos = np.empty((0,3),dtype=MY_DTYPE)
         ptype = np.empty(0,dtype=np.int32)
-        for ip,p in enumerate(self.obj.data_manager.ptypes):  # get positions
+        for p in self.obj.data_manager.ptypes:  # get positions
             if not has_ptype(self.obj, p): continue
             data = get_property(self.obj, 'pos', p).to(self.obj.units['length'])
             pos = np.append(pos, data.d, axis=0)
             ptype = np.append(ptype, np.full(len(data), ptype_ints[p], dtype=np.int32), axis=0)
         haloid_all = fof(self.obj, pos, LL, group_type='halo')  # run FOF
-        self.haloid = []
+        self.haloid = {}
         haloid = np.empty(0,dtype=np.int64)
         for p in self.obj.data_manager.ptypes:  # fill haloid arrays for each ptype
             if has_ptype(self.obj, p):
@@ -228,16 +229,16 @@ class fof6d:
             else:
                 data = np.empty(0,dtype=np.int64)
                 datasel = np.empty(0,dtype=np.int64)
-            self.haloid.append(data)
+            self.haloid[p] = data
             haloid = np.append(haloid,datasel,axis=0)
-        self.haloid = np.asarray(self.haloid, dtype=object)
+        # self.haloid = np.asarray(self.haloid, dtype=object)
         self.obj.data_manager.haloid = haloid
         if haloid_file is not None:
             memlog('Writing 3D FOF Halo IDs to %s' % haloid_file)
             with h5py.File(haloid_file,'w') as hf:
                 hf.create_dataset('all_haloids',data=haloid, compression=1)
-                for ip,p in enumerate(self.obj.data_manager.ptypes):  # write haloid arrays for each ptype
-                    haloid_out = self.haloid[ip]
+                for p in self.obj.data_manager.ptypes:  # write haloid arrays for each ptype
+                    haloid_out = self.haloid[p]
                     hf.create_dataset('haloids_%s'%p,data=haloid_out, compression=1)
                 hf.close()
 
@@ -352,7 +353,7 @@ class fof6d:
             mygrp.global_indexes = my_indexes
             offset = 0
             mygrp.ngas = mygrp.nstar = mygrp.nbh = mygrp.ndust = mygrp.ndm = mygrp.ndm2 = mygrp.ndm3 = 0
-            for ip,p in enumerate(self.obj.data_manager.ptypes):
+            for p in self.obj.data_manager.ptypes:
                 if not has_ptype(self.obj, p): continue
                 if p == 'gas':
                     mygrp.glist = my_indexes[my_ptype==ptype_ints[p]]-offset

@@ -32,13 +32,13 @@ class DataManager(object):
         self._assign_particle_counts()
         if ('Gas' in self.obj._ds_type.ds.particle_fields_by_type) or ('PartType0' in self.obj._ds_type.ds.particle_fields_by_type):
             if isinstance(select,str) and select == 'all': self._load_gas_data()
-            else: self._load_gas_data(select=select[self.ptypes.index('gas')])
+            else: self._load_gas_data(select=select['gas'])
         if ('Stars' in self.obj._ds_type.ds.particle_fields_by_type) or ('PartType4' in self.obj._ds_type.ds.particle_fields_by_type):
             if isinstance(select,str) and select == 'all': self._load_star_data()
-            else: self._load_star_data(select=select[self.ptypes.index('star')])
+            else: self._load_star_data(select=select['star'])
         if self.blackholes:
             if isinstance(select,str) and select == 'all': self._load_bh_data()
-            else: self._load_bh_data(select=select[self.ptypes.index('bh')])
+            else: self._load_bh_data(select=select['bh'])
         memlog('Loaded baryon data')
         
     def _determine_ptypes(self):
@@ -146,7 +146,9 @@ class DataManager(object):
         if 'dm3' in self.obj.data_manager.ptypes: self.obj.simulation.ndm3 = len(self.dm3list)
         self.obj.simulation.nbh   = len(self.bhlist)
         self.obj.simulation.ndust = len(self.dlist)
-        self.obj.simulation.ntot  = self.obj.simulation.ngas+self.obj.simulation.nstar+self.obj.simulation.ndm+self.obj.simulation.ndm2+self.obj.simulation.ndm3+self.obj.simulation.nbh+self.obj.simulation.ndust
+        self.obj.simulation.ntot  = self.obj.simulation.ngas+self.obj.simulation.nstar+self.obj.simulation.ndm+self.obj.simulation.nbh+self.obj.simulation.ndust
+        if 'dm2' in self.obj.data_manager.ptypes: self.obj.simulation.ntot += self.obj.simulation.ndm2
+        if 'dm3' in self.obj.data_manager.ptypes: self.obj.simulation.ntot += self.obj.simulation.ndm3
 
 
     def _load_gas_data(self,select='all'):

@@ -457,7 +457,7 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
     """    
     # check if potential exists in snapshot for all particle types
     obj.load_pot = True
-    for ip,p in enumerate(ptypes):
+    for p in ptypes:
         if not has_ptype(obj, p):
             continue
         if not has_property(obj, p, 'pot'):
@@ -473,7 +473,8 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
     ptype   = np.empty(0,dtype=np.int32)
     indexes = np.empty(0,dtype=np.int64)
 
-    for ip,p in enumerate(ptypes):
+    for p in  obj.data_manager.ptypes:
+        # ip=ptype_ints[p]
         if not has_ptype(obj, p):
             continue
      
@@ -487,7 +488,7 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
         if isinstance(select,str) and select == 'all': 
             flag = [True]*count
         else:
-            flag = (select[ip]>=0)
+            flag = (select[p]>=0)
 
         data = get_property(obj, 'pos', p).to(obj.units['length'])[flag]
         pos  = np.append(pos, data.d, axis=0)
@@ -546,7 +547,7 @@ def get_haloid(obj, ptypes, offset=-1):
     list of array of haloids for each particle type in ptypes
 
     """    
-    haloid = []
+    haloid = {}
 
     obj.npartsnap = 0  # number of particles in snapshot
     for p in ptypes:
@@ -555,8 +556,7 @@ def get_haloid(obj, ptypes, offset=-1):
             obj.npartsnap += len(data)
         else: 
             data = []
-        haloid.append(data)
-    haloid = np.asarray(haloid)
+        haloid[p]= data
+    # haloid = np.asarray(haloid, dtype=object)
 
     return haloid
-

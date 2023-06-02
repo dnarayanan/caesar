@@ -210,12 +210,15 @@ class CAESAR:
         with h5py.File(filename, 'r') as hd:
             mylog.info('Opening {}'.format(filename))
 
-            if 'hash' in hd.attrs:
-                self.hash = hd.attrs['hash']
-            else:
+            if skip_hash_check:
                 self.hash = None
-            if isinstance(self.hash, np.bytes_):
-                self.hash = self.hash.decode('utf8')
+            else:
+                if 'hash' in hd.attrs:
+                    self.hash = hd.attrs['hash']
+                else:
+                    self.hash = None
+                if isinstance(self.hash, np.bytes_):
+                    self.hash = self.hash.decode('utf8')
 
             # This should probably be caesar_version or something
             self.caesar = hd.attrs['caesar']
@@ -624,4 +627,4 @@ class Cloud(Group):
 
 
 def load(filename, skip_hash_check=False):
-    return CAESAR(filename, skip_hash_check=False)
+    return CAESAR(filename, skip_hash_check=skip_hash_check)
