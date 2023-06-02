@@ -698,8 +698,10 @@ def _get_aperture_quan(galaxies,aperture=30,aptname=None,projection=None):
     # set up ptype indexes
     galpos = np.asarray([i.pos for i in galaxies.obj.galaxy_list], dtype=np.float64)
     ptype_array = []
+    ptype_names = []
     for pt in galaxies.obj.data_manager.ptypes:  # this is the ordering for ptypes to be computed
         ptype_array.append(ptype_ints[pt])
+        ptype_names.append(pt)
     ptype_array = np.array(ptype_array,dtype=np.int32)
 
     cdef:
@@ -722,7 +724,7 @@ def _get_aperture_quan(galaxies,aperture=30,aptname=None,projection=None):
         int         ih,ig
         double      Lbox = galaxies.obj.simulation.boxsize.d
         float[:]    apert2 = aperture2
-        int[:]      ptypes = np.arange(np.max(ptype_array)+1, dtype=np.int32)
+        int[:]      ptypes = np.arange(6, dtype=np.int32)-1
         ## things to compute
         double[:,:]   gmas = np.zeros((ngal,nptype))
         double[:,:]   gvds = np.zeros((ngal,nptype))
@@ -731,7 +733,7 @@ def _get_aperture_quan(galaxies,aperture=30,aptname=None,projection=None):
     
     for ih,ig in enumerate(ptype_array):
         ptypes[ig]=ih
-#     print(ptype_array,ptypes)
+    # print(ptype_array,ptypes)
     
     # set up list of galaxies to process, associated to halos
     ngal = 0
@@ -743,7 +745,7 @@ def _get_aperture_quan(galaxies,aperture=30,aptname=None,projection=None):
 
     get_galaxy_aperture(nhalo,ngal,npart, hid_bins,galind_bins, galaxy_pos, pmass, ppos, pvel, ptype, Lbox, ptypes, nptype, kdir, apert2, my_nproc, gmas,gvds)
     for ih in range(len(ptype_array)):
-        outn='%s_%s'%(galaxies.obj.data_manager.ptypes[ih],apert_str)
+        outn='%s_%s'%(ptype_names[ih],apert_str)
         for ig in range(ngal):
             galaxies.obj.galaxy_list[ig].masses[outn] = galaxies.obj.yt_dataset.quan(gmas[ig,ih], galaxies.obj.units['mass'])
             galaxies.obj.galaxy_list[ig].velocity_dispersions[outn] = galaxies.obj.yt_dataset.quan(gvds[ig,ih], galaxies.obj.units['velocity'])
@@ -1174,7 +1176,6 @@ cdef void get_galaxy_aperture(int nh, int ng, long int npt, long int[:] hbins,in
     Note that this only looks at particles belongs to a galaxy's halo, so it may miss some mass
     particularly for satellites on the outskirts of the halo.
     Should be good for centrals, though!
-
     """
 
     cdef int j,k,l,ih, igstart, igend
@@ -1203,7 +1204,7 @@ cdef void get_galaxy_aperture(int nh, int ng, long int npt, long int[:] hbins,in
                             dx[k] = Lbox - dx[k]
                         d2 += dx[k]*dx[k]
 
-                    if d2 < apert2[j]:
+                    if d2 < apert2[j] and target_ptype[ptype[i]] >=0:
                         aperture_mass[j,target_ptype[ptype[i]]] += pmass[i]
 #                         aperture_ids[i] = j  # this will not work properly when projecting two halos overlap
                         aperture_npat[j,target_ptype[ptype[i]]] += 1
@@ -1234,7 +1235,7 @@ cdef void get_galaxy_aperture(int nh, int ng, long int npt, long int[:] hbins,in
                             dx[k] = Lbox - dx[k]
                         d2 += dx[k]*dx[k]
                         
-                    if d2 < apert2[j]:
+                    if d2 < apert2[j] and target_ptype[ptype[i]]>=0:
                         for k in range(3):
                             aperture_vsig[j, k, target_ptype[ptype[i]]] += (pmass[i]*pvel[i, k] - aperture_vsum[j, k, target_ptype[ptype[i]]])**2
                         d2 = 1.e30

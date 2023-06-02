@@ -413,7 +413,7 @@ cdef void nogil_radial_quants(int ig, long long istart, long long iend, int ndim
         elif ip == nptypes:  # second-to-last value stores baryonic radii
             mtarget = 0.
             for i in range(nptypes):
-                if group_ptypes[i] == 1 or group_ptypes[i] == 2: continue  # skip DM particles
+                if group_ptypes[i] == 1 or group_ptypes[i] == 2 or group_ptypes[i] == 3: continue  # skip DM particles; need to take care of active dust (ptype=3) later!
                 mtarget += grp_mass[ig,i]
         else:
             mtarget = grp_mass[ig,ip]
@@ -697,6 +697,7 @@ def get_group_overall_properties(group,grp_list):
     # collect all the particle type integers for particles in this group
     # NOTE: this routine assumes gadget numbering: 0=gas, 1=DM, 2=DM2, 3=dust, 4=star, 5=BH
     pt_ints = []
+    pt_names = []
     cdef:
         int[6] pt_rints = np.zeros(6, dtype=np.int32)- 1 # for reversed part type saving information
     cn = 0
@@ -704,11 +705,13 @@ def get_group_overall_properties(group,grp_list):
         if (group.obj_type in ['galaxy', 'cloud']):
             if p not in ['dm','dm2','dm3']:  # not DM informaiton for galaxies, see aperture calculation later
                 pt_ints.append(ptype_ints[p])
+                pt_names.append(p)
                 pt_rints[ptype_ints[p]] = cn
                 cn+=1
         else:
             pt_ints.append(ptype_ints[p])
             pt_rints[ptype_ints[p]] = cn
+            pt_names.append(p)
             cn+=1
 
     cdef:
@@ -768,7 +771,6 @@ def get_group_overall_properties(group,grp_list):
         for i in range(istart,iend):
             if pt_rints[ptype[i]] >= 0:
                 grp_mass[ig, pt_rints[ptype[i]]] += mass[i]
-                # grp_count[ig,ip] += 1
         for ip in range(nptypes):  
             grp_mtot[ig] += grp_mass[ig,ip]
 
@@ -793,11 +795,10 @@ def get_group_overall_properties(group,grp_list):
         mygroup = grp_list[ig]
         mygroup.masses['total'] = group.obj.yt_dataset.quan(grp_mtot[ig], group.obj.units['mass'])
         mbaryon = 0.
-        for p in group.obj.data_manager.ptypes:
-            if ptype_ints[p] in pt_ints:
-                mygroup.masses[list_types[p]] = group.obj.yt_dataset.quan(grp_mass[ig, pt_rints[ptype_ints[p]]], group.obj.units['mass'])
-                if p is not 'dm' and p is not 'dm2' and p is not 'dm3':
-                    mbaryon += grp_mass[ig, pt_rints[ptype_ints[p]]]
+        for p in pt_names:
+            mygroup.masses[list_types[p]] = group.obj.yt_dataset.quan(grp_mass[ig, pt_rints[ptype_ints[p]]], group.obj.units['mass'])
+            if p is not 'dm' and p is not 'dm2' and p is not 'dm3':
+                mbaryon += grp_mass[ig, pt_rints[ptype_ints[p]]]
         mygroup.masses['baryon'] = group.obj.yt_dataset.quan(mbaryon, group.obj.units['mass'])
         mygroup.pos = group.obj.yt_dataset.arr(grp_pos[ig], group.obj.units['length'])
         mygroup.vel = group.obj.yt_dataset.arr(grp_vel[ig], group.obj.units['velocity'])
@@ -826,14 +827,14 @@ def get_group_overall_properties(group,grp_list):
                 mygroup.rotation['baryon_BoverT'] = group.obj.yt_dataset.quan(grp_L[ig,ip,5],'')
                 mygroup.rotation['baryon_kappa_rot'] = group.obj.yt_dataset.quan(grp_L[ig,ip,6],'')
             else:
-                p = group.obj.data_manager.ptypes[pt_ints[ip]] # This change makes the names for galaxy catalog correct 
+                p = pt_names[ip] # This change makes the names for galaxy catalog correct 
                 name = list_types[p]+'_r20'
                 mygroup.radii[name] = group.obj.yt_dataset.quan(grp_R20[ig,ip], group.obj.units['length'])
                 name = list_types[p]+'_half_mass'
                 mygroup.radii[name] = group.obj.yt_dataset.quan(grp_Rhalf[ig,ip], group.obj.units['length'])
                 name = list_types[p]+'_r80'
                 mygroup.radii[name] = group.obj.yt_dataset.quan(grp_R80[ig,ip], group.obj.units['length'])
-                mygroup.velocity_dispersions[list_types[group.obj.data_manager.ptypes[ip]]] = group.obj.yt_dataset.quan(grp_vdisp[ig,ip], group.obj.units['velocity'])
+                mygroup.velocity_dispersions[list_types[p]] = group.obj.yt_dataset.quan(grp_vdisp[ig,ip], group.obj.units['velocity'])
                 name = list_types[p]
                 mygroup.rotation[name+'_L'] = group.obj.yt_dataset.arr( [grp_L[ig,0,ip],grp_L[ig,1,ip],grp_L[ig,2,ip]], L_units)
                 mygroup.rotation[name+'_ALPHA'] = group.obj.yt_dataset.quan(grp_L[ig,ip,3],'')

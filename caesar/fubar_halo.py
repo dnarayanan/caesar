@@ -124,8 +124,7 @@ def reset_global_particle_IDs(obj):
     # determine full particle numbers in snapshot
     from caesar.property_manager import has_ptype, get_property
     offset = np.zeros(len(obj.data_manager.ptypes)+1,dtype=np.int64)
-    for p in obj.data_manager.ptypes:
-        ip = ptype_ints[p]
+    for ip, p in enumerate(obj.data_manager.ptypes):
         if not has_ptype(obj, p):
             continue
         if p == 'bh':
@@ -160,8 +159,7 @@ def reset_global_particle_IDs(obj):
     # reset lists
     for group_type in obj.group_types:
         group_list = 'obj.%s_list'%group_type
-        for p in obj.data_manager.ptypes:
-            ip = ptype_ints[p]
+        for ip, p in enumerate(obj.data_manager.ptypes):
             if not has_ptype(obj, p):
                 continue
             for group in eval(group_list):
@@ -193,7 +191,7 @@ def load_global_lists(obj):
 
         group_list = 'obj.%s_list'%group_type
         for group in eval(group_list):
-            for ip,p in enumerate(obj.data_manager.ptypes):
+            for p in obj.data_manager.ptypes:
                 if not has_ptype(obj, p):
                     continue
                 part_list = 'group.%s'%plist_dict[p]
