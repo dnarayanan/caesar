@@ -498,7 +498,12 @@ def get_particles_for_FOF(obj, ptypes, select='all', my_dtype=MY_DTYPE):
         
         if p == 'bh':
             if has_property(obj, 'bh', 'bhmass'):
-                data = get_property(obj, 'bhmass', 'bh').to(obj.units['mass'])[flag]
+                bhmass= get_property(obj, 'bhmass', 'bh')[flag]
+                if bhmass.units==obj.yt_dataset.units.dimensionless:
+                    data=obj.yt_dataset.arr(bhmass.d, 'Msun/h').to(obj.units['mass'])*1e10  # assume code mass is in 10^10 Msun/h
+                else:
+                    data= bhmass.to(obj.units['mass'])
+                # data = get_property(obj, 'bhmass', 'bh').to(obj.units['mass'])[flag]
                 # obj.yt_dataset.arr(get_property(obj, 'bhmass', 'bh').d[flag]*1e10, 'Msun/h').to(obj.units['mass'])
             else:
                 data = get_property(obj, 'mass', 'bh').to(obj.units['mass'])[flag]

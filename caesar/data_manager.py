@@ -289,7 +289,12 @@ class DataManager(object):
             flag = (select>=0)
 
         if has_property(self.obj, 'bh', 'bhmass'):
-            self.bhmass     = get_property(self.obj, 'bhmass', 'bh')[flag].to(self.obj.units['mass'])
+            bhmass= get_property(self.obj, 'bhmass', 'bh')[flag]
+            if bhmass.units==self.obj.yt_dataset.units.dimensionless:
+                self.bhmass=self.obj.yt_dataset.arr(bhmass.d, 'Msun/h').to(self.obj.units['mass'])*1e10  # assume code mass is in 10^10 Msun/h
+            else:
+                self.bhmass= bhmass.to(self.obj.units['mass'])
+            # self.bhmass     = get_property(self.obj, 'bhmass', 'bh')[flag].to(self.obj.units['mass'])
             # self.obj.yt_dataset.arr(get_property(self.obj, 'bhmass', 'bh').d[flag]*1e10, 'Msun/h').to(self.obj.units['mass'])  # I don't know how to convert this automatically
             self.use_bhmass = True
         elif has_property(self.obj, 'bh', 'mass'):

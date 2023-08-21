@@ -322,8 +322,11 @@ def get_mean_interparticle_separation(obj):
         smass = get_property(obj, 'mass', 'star').to('code_mass')
     if obj.data_manager.blackholes and has_ptype(obj, 'bh'):
         if has_property(obj, 'bh', 'bhmass'):
-            bhmass= get_property(obj, 'bhmass', 'bh').to('code_mass')
-            #obj.yt_dataset.arr(get_property(obj, 'bhmass', 'bh').d, 'Msun').to('code_mass')
+            bhmass= get_property(obj, 'bhmass', 'bh')
+            if bhmass.units==obj.yt_dataset.units.dimensionless:
+                bhmass=obj.yt_dataset.arr(bhmass.d, 'Msun/h').to('code_mass')*1e10  # assume code mass is in 10^10 Msun/h
+            else:
+                bhmass= bhmass.to('code_mass')
         elif has_property(obj, 'bh', 'mass'):
             bhmass= get_property(obj, 'mass', 'bh').to('code_mass')
             # obj.yt_dataset.arr(get_property(obj, 'mass', 'bh').d, 'Msun').to('code_mass')
