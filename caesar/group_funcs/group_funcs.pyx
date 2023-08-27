@@ -551,8 +551,10 @@ def get_group_gas_properties(group,grp_list):
 
     for ig in range(ng):
         grp_list[ig].sfr = group.obj.yt_dataset.quan(grp_sfr[ig], '%s/%s' % (group.obj.units['mass'],group.obj.units['time']))
-        grp_list[ig].masses['H2'] = group.obj.yt_dataset.quan(grp_mH2[ig], group.obj.units['mass'])
-        grp_list[ig].masses['HI'] = group.obj.yt_dataset.quan(grp_mHI[ig], group.obj.units['mass'])
+        grp_list[ig].masses['H2'] = group.obj.yt_dataset.quan(grp_mH2[ig], group.obj.units['mass'])  # temporary assignment; will be recalculated in hydrogen_mass_calc if possible
+        grp_list[ig].masses['HI'] = group.obj.yt_dataset.quan(grp_mHI[ig], group.obj.units['mass'])  # temporary assignment; will be recalculated in hydrogen_mass_calc if possible
+        grp_list[ig].masses['H2_ism'] = group.obj.yt_dataset.quan(grp_mH2[ig], group.obj.units['mass'])
+        grp_list[ig].masses['HI_ism'] = group.obj.yt_dataset.quan(grp_mHI[ig], group.obj.units['mass'])
         grp_list[ig].metallicities = dict(
             mass_weighted = group.obj.yt_dataset.quan(grp_Zm[ig], ''),
             sfr_weighted  = group.obj.yt_dataset.quan(grp_Zsfr[ig], ''),
