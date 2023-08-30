@@ -510,8 +510,8 @@ def fof6d_halo(nparthalo,npart,pos,vel,minstars,Lbox,fof_LL,vel_LL,kerneltab):
 
     # run fof6d
     groups = [[0,npart]]  # group to process has the entire list of particles in halo
-    pindex = np.arange(npart,dtype=np.int32) # index to keep track of particle sorting
-    myhaloID = np.zeros(npart,dtype=np.int32)  # fof6d doing one halo at a time; arbitrarily assign to halo 0
+    pindex = np.arange(npart,dtype=np.int64) # index to keep track of particle sorting
+    myhaloID = np.zeros(npart,dtype=np.int64)  # fof6d doing one halo at a time; arbitrarily assign to halo 0
     for idir in range(len(mypos)):  # sort in each direction, find groups within sorted list
         if len(groups) > 0: groups = fof_sorting_old(groups,mypos,myvel,myhaloID,pindex,fof_LL,Lbox,idir,mingrp=minstars)
     if len(groups) == 0:
@@ -523,7 +523,7 @@ def fof6d_halo(nparthalo,npart,pos,vel,minstars,Lbox,fof_LL,vel_LL,kerneltab):
 
     # insert galaxy IDs into particle lists
     nfof = 0
-    galindex = np.zeros(npart,dtype=int)-1
+    galindex = np.zeros(npart,dtype=np.int64)-1
     for igrp in range(len(groups)):
         if fof6d_results[igrp] is None: continue  # no valid galaxies
         istart = groups[igrp][0]  # starting particle index for group igrp
@@ -570,13 +570,13 @@ def fof6d_main(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,mingrp,fof_LL,vel_L
             siglist.append(sigs)
 
     # determine counts within fof_LL, set up ordering of most dense to least
-    ncount = np.zeros(nactive,dtype=int)
+    ncount = np.zeros(nactive,dtype=np.int64)
     for i in range(len(ncount)):
         ncount[i] = len(nlist[1][i])  # count number of neighbors for each particle
     dense_order = np.argsort(-ncount)  # find ordering of most dense to least
 
     # main loop to do FOF
-    galind = np.zeros(nactive,dtype=int)-1
+    galind = np.zeros(nactive,dtype=np.int64)-1
     linked = []
     galcount = 0
     for ipart in range(nactive):
@@ -609,7 +609,7 @@ def fof6d_main(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,mingrp,fof_LL,vel_L
         if pcount[galind[i]] < mingrp: galind[i] = -1
     if len(galind[galind>=0])==0: return 0,galind  # if there are no valid groups left, return
     galind_unique = np.unique(galind[galind>=0])  # find unique groups
-    galind_inv = np.zeros(max(galind_unique)+1,dtype=int)
+    galind_inv = np.zeros(max(galind_unique)+1,dtype=np.int64)
     for i in range(len(galind_unique)):
         galind_inv[galind_unique[i]] = i  # create mapping from original groups to unique set
     for i in range(iend-istart):
