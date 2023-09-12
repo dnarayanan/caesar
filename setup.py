@@ -9,7 +9,6 @@ import sys
 sys.path.insert(0, 'caesar')
 from __version__ import VERSION
 
-
 class build_py(_build_py):
     def run(self):
         _build_py.run(self)
@@ -22,7 +21,8 @@ class build_ext(_build_ext):
         _build_ext.finalize_options(self)
         # Prevent numpy from thinking it is still in its setup process
         # see http://stackoverflow.com/a/21621493/1382869
-        __builtins__.__NUMPY_SETUP__ = False
+        from six.moves import builtins
+        builtins.__NUMPY_SETUP__ = False
         import numpy
         self.include_dirs.append(numpy.get_include())
 
@@ -78,9 +78,9 @@ setup(
     keywords='',
     entry_points={'console_scripts': ['caesar = caesar.command_line:run']},
     packages=find_packages(),
-    setup_requires=['numpy', 'cython>=0.22'],
+    setup_requires=['six', 'numpy', 'cython>=0.22'],
     install_requires=[
-        'numpy', 'h5py', 'cython', 'psutil', 'scipy', 'joblib', 'scikit-learn',
+        'six', 'numpy', 'h5py', 'cython', 'psutil', 'scipy', 'joblib', 'scikit-learn',
         'yt', 'astropy'#,
         #'pygadgetreader @ git+https://github.com/dnarayanan/pygadgetreader'
     ],
