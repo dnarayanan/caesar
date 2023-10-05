@@ -19,7 +19,7 @@ cdef extern from "math.h":
     double M_PI
 cdef extern from "stdlib.h":
     ctypedef void const_void "const void"
-    void qsort(void *base, int nmemb, int size, int(*compar)(const_void *, const_void *) noexcept nogil) nogil
+    void qsort(void *base, int nmemb, int size, int(*compar)(const_void *, const_void *)) nogil
 
 ctypedef struct part_struct:  # structure to hold particle info for particles within single group
     float m  # mass
@@ -43,7 +43,7 @@ cdef int isin(int val, int[:] arr) nogil:
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef int mycmp(const_void * pa, const_void * pb) noexcept nogil:  # qsort comparison function
+cdef int mycmp(const_void * pa, const_void * pb):  # qsort comparison function
     cdef float a = ((<part_struct *>pa).r)
     cdef float b = ((<part_struct *>pb).r)
     if a < b:
@@ -165,6 +165,7 @@ cdef float nogil_half_mass_radius(part_struct *pinfo, float mtarget, int ip, int
     cdef int i,ngp
     cdef double cumulative_mass = 0.0
     cdef float r = 0.0
+
 
     ngp = len(group_ptypes)
     for i in range(npart):
@@ -391,7 +392,7 @@ cdef void nogil_rotator(float *vector, float ALPHA, float BETA) nogil:
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void nogil_radial_quants(int ig, long long istart, long long iend, int ndim, float[:] mass, float[:,:] pos, float[:,:] vel, int[:] ptype, float[:] cent_pos, float[:] cent_vel, float Lbox, int nptypes, int[:] group_ptypes, int gtflag, double[:] Densities, int nDens, double[:,:] grp_mass, float[:,:] grp_R20, float[:,:] grp_Rhalf, float[:,:] grp_R80, float[:,:] grp_vdisp, float[:,:,:] grp_L, float[:,:] grp_rvir, float[:,:] grp_mvir) nogil:
+cdef void nogil_radial_quants(int ig, long long istart, long long iend, int ndim, float[:] mass, float[:,:] pos, float[:,:] vel, int[:] ptype, float[:] cent_pos, float[:] cent_vel, float Lbox, int nptypes, int[:] group_ptypes, int gtflag, double[:] Densities, int nDens, double[:,:] grp_mass, float[:,:] grp_R20, float[:,:] grp_Rhalf, float[:,:] grp_R80, float[:,:] grp_Rmax, float[:,:] grp_vdisp, float[:,:,:] grp_L, float[:,:] grp_rvir, float[:,:] grp_mvir) nogil:
     """Compute radial quantities """
 
     cdef int ip, nparticles = iend-istart
@@ -421,6 +422,7 @@ cdef void nogil_radial_quants(int ig, long long istart, long long iend, int ndim
         grp_R20[ig,ip] = nogil_half_mass_radius(grp_partinfo, 0.2*mtarget, ip, group_ptypes, nparticles)
         grp_Rhalf[ig,ip] = nogil_half_mass_radius(grp_partinfo, 0.5*mtarget, ip, group_ptypes, nparticles)
         grp_R80[ig,ip] = nogil_half_mass_radius(grp_partinfo, 0.8*mtarget, ip, group_ptypes, nparticles)
+        grp_Rmax[ig,ip] = nogil_half_mass_radius(grp_partinfo, 0.9999*mtarget, ip, group_ptypes, nparticles)
         # compute velocity dispersions for this ptype(s)
         grp_vdisp[ig,ip] = nogil_velocity_dispersions(grp_partinfo, ip, group_ptypes, nparticles, ndim)
         # calculate angular quantities for this ptypes(s)
@@ -753,6 +755,7 @@ def get_group_overall_properties(group,grp_list):
         float[:,:] grp_R20 = np.zeros((ngroup,nptypes+2),dtype=MY_DTYPE)  # 80% mass-enclosing radius
         float[:,:] grp_Rhalf = np.zeros((ngroup,nptypes+2),dtype=MY_DTYPE)  # half-mass radius
         float[:,:] grp_R80 = np.zeros((ngroup,nptypes+2),dtype=MY_DTYPE)  # 80% mass-enclosing radius
+        float[:,:] grp_Rmax = np.zeros((ngroup,nptypes+2),dtype=MY_DTYPE)  # 100% mass-enclosing radius
         float[:,:] grp_vdisp = np.zeros((ngroup,nptypes+2),dtype=MY_DTYPE)  # velocity dispersions
         float[:,:,:] grp_L = np.zeros((ngroup,nptypes+2,7),dtype=MY_DTYPE)  # holds angular quants (Lx,Ly,Lz,ALPHA,BETA,B/T,kappa_rot)
         float[:,:] grp_mvir = np.zeros((ngroup,nDens),dtype=MY_DTYPE)  # virial masses like M500, M2500, ...
@@ -781,9 +784,9 @@ def get_group_overall_properties(group,grp_list):
 
         # Compute other quantities that require radially sorted particle list
         if gtflag == 1 and use_pot: # if halo, use min potential for halo center
-            nogil_radial_quants(ig, istart, iend, ndim, mass, pos, vel, ptype, grp_minpotpos[ig], grp_minpotvel[ig], Lbox, nptypes, group_ptypes, gtflag, Densities, nDens, grp_mass, grp_R20, grp_Rhalf, grp_R80, grp_vdisp, grp_L, grp_rvir, grp_mvir)
+            nogil_radial_quants(ig, istart, iend, ndim, mass, pos, vel, ptype, grp_minpotpos[ig], grp_minpotvel[ig], Lbox, nptypes, group_ptypes, gtflag, Densities, nDens, grp_mass, grp_R20, grp_Rhalf, grp_R80, grp_Rmax, grp_vdisp, grp_L, grp_rvir, grp_mvir)
         else:
-            nogil_radial_quants(ig, istart, iend, ndim, mass, pos, vel, ptype, grp_pos[ig], grp_vel[ig], Lbox, nptypes, group_ptypes, gtflag, Densities, nDens, grp_mass, grp_R20, grp_Rhalf, grp_R80, grp_vdisp, grp_L, grp_rvir, grp_mvir)
+            nogil_radial_quants(ig, istart, iend, ndim, mass, pos, vel, ptype, grp_pos[ig], grp_vel[ig], Lbox, nptypes, group_ptypes, gtflag, Densities, nDens, grp_mass, grp_R20, grp_Rhalf, grp_R80, grp_Rmax, grp_vdisp, grp_L, grp_rvir, grp_mvir)
 
     # assign quantities to groups, with units
     from caesar.property_manager import has_ptype,ptype_ints
@@ -812,6 +815,7 @@ def get_group_overall_properties(group,grp_list):
                 mygroup.radii['total_r20'] = group.obj.yt_dataset.quan(grp_R20[ig,ip], group.obj.units['length'])
                 mygroup.radii['total_half_mass'] = group.obj.yt_dataset.quan(grp_Rhalf[ig,ip], group.obj.units['length'])
                 mygroup.radii['total_r80'] = group.obj.yt_dataset.quan(grp_R80[ig,ip], group.obj.units['length'])
+                mygroup.radii['total_rmax'] = group.obj.yt_dataset.quan(grp_Rmax[ig,ip], group.obj.units['length'])
                 mygroup.velocity_dispersions['total'] = group.obj.yt_dataset.quan(grp_vdisp[ig,ip], group.obj.units['velocity'])
                 mygroup.rotation['total_L'] = group.obj.yt_dataset.arr( [grp_L[ig,ip,0],grp_L[ig,ip,1],grp_L[ig,ip,2]], L_units)
                 mygroup.rotation['total_ALPHA'] = group.obj.yt_dataset.quan(grp_L[ig,ip,3],'')
@@ -822,6 +826,7 @@ def get_group_overall_properties(group,grp_list):
                 mygroup.radii['baryon_r20'] = group.obj.yt_dataset.quan(grp_R20[ig,ip], group.obj.units['length'])
                 mygroup.radii['baryon_half_mass'] = group.obj.yt_dataset.quan(grp_Rhalf[ig,ip], group.obj.units['length'])
                 mygroup.radii['baryon_r80'] = group.obj.yt_dataset.quan(grp_R80[ig,ip], group.obj.units['length'])
+                mygroup.radii['baryon_rmax'] = group.obj.yt_dataset.quan(grp_Rmax[ig,ip], group.obj.units['length'])
                 mygroup.velocity_dispersions['baryon'] = group.obj.yt_dataset.quan(grp_vdisp[ig,ip], group.obj.units['velocity'])
                 mygroup.rotation['baryon_L'] = group.obj.yt_dataset.arr( [grp_L[ig,ip,0],grp_L[ig,ip,1],grp_L[ig,ip,2]], L_units)
                 mygroup.rotation['baryon_ALPHA'] = group.obj.yt_dataset.quan(grp_L[ig,ip,3],'')
@@ -836,6 +841,8 @@ def get_group_overall_properties(group,grp_list):
                 mygroup.radii[name] = group.obj.yt_dataset.quan(grp_Rhalf[ig,ip], group.obj.units['length'])
                 name = list_types[p]+'_r80'
                 mygroup.radii[name] = group.obj.yt_dataset.quan(grp_R80[ig,ip], group.obj.units['length'])
+                name = list_types[p]+'_rmax'
+                mygroup.radii[name] = group.obj.yt_dataset.quan(grp_Rmax[ig,ip], group.obj.units['length'])
                 mygroup.velocity_dispersions[list_types[p]] = group.obj.yt_dataset.quan(grp_vdisp[ig,ip], group.obj.units['velocity'])
                 name = list_types[p]
                 mygroup.rotation[name+'_L'] = group.obj.yt_dataset.arr( [grp_L[ig,0,ip],grp_L[ig,1,ip],grp_L[ig,2,ip]], L_units)
@@ -1094,7 +1101,7 @@ def get_half_mass_radius(
     ptype : np.ndarray
         Array of integers containing the particle types.
     half_mass : double
-        Half mass value to accumulate to.
+        Fraction of total mass to accumulate to.
     binary : int
         Integer used to select particle types.  For example,
         if you are interested in particle types 0 and 3 this
