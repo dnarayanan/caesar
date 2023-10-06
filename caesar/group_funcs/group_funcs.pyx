@@ -43,15 +43,17 @@ cdef int isin(int val, int[:] arr) nogil:
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef int mycmp(const_void * pa, const_void * pb):  # qsort comparison function
+cdef int mycmp(const_void * pa, const_void * pb) nogil:  # qsort comparison function
     cdef float a = ((<part_struct *>pa).r)
     cdef float b = ((<part_struct *>pb).r)
+    cdef int value
     if a < b:
-        return -1
+        value = -1
     elif a > b:
-        return 1
+        value = 1
     else:
-        return 0
+        value = 0
+    return value
 
 """ ======================================================= """
 """ AUXILIARY ROUTINES TO COMPUTE SPECIFIC GROUP PROPERTIES """
