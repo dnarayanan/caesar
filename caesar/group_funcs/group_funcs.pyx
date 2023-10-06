@@ -19,7 +19,7 @@ cdef extern from "math.h":
     double M_PI
 cdef extern from "stdlib.h":
     ctypedef void const_void "const void"
-    void qsort(void *base, int nmemb, int size, int(*compar)(const_void *, const_void *)) nogil
+    void qsort(void *base, int nmemb, int size, int(*compar)(const_void *, const_void *) noexcept nogil) nogil
 
 ctypedef struct part_struct:  # structure to hold particle info for particles within single group
     float m  # mass
@@ -43,7 +43,7 @@ cdef int isin(int val, int[:] arr) nogil:
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef int mycmp(const_void * pa, const_void * pb):  # qsort comparison function
+cdef int mycmp(const_void * pa, const_void * pb) noexcept nogil:  # qsort comparison function
     cdef float a = ((<part_struct *>pa).r)
     cdef float b = ((<part_struct *>pb).r)
     if a < b:
