@@ -78,7 +78,7 @@ setup(
     keywords='',
     entry_points={'console_scripts': ['caesar = caesar.command_line:run']},
     packages=find_packages(),
-    setup_requires=['six', 'numpy', 'cython>=0.22'],
+    setup_requires=['six', 'numpy', 'cython>=3.0'],
     install_requires=[
         'six', 'numpy', 'h5py', 'cython', 'psutil', 'scipy', 'joblib', 'scikit-learn',
         'yt', 'astropy'#,
