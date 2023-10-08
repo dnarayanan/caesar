@@ -3,6 +3,7 @@ import numpy as np
 cimport numpy as np
 import sys
 cimport cython
+#import matplotlib.pyplot as plt
 from cython.parallel import prange, threadid
 from caesar.utils import memlog,rotator
 from yt.funcs import mylog
@@ -19,9 +20,9 @@ from libc.stdio cimport printf, fflush, stderr, stdout
 from libc.math cimport sqrt as c_sqrt, fabs as c_fabs, log10 as c_log10, exp as c_exp, copysign, fabs
 
 
-""" ============================================================ """
-""" THESE ARE THE MAIN ROUTINE TO CALCULATE GROUP PHOTOMETRY     """
-""" ============================================================ """
+""" ======================================================= """
+""" THIS IS THE MAIN ROUTINE TO CALCULATE GROUP PHOTOMETRY  """
+""" ======================================================= """
 
 @cython.cdivision(True)
 @cython.wraparound(False)
@@ -85,10 +86,9 @@ def compute_mags(phot):
         float[:] dnu = CLIGHT_AA/phot.ssp_wavelengths[:nlam-1] - CLIGHT_AA/phot.ssp_wavelengths[1:]
         float msum
         int ib,ig,ip,idim,ikern,istart,iend
-        # variables
+        # things to compute
         float[:,:] spect_dust = np.zeros((ng,nlam),dtype=MY_DTYPE)   # galaxy spectra with extinction
         float[:,:] spect_nodust = np.zeros((ng,nlam),dtype=MY_DTYPE)   # galaxy spectra without extinction
-        # things to compute
         float[:,:] absmags = np.zeros((ng,nbands),dtype=MY_DTYPE)    # absolute mags
         float[:,:] appmags = np.zeros((ng,nbands),dtype=MY_DTYPE)    # apparent mags
         float[:,:] absmags_nd = np.zeros((ng,nbands),dtype=MY_DTYPE) # absolute mags, no dust
@@ -101,23 +101,51 @@ def compute_mags(phot):
         # compute spectrum of galaxy with and without dust
         get_galaxy_spectrum(istart,iend,sm,sage,sZ,svz,AV_star,extinctions,nextinct,ssfr[ig],Zgal[ig],nlam,nage,nZ,ssp_wavelengths,ssp_ages,ssp_logZ,ssp_spectra,spect_dust[ig],spect_nodust[ig])
         get_magnitudes(nbands,nlam,itrans,ftrans,jtrans,ztrans,iwave0,iwave1,iwz0,iwz1,lumtoflux,lumtoflux_abs,spect_dust[ig],spect_nodust[ig],absmags[ig],absmags_nd[ig],appmags[ig],appmags_nd[ig])
+        # extincted light goes into bolometric far-IR luminosity 
         for ip in range(nlam-1):
             L_FIR[ig] += (spect_nodust[ig][ip]-spect_dust[ig][ip])*dnu[ip]
 
+    # wavelength indices over which to compute UV spectral slope beta
+    bwave0 = (np.abs(phot.ssp_wavelengths - phot.beta_wave[0])).argmin() 
+    bwave1 = (np.abs(phot.ssp_wavelengths - phot.beta_wave[1])).argmin()
     # load magnitudes into group objects
     for ig in range(ng):
         phot.groups[ig].absmag = {}
         phot.groups[ig].absmag_nodust = {}
         phot.groups[ig].appmag = {}
         phot.groups[ig].appmag_nodust = {}
+        phot.groups[ig].photometry = {}
         for ib,b in enumerate(phot.band_names):
             phot.groups[ig].absmag[b] = absmags[ig,ib]
             phot.groups[ig].absmag_nodust[b] = absmags_nd[ig,ib]
             phot.groups[ig].appmag[b] = appmags[ig,ib]
             phot.groups[ig].appmag_nodust[b] = appmags_nd[ig,ib]
-        phot.groups[ig].L_FIR = phot.obj.yt_dataset.quan(L_FIR[ig],'Lsun')
+        phot.groups[ig].photometry['L_FIR'] = phot.obj.yt_dataset.quan(L_FIR[ig],'Lsun')
+        # Compute beta
+        wavefit = np.array(phot.ssp_wavelengths)[bwave0:bwave1]
+        specfit = np.array(spect_dust[ig])[bwave0:bwave1]
+        phot.groups[ig].photometry['beta'] = get_beta(wavefit,specfit)
+        specfit = np.array(spect_nodust[ig])[bwave0:bwave1]
+        phot.groups[ig].photometry['beta_nodust'] = get_beta(wavefit,specfit)
 
     return np.array(spect_dust), np.array(spect_nodust)
+
+
+""" =============================================== """
+""" SUBROUTINES TO CALCULATE PHOTOMETRIC PROPERTIES """
+""" =============================================== """
+
+def get_beta(wavefit,specfit):
+    wavefit = np.array(wavefit)
+    # beta defined for f_lambda, but spectrum is f_nu, so do conversion from 1/Hz -> 1/A
+    specfit = np.array(specfit) * const.c.to('AA/s').value / wavefit**2
+    wavefit = np.log10(wavefit[specfit>0])
+    specfit = np.log10(specfit[specfit>0])
+    if (len(specfit)>0):
+        slope, intcpt = np.polyfit(wavefit,specfit,1)
+    else:
+        slope = -100
+    return slope
 
 @cython.cdivision(True)
 @cython.wraparound(False)
@@ -175,8 +203,8 @@ cdef void extinction(float sAV, float[:,:] extinct, int nextinct, float ssfr, fl
         if sfact < 0.: sfact = 0.
         for i in range(nlam):
             dust_ext[i] = sAV * (extinct[0][i]*sfact+ extinct[3][i]*(1.-sfact)) 
-        if nextinct == 7: # mix in SMC at low metallicities; ramp up SMC frac from logZ=0 to -1.
-            zfact = Zgal + 1
+        if nextinct == 7: # mix in SMC at low metallicities; ramp up SMC frac from logZ=-1 to -2.
+            zfact = Zgal + 2
             if zfact > 1.: zfact = 1.
             if zfact < 0.: zfact = 0.
             for i in range(nlam):
@@ -199,8 +227,8 @@ cdef void get_galaxy_spectrum(int istart, int iend, float[:] sm, float[:] sage, 
 
     dust_ext = <float *> malloc(nlam*sizeof(float))
     spec_star = <float *> malloc(nlam*sizeof(float))
-    for i in range(istart,iend):
-        zfact += sm[i]
+    #for i in range(istart,iend):
+    #    zfact += sm[i]
     for i in range(nlam):
         spec[i] = 0.
         spec_nd[i] = 0.

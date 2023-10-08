@@ -67,7 +67,7 @@ class photometry:
         Number of OpenMP cores, negative means use all but (nproc+1) cores.
     """
 
-    def __init__(self, obj, group_list, ds=None, band_names='v', ssp_model='FSPS', ssp_table_file='FSPS_Chab_EL.hdf5', view_dir='x', use_dust=True, ext_law='mw', use_cosmic_ext=True, kernel_type='cubic', nproc=-1):
+    def __init__(self, obj, group_list, ds=None, band_names='v', ssp_model='FSPS', ssp_table_file='FSPS_Chab_EL.hdf5', view_dir='x', use_dust=True, ext_law='mw', use_cosmic_ext=True, beta_wave=[1500,2000], kernel_type='cubic', nproc=-1):
 
         from caesar.property_manager import ptype_ints
         self.obj = obj  # caesar object
@@ -96,13 +96,16 @@ class photometry:
         if view_dir == 'z' or view_dir == '2': self.viewdir = 2
         self.use_dust = use_dust  # if False, will use metals plus an assumed dust-to-metal ratio
         if hasattr(self.obj,'_kwargs') and 'use_dust' in self.obj._kwargs:
-            use_dust = self.obj._kwargs['use_dust'].lower()
+            use_dust = self.obj._kwargs['use_dust']
         self.use_cosmic_ext = use_cosmic_ext
         if hasattr(self.obj,'_kwargs') and 'use_cosmic_ext' in self.obj._kwargs:
             use_cosmic_ext = self.obj._kwargs['use_cosmic_ext'].lower()
+        self.beta_wave = beta_wave
+        if hasattr(self.obj,'_kwargs') and 'beta_wave' in self.obj._kwargs:
+            self.beta_wave = self.obj._kwargs['beta_wave']
         self.kernel_type = kernel_type
         if hasattr(self.obj,'_kwargs') and 'kernel_type' in self.obj._kwargs:
-            use_cosmic_ext = self.obj._kwargs['kernel_type'].lower()
+            kernel_type = self.obj._kwargs['kernel_type'].lower()
         self.nkerntab = 2000
         if nproc == -1:
             try:
@@ -151,6 +154,10 @@ class photometry:
         #find the AV for stars belonging to the groups that were asked for
         self.Av_per_group()
         spect_dust, spect_nodust = compute_mags(self)
+        #import matplotlib.pyplot as plt
+        #plt.plot(np.log10(self.ssp_wavelengths),np.log10(spect_dust[0]+1.e-20),label='Gal %d'%0)
+        #plt.plot(np.log10(self.ssp_wavelengths),np.log10(spect_nodust[0]+1.e-20))
+        #plt.show()
         
         return spect_dust, spect_nodust
 
@@ -194,18 +201,27 @@ class photometry:
         self.ext_curves.append(smc(wave))
         self.ext_curves.append(lmc(wave))
         self.ext_curves = np.asarray(self.ext_curves)
+        '''
+        plt.plot(np.log10(wave),np.log10(calzetti(wave)),label='calzetti')
+        plt.plot(np.log10(wave),np.log10(cardelli(wave)),label='MW')
+        plt.plot(np.log10(wave),np.log10(smc(wave)),label='SMC')
+        plt.xlim(3,4)
+        plt.ylim(-1,1)
+        plt.legend()
+        plt.show()
+        '''
 
         if 'calzetti' in self.ext_law: self.ext_law = 0
         elif 'chevallard' in self.ext_law: self.ext_law = 1
         elif 'conroy' in self.ext_law: self.ext_law = 2
-        elif self.ext_law == 'mw' or self.ext_law == 'cardelli' or 'CCM' in self.ext_law: self.ext_law = 3
+        elif self.ext_law == 'mw' or self.ext_law == 'cardelli' or 'ccm' in self.ext_law: self.ext_law = 3
         elif 'smc' in self.ext_law: self.ext_law = 4
         elif 'lmc' in self.ext_law: self.ext_law = 5
-        elif self.ext_law == 'mix_calz_MW': self.ext_law = 6
+        elif self.ext_law == 'mix_calz_mw': self.ext_law = 6
         elif self.ext_law == 'composite': self.ext_law = 7
         else:
-            mylog.warning('Extinction law %s not recognized, assuming composite'%self.ext_law)
-            self.ext_law = 7
+            mylog.warning('Extinction law %s not recognized, assuming mix_calz_MW'%self.ext_law)
+            self.ext_law = 6
 
 
     # set up star and gas lists in each object
@@ -400,7 +416,7 @@ def generate_ssp_table_fsps(ssp_lookup_file,Zsol=Solar['total'],oversample=[2,2]
         if return_table:
             return ssp_ages, ssp_logZ, mass_remaining, wavelengths, ssp_spectra
 
-def generate_ssp_table_bpass(ssp_lookup_file,Zsol=Solar['total'],return_table=False,model_dir = '/home/rad/caesar/BPASSv2.2.1_bin-imf_chab100'):
+def generate_ssp_table_bpass(ssp_lookup_file,Zsol=Solar['total'],return_table=False,model_dir = '.'):
         '''
         Generates an SPS lookup table from BPASS.
         '''
