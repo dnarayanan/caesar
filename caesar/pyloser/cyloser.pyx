@@ -84,6 +84,7 @@ def compute_mags(phot):
         float lumtoflux = phot.lumtoflux
         float lumtoflux_abs = phot.lumtoflux_abs
         float[:] dnu = CLIGHT_AA/phot.ssp_wavelengths[:nlam-1] - CLIGHT_AA/phot.ssp_wavelengths[1:]
+        float splitage = phot.splitting_age
         float msum
         int ib,ig,ip,idim,ikern,istart,iend
         # things to compute
@@ -99,7 +100,7 @@ def compute_mags(phot):
         istart = starid_bins[ig]
         iend = starid_bins[ig+1]
         # compute spectrum of galaxy with and without dust
-        get_galaxy_spectrum(istart,iend,sm,sage,sZ,svz,AV_star,extinctions,nextinct,ssfr[ig],Zgal[ig],nlam,nage,nZ,ssp_wavelengths,ssp_ages,ssp_logZ,ssp_spectra,spect_dust[ig],spect_nodust[ig])
+        get_galaxy_spectrum(istart,iend,sm,sage,sZ,svz,AV_star,extinctions,nextinct,ssfr[ig],Zgal[ig],splitage,nlam,nage,nZ,ssp_wavelengths,ssp_ages,ssp_logZ,ssp_spectra,spect_dust[ig],spect_nodust[ig])
         get_magnitudes(nbands,nlam,itrans,ftrans,jtrans,ztrans,iwave0,iwave1,iwz0,iwz1,lumtoflux,lumtoflux_abs,spect_dust[ig],spect_nodust[ig],absmags[ig],absmags_nd[ig],appmags[ig],appmags_nd[ig])
         # extincted light goes into bolometric far-IR luminosity 
         for ip in range(nlam-1):
@@ -192,10 +193,11 @@ cdef void extinction(float sAV, float[:,:] extinct, int nextinct, float ssfr, fl
 
     for i in range(nlam):
         dust_ext[i] = 1.0
-    if sAV < 0.001: return 
+    if sAV < 1.e-4: return 
 
     if nextinct <= 5:
-        dust_ext[i] = sAV * extinct[nextinct][i]  # use single attenuation/extinction law
+        for i in range(nlam):
+            dust_ext[i] = sAV * extinct[nextinct][i]  # use single attenuation/extinction law
     elif nextinct == 6 or nextinct == 7:  # composite extinction curves
         # Calzetti for log sSFR>0 Gyr^-1, MW for log sSFR<-1, linear mix in between
         sfact = ssfr + 1
@@ -218,12 +220,13 @@ cdef void extinction(float sAV, float[:,:] extinct, int nextinct, float ssfr, fl
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void get_galaxy_spectrum(int istart, int iend, float[:] sm, float[:] sage, float[:] sZ, float[:] svz, float[:] sAV, float[:,:] extinct, int nextinct, float ssfr, float Zgal, int nlam, int nage, int nZ, float[:] ssp_wavelengths, float[:] ssp_ages, float[:] ssp_logZ, float[:,:] ssp_spectra, float[:] spec, float[:] spec_nd) nogil:
+cdef void get_galaxy_spectrum(int istart, int iend, float[:] sm, float[:] sage, float[:] sZ, float[:] svz, float[:] sAV, float[:,:] extinct, int nextinct, float ssfr, float Zgal, float splitage, int nlam, int nage, int nZ, float[:] ssp_wavelengths, float[:] ssp_ages, float[:] ssp_logZ, float[:,:] ssp_spectra, float[:] spec, float[:] spec_nd) nogil:
 
-    cdef int i,j,zsign
+    cdef int i,j,k,zsign,nbin
     cdef float *dust_ext
     cdef float *spec_star
     cdef float zfact=0.
+    cdef float age,mass,dage
 
     dust_ext = <float *> malloc(nlam*sizeof(float))
     spec_star = <float *> malloc(nlam*sizeof(float))
@@ -233,23 +236,31 @@ cdef void get_galaxy_spectrum(int istart, int iend, float[:] sm, float[:] sage, 
         spec[i] = 0.
         spec_nd[i] = 0.
     for ip in range(istart,iend):
-        # get spectrum of 1 Mo star interpolated to its age and metallicity
-        interp_tab(sage[ip],sZ[ip],nlam,nage,nZ,ssp_wavelengths,ssp_ages,ssp_logZ,ssp_spectra,spec_star)
-        extinction(sAV[ip],extinct,nextinct,ssfr,Zgal,nlam,dust_ext)
-        zfact = svz[ip]/3.e10
-        if zfact >= 0: zsign = 1
-        else: zsign = -1
-        for i in range(nlam):
-            # determine shift in wavelength index owing to star's peculiar velocity
-            j = i
-            while fabs(ssp_wavelengths[j]-ssp_wavelengths[i]) < fabs(ssp_wavelengths[i]*zfact):
-                j += zsign
-            if fabs(ssp_wavelengths[j]-ssp_wavelengths[i]*(1.+zfact)) > fabs(ssp_wavelengths[j-zsign]-ssp_wavelengths[i]*(1.+zfact)):
-                j -= zsign  # check if it's closer to wavelength j or the previous wavelength
-            if j<0 or j>=nlam: continue
-            # add star's spectrum to shifted wavelength bin
-            spec[i] += sm[ip] * dust_ext[i] * spec_star[i] 
-            spec_nd[i] += sm[ip] * spec_star[i] 
+        # split star into 2*nbin+1 time bins, if younger than splitage
+        nbin = int(splitage / sage[ip])
+        if nbin > 10: nbin = 10  # reasonable upper limit 
+        dage = sage[ip] / (nbin+1)
+        mass = sm[ip] / (2*nbin+1)
+        for k in range(-nbin,nbin+1):
+            # get age and mass for this portion of the (split) star
+            age = sage[ip] + k*dage
+            # get spectrum of 1 Mo star interpolated to its age and metallicity
+            interp_tab(age,sZ[ip],nlam,nage,nZ,ssp_wavelengths,ssp_ages,ssp_logZ,ssp_spectra,spec_star)
+            extinction(sAV[ip],extinct,nextinct,ssfr,Zgal,nlam,dust_ext)
+            zfact = svz[ip]/3.e10
+            if zfact >= 0: zsign = 1
+            else: zsign = -1
+            for i in range(nlam):
+                # determine shift in wavelength index owing to star's peculiar velocity
+                j = i
+                while fabs(ssp_wavelengths[j]-ssp_wavelengths[i]) < fabs(ssp_wavelengths[i]*zfact):
+                    j += zsign
+                if fabs(ssp_wavelengths[j]-ssp_wavelengths[i]*(1.+zfact)) > fabs(ssp_wavelengths[j-zsign]-ssp_wavelengths[i]*(1.+zfact)):
+                    j -= zsign  # check if it's closer to wavelength j or the previous wavelength
+                if j<0 or j>=nlam: continue
+                # add star's spectrum to shifted wavelength bin
+                spec[j] += mass * dust_ext[i] * spec_star[i] 
+                spec_nd[j] += mass * spec_star[i] 
 
     free(spec_star)
     free(dust_ext)
@@ -370,7 +381,7 @@ cdef float star_AV(int ip, int idir, int igstart, int igend, double[:,:] spos, d
 
     cdef:
         int i,idim
-        float A_V,Zcol=0.
+        float A_V=0.,Zcol=0.
         float dx2, kernint_val
         float dx[3]
         float dtm_slope, dtm_int, dtm

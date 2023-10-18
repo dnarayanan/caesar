@@ -84,7 +84,7 @@ class CAESAR(object):
         if not hasattr(value, 'dataset_type'):
             raise IOError('not a yt dataset?')
 
-        infile = '%s/%s' % (value.fullpath, value.basename)
+        infile = '%s/%s' % (value.directory, value.basename)
         
         self.skip_hash_check = False
         if hasattr(self, 'hash'):

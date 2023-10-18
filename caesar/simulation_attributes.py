@@ -18,7 +18,7 @@ class SimulationAttributes(object):
         self.time            = ds.current_time
         self.omega_matter    = ds.omega_matter
         self.omega_lambda    = ds.omega_lambda
-        self.fullpath        = ds.fullpath
+        self.fullpath        = ds.directory
         self.basename        = ds.basename
         self.hubble_constant = ds.hubble_constant
         self.parameters      = ds.parameters

@@ -67,16 +67,18 @@ class photometry:
         Number of OpenMP cores, negative means use all but (nproc+1) cores.
     """
 
-    def __init__(self, obj, group_list, ds=None, band_names='v', ssp_model='FSPS', ssp_table_file='FSPS_Chab_EL.hdf5', view_dir='x', use_dust=True, ext_law='mw', use_cosmic_ext=True, beta_wave=[1500,2000], kernel_type='cubic', nproc=-1):
+    def __init__(self, obj, group_list, ds=None, band_names='v', ssp_model='FSPS', ssp_table_file='FSPS_Chab_EL.hdf5', view_dir='x', use_dust=True, ext_law='mix_calz_MW', use_cosmic_ext=True, beta_wave=[1500,3000], splitting_age=0.01, kernel_type='cubic', nproc=-1):
 
         from caesar.property_manager import ptype_ints
         self.obj = obj  # caesar object
         self.groups = group_list  # list of objects to process
 
         # optional arguments
+        # choose bands to compute
         self.band_names = band_names
         if hasattr(self.obj,'_kwargs') and 'fsps_bands' in self.obj._kwargs:
             self.band_names = self.obj._kwargs['fsps_bands']
+        # choose SSP model
         self.ssp_model = ssp_model
         if hasattr(self.obj,'_kwargs') and 'ssp_model' in self.obj._kwargs:
             self.ssp_model = self.obj._kwargs['ssp_model']
@@ -86,23 +88,34 @@ class photometry:
             self.ssp_table_file = ssp_table_file
         if hasattr(self.obj,'_kwargs') and 'ssp_table_file' in self.obj._kwargs:
             self.ssp_table_file = self.obj._kwargs['ssp_table_file']
-        self.ext_law = ext_law
+        # extinction law; see init_extinction() for choices
+        self.ext_law = ext_law.lower()
         if hasattr(self.obj,'_kwargs') and 'ext_law' in self.obj._kwargs:
             self.ext_law = self.obj._kwargs['ext_law'].lower()
+        # viewing direction to compute LOS extinction (doesn't impact dust-free spectrum)
         if hasattr(self.obj,'_kwargs') and 'view_dir' in self.obj._kwargs:
             view_dir = self.obj._kwargs['view_dir'].lower()
         if view_dir == 'x' or view_dir == '0': self.viewdir = 0
         if view_dir == 'y' or view_dir == '1': self.viewdir = 1
         if view_dir == 'z' or view_dir == '2': self.viewdir = 2
-        self.use_dust = use_dust  # if False, will use metals plus an assumed dust-to-metal ratio
+        # use dust from snapshot; if False (or not present), dust is computed based on metals times DTM fit from Li+19
+        self.use_dust = use_dust  
         if hasattr(self.obj,'_kwargs') and 'use_dust' in self.obj._kwargs:
             use_dust = self.obj._kwargs['use_dust']
+        # use Madau+1996 IGM extinction
         self.use_cosmic_ext = use_cosmic_ext
         if hasattr(self.obj,'_kwargs') and 'use_cosmic_ext' in self.obj._kwargs:
             use_cosmic_ext = self.obj._kwargs['use_cosmic_ext'].lower()
+        # wavelength range over which to compute best-fit UV slope using a log-linear fit
         self.beta_wave = beta_wave
         if hasattr(self.obj,'_kwargs') and 'beta_wave' in self.obj._kwargs:
             self.beta_wave = self.obj._kwargs['beta_wave']
+        # age (in Gyr) below which to split stars into multiple time bins for better sampling
+        self.splitting_age = splitting_age
+        if hasattr(self.obj,'_kwargs') and 'splitting_age' in self.obj._kwargs:
+            self.splitting_age = self.obj._kwargs['splitting_age']
+        if self.splitting_age < 0.: self.splitting_age = 0.
+        # choose kernel type for computing LOS integrals thru foreground dust
         self.kernel_type = kernel_type
         if hasattr(self.obj,'_kwargs') and 'kernel_type' in self.obj._kwargs:
             kernel_type = self.obj._kwargs['kernel_type'].lower()
@@ -211,6 +224,7 @@ class photometry:
         plt.show()
         '''
 
+        mylog.info('Using extinction law: %s'%self.ext_law)
         if 'calzetti' in self.ext_law: self.ext_law = 0
         elif 'chevallard' in self.ext_law: self.ext_law = 1
         elif 'conroy' in self.ext_law: self.ext_law = 2
@@ -260,7 +274,10 @@ class photometry:
             self.band_names = []
             for ib,b in enumerate(fsps.list_filters()):
                 band = fsps.filters.get_filter(b)  # look up characteristics of desired band 
-                band_wave = band.transmission[0]   # filter wavelengths
+                try:
+                    band_wave = band.transmission[0] # filter wavelengths
+                except:
+                    band_wave = band.transmission[0] # weirdly, fsps (ca. 18 Oct 2023) dies first time you call band.transmission, but after that it's fine
                 band_trans = band.transmission[1]  # filter response function
                 meanwave = np.sum(band.transmission[0]*band.transmission[1])/np.sum(band.transmission[1])
                 if meanwave < 50000: self.band_names.append(b)
@@ -468,7 +485,6 @@ def generate_ssp_table_bpass(ssp_lookup_file,Zsol=Solar['total'],return_table=Fa
         ssp_ages = ages # log yr
         ssp_logZ = np.log10(metallicities)  
         ssp_spectra /= 1e6 # to Msol
-        #print(np.shape(mass_remaining),mass_remaining)
 
         with h5py.File(ssp_lookup_file, 'w') as hf:
             hf.create_dataset('fsps_options',data=model_dir)
