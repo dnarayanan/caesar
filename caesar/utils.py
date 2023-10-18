@@ -70,7 +70,7 @@ def calculate_local_densities(obj, group_list):
         return
 
     try:
-        from scipy.spatial import cKDTree
+        from scipy.spatial import KDTree
         # from caesar.periodic_kdtree import PeriodicCKDTree
         #mylog.info('Calculating local densities')
     except:
@@ -83,11 +83,9 @@ def calculate_local_densities(obj, group_list):
     mass = np.array([i.masses['total'] for i in group_list])
     box  = obj.simulation.boxsize
     box  = np.array([box,box,box])
-    for i in range(3):
-        pos[pos[:,i]>box[i], i] -= box[i]
-        pos[pos[:,i]<0, i] += box[i]
+    np.mod(pos,box,out=pos)
     
-    TREE = cKDTree(pos, boxsize=obj.simulation.boxsize)
+    TREE = KDTree(pos, boxsize=obj.simulation.boxsize)
 
     if 'search_radius' in obj._kwargs:
         if isinstance(obj._kwargs['search_radius'],(int,float)):
