@@ -605,7 +605,7 @@ class Group(object):
             half_r = get_half_mass_radius(mass, r, ptype, half_masses[k], binary)
             self.radii['%s_half_mass' % k] = self.obj.yt_dataset.quan(half_r, self.obj.units['length'])
 
-    def write_IC_mask(self, ic_ds, filename, search_factor = 2.5,radius_type='total'):
+    def write_IC_mask(self, ic_ds, filename, search_factor = 2.5,radius_type='total_r20'):
         """Write MUSIC initial condition mask to disk.  If called on
         a galaxy it will look for the parent halo in the IC.
 

@@ -1,8 +1,9 @@
 import numpy as np
 from yt.funcs import mylog
 import pdb
+import math
 
-def write_IC_mask(group, ic_ds, filename, search_factor, radius_type='total',print_extents=True):
+def write_IC_mask(group, ic_ds, filename, search_factor, radius_type='total_r20',print_extents=True):
     """Write MUSIC initial condition mask to disk.
 
     Parameters
@@ -107,11 +108,15 @@ def get_IC_pos(group, ic_ds, radius_type,search_factor=2.5, return_mask=False):
     ic_ds_type = ic_ds.__class__.__name__
     if ic_ds_type not in ptype_aliases:
         raise NotImplementedError('%s not yet supported' % ic_ds_type)
-    if group.obj.yt_dataset.domain_width[0].d != ic_ds.domain_width[0].d:
+    
+    if math.isclose(group.obj.yt_dataset.domain_width[0].d,ic_ds.domain_width[0].d,abs_tol=1.e-6) == False:
         raise Exception('IC and SNAP boxes do not match! (%f vs %f)' %
                         (ic_ds.domain_width[0].d,
                          group.obj.yt_dataset.domain_width[0].d))
-    if str(ic_ds.length_unit) != str(group.obj.yt_dataset.length_unit):
+
+
+    
+    if math.isclose(ic_ds.length_unit.value,group.obj.yt_dataset.length_unit.value,abs_tol=1.e-6) == False:
         raise Exception('LENGTH UNIT MISMATCH! '\
                         'This may arise from loading the snap/IC '\
                         'incorrectly and WILL cause problems with '\
@@ -125,7 +130,7 @@ def get_IC_pos(group, ic_ds, radius_type,search_factor=2.5, return_mask=False):
             mylog.warning('Galaxy %d has no halo!' % group.GroupID)
             return
         obj = group.halo
-
+    
     search_params = dict(
         pos = obj.pos.in_units('code_length').d,
         r   = obj.radii[radius_type].in_units('code_length').d * search_factor,
@@ -198,7 +203,7 @@ def construct_lowres_tree(obj, lowres):
     lr_mass = np.empty(0)
 
     pos_unit  = obj.halos[0].pos.units
-    mass_unit = obj.halos[0].masses['total'].units
+    mass_unit = obj.halos[0].masses['total_r20'].units
 
     for p in lowres:  # all low res particles to only build tree once
         if (p==2) or (p=='dm2'):

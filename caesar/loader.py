@@ -386,7 +386,7 @@ class Group:
                       ic_ds,
                       filename,
                       search_factor=2.5,
-                      radius_type='total'):
+                      radius_type='total_r20'):
         from caesar.zoom_funcs import write_IC_mask
         write_IC_mask(self,
                       ic_ds,
