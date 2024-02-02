@@ -282,12 +282,12 @@ class PeriodicCKDTree(cKDTree):
             if k>1:
                 dd = np.empty(retshape+(k,),dtype=np.float)
                 dd.fill(np.inf)
-                ii = np.empty(retshape+(k,),dtype=np.int)
+                ii = np.empty(retshape+(k,),dtype=np.int64)
                 ii.fill(self.n)
             elif k==1:
                 dd = np.empty(retshape,dtype=np.float)
                 dd.fill(np.inf)
-                ii = np.empty(retshape,dtype=np.int)
+                ii = np.empty(retshape,dtype=np.int64)
                 ii.fill(self.n)
             else:
                 raise ValueError("Requested %s nearest neighbors; acceptable numbers are integers greater than or equal to one, or None")

@@ -803,7 +803,7 @@ def get_aperture_masses(snapfile,galaxies,halos,quantities=['gas','star','dm'],a
 
     # initialize particle lists
     npart = 0
-    gid_bins = np.zeros(len(halos)+1,dtype=np.int)
+    gid_bins = np.zeros(len(halos)+1,dtype=np.int64)
     for ihalo,h in enumerate(halos):
         for pt in quants:
             if pt == 'gas' or pt == 'sfr' or pt == 'HI' or pt == 'H2': mylist = h.glist
@@ -876,7 +876,7 @@ def get_aperture_masses(snapfile,galaxies,halos,quantities=['gas','star','dm'],a
                 gplist_set = set(gplist)
                 mylist = [i for i in mylist if i not in gplist_set]
             npnew = len(mylist)
-            all_type = np.zeros(npnew,dtype=np.int)+ipt
+            all_type = np.zeros(npnew,dtype=np.int32)+ipt
             phalo_pos[npart:npart+npnew] = all_pos[kpt][mylist]
             if pt == 'sfr':
                 phalo_mass[npart:npart+npnew] = all_sfr[mylist]
