@@ -280,12 +280,12 @@ class PeriodicCKDTree(cKDTree):
         retshape = np.shape(x)[:-1]
         if retshape!=():
             if k>1:
-                dd = np.empty(retshape+(k,),dtype=np.float)
+                dd = np.empty(retshape+(k,),dtype=np.float64)
                 dd.fill(np.inf)
                 ii = np.empty(retshape+(k,),dtype=np.int64)
                 ii.fill(self.n)
             elif k==1:
-                dd = np.empty(retshape,dtype=np.float)
+                dd = np.empty(retshape,dtype=np.float64)
                 dd.fill(np.inf)
                 ii = np.empty(retshape,dtype=np.int64)
                 ii.fill(self.n)
@@ -311,7 +311,7 @@ class PeriodicCKDTree(cKDTree):
                 else:
                     return np.inf, self.n
             elif k>1:
-                dd = np.empty(k,dtype=np.float)
+                dd = np.empty(k,dtype=np.float64)
                 dd.fill(np.inf)
                 ii = np.empty(k,dtype=np.int)
                 ii.fill(self.n)
@@ -369,7 +369,7 @@ class PeriodicCKDTree(cKDTree):
         save substantial amounts of time by putting them in a
         PeriodicCKDTree and using query_ball_tree.
         """
-        x = np.asarray(x).astype(np.float)
+        x = np.asarray(x).astype(np.float64)
         if x.shape[-1] != self.m:
             raise ValueError("Searching for a %d-dimensional point in a " \
                              "%d-dimensional KDTree" % (x.shape[-1], self.m))

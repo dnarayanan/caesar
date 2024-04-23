@@ -240,14 +240,14 @@ def find_progens(pid_current, pid_target, gid_current, gid_target, pid_hash, npa
                   for ig in range(ngal_curr)))
         if n_most is not None:
             prog_index = np.array(prog_index_tmp,dtype=np.int32)
-            match_frac = np.array(match_frac_tmp,dtype=np.float)
+            match_frac = np.array(match_frac_tmp,dtype=np.float64)
         else:
             prog_index = np.array(prog_index_tmp,dtype=object)
             match_frac = np.array(match_frac_tmp,dtype=object)
     else:
         if n_most is not None:
             prog_index = np.zeros((ngal_curr,n_most),dtype=np.int32)
-            match_frac = np.zeros((ngal_curr,n_most),dtype=np.float)
+            match_frac = np.zeros((ngal_curr,n_most),dtype=np.float64)
         else:
             prog_index = np.zeros(ngal_curr,dtype=object)
             match_frac = np.zeros(ngal_curr,dtype=object)
