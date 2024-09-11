@@ -151,7 +151,7 @@ def get_beta(wavefit,specfit):
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void get_magnitudes(int nbands, int nlam, int[:] itrans, float[:] ftrans, int[:] jtrans, float[:] ztrans, int[:] iwave0, int[:] iwave1, int[:] iwz0, int[:] iwz1, float lumtoflux, float lumtoflux_abs, float[:] spect_dust, float[:] spect_nodust, float[:] absmag, float[:] absmag_nd, float[:] appmag, float[:] appmag_nd) nogil:
+cdef void get_magnitudes(int nbands, int nlam, int[:] itrans, float[:] ftrans, int[:] jtrans, float[:] ztrans, int[:] iwave0, int[:] iwave1, int[:] iwz0, int[:] iwz1, float lumtoflux, float lumtoflux_abs, float[:] spect_dust, float[:] spect_nodust, float[:] absmag, float[:] absmag_nd, float[:] appmag, float[:] appmag_nd) noexcept nogil:
 
     cdef int ib
 
@@ -186,7 +186,7 @@ cdef float apply_bands(int iband, float[:] spectrum, float[:] ftrans, int iwave0
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void extinction(float sAV, float[:,:] extinct, int nextinct, float ssfr, float Zgal, int nlam, float *dust_ext) nogil:
+cdef void extinction(float sAV, float[:,:] extinct, int nextinct, float ssfr, float Zgal, int nlam, float *dust_ext) noexcept nogil:
 
     cdef int i=0
     cdef double sfact,zfact
@@ -220,7 +220,7 @@ cdef void extinction(float sAV, float[:,:] extinct, int nextinct, float ssfr, fl
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void get_galaxy_spectrum(int istart, int iend, float[:] sm, float[:] sage, float[:] sZ, float[:] svz, float[:] sAV, float[:,:] extinct, int nextinct, float ssfr, float Zgal, float splitage, int nlam, int nage, int nZ, float[:] ssp_wavelengths, float[:] ssp_ages, float[:] ssp_logZ, float[:,:] ssp_spectra, float[:] spec, float[:] spec_nd) nogil:
+cdef void get_galaxy_spectrum(int istart, int iend, float[:] sm, float[:] sage, float[:] sZ, float[:] svz, float[:] sAV, float[:,:] extinct, int nextinct, float ssfr, float Zgal, float splitage, int nlam, int nage, int nZ, float[:] ssp_wavelengths, float[:] ssp_ages, float[:] ssp_logZ, float[:,:] ssp_spectra, float[:] spec, float[:] spec_nd) noexcept nogil:
 
     cdef int i,j,k,zsign,nbin
     cdef float *dust_ext
@@ -292,7 +292,7 @@ cdef int index_search(float x, float[:] myvec, int nvec) nogil:
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void interp_tab(float age,float met, int nlam, int nage, int nZ, float[:] ssp_wavelengths, float[:] ssp_ages, float[:] ssp_logZ, float[:,:] ssp_spectra, float *spec_star) nogil:
+cdef void interp_tab(float age,float met, int nlam, int nage, int nZ, float[:] ssp_wavelengths, float[:] ssp_ages, float[:] ssp_logZ, float[:,:] ssp_spectra, float *spec_star) noexcept nogil:
 
     cdef int i,iage,iZ,i00,i01,i10,i11
     cdef float logage, logZ, fage, fZ

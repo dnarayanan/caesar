@@ -445,7 +445,7 @@ def get_HIH2_masses(galaxies,aperture=30,rho_thresh=0.13):
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void _get_galaxy_hydrogen_masses(int igstart, int igend, int istart, int iend, double[:,:] galaxy_pos, double[:] galaxy_mass, float[:,:] gpos, float[:] HImass, float[:] H2mass, float Lbox, double[:] galaxy_HImass, double[:] galaxy_H2mass, double[:] apert_HImass, double[:] apert_H2mass, double apert2) nogil:
+cdef void _get_galaxy_hydrogen_masses(int igstart, int igend, int istart, int iend, double[:,:] galaxy_pos, double[:] galaxy_mass, float[:,:] gpos, float[:] HImass, float[:] H2mass, float Lbox, double[:] galaxy_HImass, double[:] galaxy_H2mass, double[:] apert_HImass, double[:] apert_H2mass, double apert2) noexcept nogil:
     """Function to assign halo gas to galaxies.
 
     When we assign galaxies in CAESAR, we only consider dense gas.
@@ -765,7 +765,8 @@ def get_aperture_masses(snapfile,galaxies,halos,quantities=['gas','star','dm'],a
     ''' Compute aperture masses in various quantities; standalone version '''
 
     import sys
-
+    cdef:
+        int ipt, ig
     # if aperture specified as a constant value, make into array
     if isinstance(aperture, (list, tuple, np.ndarray)):
         aperture2 = (aperture*aperture).astype(np.float32)
@@ -923,7 +924,8 @@ def get_aperture_masses(snapfile,galaxies,halos,quantities=['gas','star','dm'],a
                 get_galaxy_aperture_masses(igstart, igend, istart, iend, galaxy_pos, pmass, ppos, ptype, Lbox, galaxy_mass[jpt], jpt, kdir, apert2)
 
     # reset order to order of galaxies in caesar file
-    gmass = np.array(galaxy_mass)
+    cdef:
+        float[:,:] gmass = np.array(galaxy_mass)
     for ipt in range(len(quants)):
         for ih,ig in enumerate(g_indexes):
             galaxy_mass[ipt,ig] = gmass[ipt,ih]
@@ -975,10 +977,13 @@ def get_aperture_vdis(snapfile,caesarobj,quantities=['gas','star','dm'],aperture
         ptype_array.append(ptype_ints[pt])
     ptype_array = np.array(ptype_array,dtype=np.int32)
 
+    cdef:
+        int ig, ipt, ngal = 0
+        long int npart = 0
     # collate galaxy info in order of halos
     g_indexes = np.zeros(len(galaxies),dtype=np.int32)
     gind_bins = np.zeros(len(halos)+1,dtype=np.int32)
-    ngal = 0
+
     galpos = []
     galmass = []
     for ihalo,h in enumerate(halos):
@@ -990,7 +995,6 @@ def get_aperture_vdis(snapfile,caesarobj,quantities=['gas','star','dm'],aperture
     galmass = np.array([galaxies[i].masses['stellar'] for i in g_indexes], dtype=np.float64)
 
     # initialize particle lists
-    cdef long int npart = 0
     gid_bins = np.zeros(len(halos)+1,dtype=np.int64)
     for ihalo,h in enumerate(halos):
         for pt in quants:
@@ -1139,7 +1143,7 @@ def get_aperture_vdis(snapfile,caesarobj,quantities=['gas','star','dm'],aperture
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void get_galaxy_aperture_masses(int igstart, int igend, int istart, int iend, double[:,:] galaxy_pos, float[:] pmass, float[:,:] ppos, int[:] ptype, float Lbox, double[:] aperture_mass, int target_ptype, int kdir, float[:] apert2) nogil:
+cdef void get_galaxy_aperture_masses(int igstart, int igend, int istart, int iend, double[:,:] galaxy_pos, float[:] pmass, float[:,:] ppos, int[:] ptype, float Lbox, double[:] aperture_mass, int target_ptype, int kdir, float[:] apert2) noexcept nogil:
     """Function to compute aperture masses for galaxies within halos.
     Note that this only looks at mass within a galaxy's halo, so it may miss some mass
     particularly for satellites on the outskirts of the halo.
@@ -1171,7 +1175,7 @@ cdef void get_galaxy_aperture_masses(int igstart, int igend, int istart, int ien
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void get_galaxy_aperture(int nh, int ng, long int npt, long int[:] hbins,int[:] gbins, double[:,:] galaxy_pos, float[:] pmass, float[:,:] ppos, float[:,:] pvel, int[:] ptype, float Lbox, int[:] target_ptype, int nptype, int kdir, float[:] apert2, int nproc, double[:,:] aperture_mass, double[:,:] aperture_vd):
+cdef void get_galaxy_aperture(int nh, int ng, long int npt, long int[:] hbins,int[:] gbins, double[:,:] galaxy_pos, float[:] pmass, float[:,:] ppos, float[:,:] pvel, int[:] ptype, float Lbox, int[:] target_ptype, int nptype, int kdir, float[:] apert2, int nproc, double[:,:] aperture_mass, double[:,:] aperture_vd) noexcept:
     """
     Note that this only looks at particles belongs to a galaxy's halo, so it may miss some mass
     particularly for satellites on the outskirts of the halo.

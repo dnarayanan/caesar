@@ -59,7 +59,7 @@ cdef int mycmp(const_void * pa, const_void * pb) noexcept nogil:  # qsort compar
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void nogil_CoM_quants(int ig, float[:,:] pos, float[:,:] vel, float[:] mass, float[:] pot, int[:] ptype, int[:] group_ptypes, double[:] grp_mtot, long long istart, long long iend, int ndim, float Lbox, float[:,:] grp_pos, float[:,:] grp_vel, float[:,:] grp_minpotpos, float[:,:] grp_minpotvel) nogil:
+cdef void nogil_CoM_quants(int ig, float[:,:] pos, float[:,:] vel, float[:] mass, float[:] pot, int[:] ptype, int[:] group_ptypes, double[:] grp_mtot, long long istart, long long iend, int ndim, float Lbox, float[:,:] grp_pos, float[:,:] grp_vel, float[:,:] grp_minpotpos, float[:,:] grp_minpotvel) noexcept nogil:
     """ Computes center-of-mass position and velocity, as well as minimum potential position.
 
     ig: group index
@@ -113,7 +113,7 @@ cdef void nogil_CoM_quants(int ig, float[:,:] pos, float[:,:] vel, float[:] mass
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void nogil_load_partinfo(float[:] mass, float[:,:] pos, float[:,:] vel, int[:] ptype, float[:] cent_pos, float[:] cent_vel, part_struct *pinfo, float Lbox, long long istart, long long iend, int ndim) nogil:
+cdef void nogil_load_partinfo(float[:] mass, float[:,:] pos, float[:,:] vel, int[:] ptype, float[:] cent_pos, float[:] cent_vel, part_struct *pinfo, float Lbox, long long istart, long long iend, int ndim) noexcept nogil:
     """ Computes center-of-mass position and velocity, as well as minimum potential position.
 
     ig: group index
@@ -221,7 +221,7 @@ cdef float nogil_velocity_dispersions(part_struct *pinfo, int ip, int[:] group_p
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] group_ptypes, float[:] L) nogil:
+cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] group_ptypes, float[:] L) noexcept nogil:
     """ Compute angular quantities associated with rotating the galaxy along its angular mom vector
 
     pinfo: struct holding mass, radii, ptypes of particles
@@ -326,7 +326,7 @@ cdef void nogil_angular_quants(part_struct *pinfo, int npart, int ip, int[:] gro
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void nogil_virial_quants(part_struct *pinfo, double[:] Densities, int npart, int nDens, float[:] collectRadii, float[:] collectMasses) nogil:
+cdef void nogil_virial_quants(part_struct *pinfo, double[:] Densities, int npart, int nDens, float[:] collectRadii, float[:] collectMasses) noexcept nogil:
     """Get virial mass and radius at desired set of Densities
 
     pinfo: struct holding mass, radii of particles
@@ -357,7 +357,7 @@ cdef void nogil_virial_quants(part_struct *pinfo, double[:] Densities, int npart
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void nogil_rotator(float *vector, float ALPHA, float BETA) nogil:
+cdef void nogil_rotator(float *vector, float ALPHA, float BETA) noexcept nogil:
     """Rotate a vector through rotator angles ALPHA, BETA, which are the yaw and pitch angles.
     See https://en.wikipedia.org/wiki/Rotation_matrix
 
@@ -392,7 +392,7 @@ cdef void nogil_rotator(float *vector, float ALPHA, float BETA) nogil:
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void nogil_radial_quants(int ig, long long istart, long long iend, int ndim, float[:] mass, float[:,:] pos, float[:,:] vel, int[:] ptype, float[:] cent_pos, float[:] cent_vel, float Lbox, int nptypes, int[:] group_ptypes, int gtflag, double[:] Densities, int nDens, double[:,:] grp_mass, float[:,:] grp_R20, float[:,:] grp_Rhalf, float[:,:] grp_R80, float[:,:] grp_Rmax, float[:,:] grp_vdisp, float[:,:,:] grp_L, float[:,:] grp_rvir, float[:,:] grp_mvir) nogil:
+cdef void nogil_radial_quants(int ig, long long istart, long long iend, int ndim, float[:] mass, float[:,:] pos, float[:,:] vel, int[:] ptype, float[:] cent_pos, float[:] cent_vel, float Lbox, int nptypes, int[:] group_ptypes, int gtflag, double[:] Densities, int nDens, double[:,:] grp_mass, float[:,:] grp_R20, float[:,:] grp_Rhalf, float[:,:] grp_R80, float[:,:] grp_Rmax, float[:,:] grp_vdisp, float[:,:,:] grp_L, float[:,:] grp_rvir, float[:,:] grp_mvir) noexcept nogil:
     """Compute radial quantities """
 
     cdef int ip, nparticles = iend-istart
