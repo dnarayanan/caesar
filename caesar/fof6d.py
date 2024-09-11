@@ -190,6 +190,8 @@ class fof6d:
                 memlog('Total halo particle IDs = %d'%(nhid))
                 # self.haloid = np.asarray(self.haloid, dtype=object)         # all particles
                 self.obj.data_manager.haloid = np.asarray(pids) # only halo particles
+            else:
+                sys.exit('No ID data file is found in %s' % haloid_file)   
         else:
             mylog.warning("With haloid='AHF' you must also specify a haloid_file containing halo[+subhalo] IDs.")
             sys.exit()

@@ -3,7 +3,7 @@ from yt.funcs import mylog
 import pdb
 import math
 
-def write_IC_mask(group, ic_ds, filename, search_factor, radius_type='total_r20',print_extents=True):
+def write_IC_mask(group, ic_ds, filename, search_factor, radius_type='total',print_extents=True):
     """Write MUSIC initial condition mask to disk.
 
     Parameters
@@ -203,7 +203,7 @@ def construct_lowres_tree(obj, lowres):
     lr_mass = np.empty(0)
 
     pos_unit  = obj.halos[0].pos.units
-    mass_unit = obj.halos[0].masses['total_r20'].units
+    mass_unit = obj.halos[0].masses['total'].units
 
     for p in lowres:  # all low res particles to only build tree once
         if (p==2) or (p=='dm2'):
