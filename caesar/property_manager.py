@@ -272,6 +272,8 @@ class DatasetType(object):
         else:
             if self.ds_type == 'GizmoDataset' or self.ds_type == 'GadgetDataset' or self.ds_type == None:  # Note yt doesn't work properly for the particle IDs for Gadget snapshot, additional twist is needed in lower function and pygadgetreader
                 data = self._get_simba_property(requested_ptype,requested_prop)
+            elif self.ds_type == 'SwiftDataset':
+                data = self._get_swift_property(requested_ptype,requested_prop)
             else:
                 data = self.dd[ptype, prop].astype(MY_DTYPE)
 
@@ -325,6 +327,61 @@ class DatasetType(object):
         else:
             data = self.ds.arr(data, '')
         return data
+        
+
+    def _get_swift_property(self,ptype,prop):
+        try:
+            import swiftsimio as sso
+        except:
+            return self.dd[ptype, prop].astype(MY_DTYPE)
+        data = sso.load('%s/%s'%(self.ds.directory,self.ds.basename))
+        data = getattr(data, ptype)  # get particle
+        data = getattr(data, prop)   # now actual particle data with unit
+        
+        # set up units coming out of pygr
+        prop_unit = {'mass':'Msun', 'pos':'kpc', 'vel':'km/s', 'pot':'Msun * kpc**2 / s**2', 'rho':'g / cm**3', 'sfr':'Msun / yr', 'u':'K', 'Dust_Masses':'Msun', 'bhmass':'Msun', 'BH_Mass':'Msun', 'bhmdot':'Msun / yr', 'hsml':'kpc'}
+        if prop in prop_unit.keys():
+            data = data.to(prop_unit[prop])
+        
+        prop_unit = {'mass':'Msun', 'pos':'kpccm', 'vel':'km/s', 'pot':'Msun * kpccm**2 / s**2', 'rho':'g / cm**3', 'sfr':'Msun / yr', 'u':'K', 'Dust_Masses':'Msun', 'bhmass':'Msun', 'BH_Mass':'Msun', 'bhmdot':'Msun / yr', 'hsml':'kpccm'}
+
+        # damn you little h!
+        # if prop == 'mass' or prop == 'bhmass' or prop == 'pos':
+        #     hfact = 1./self.ds.hubble_constant
+        # elif prop == 'rho':
+        #     hfact = self.ds.hubble_constant**2
+        # else:
+        #     hfact = 1
+        # 
+        # # deal with differences in pygr vs. yt/caesar naming
+        # if ptype == 'bh': ptype = 'bndry'
+        # if prop == 'temperature': prop = 'u'
+        # if prop == 'haloid' or prop == 'dustmass' or prop == 'aform' or prop == 'bhmass' or prop == 'bhmdot': prop = self.get_property_name(ptype, prop)
+        # if ptype == 'dm2': ptype = 'disk'
+        # if ptype == 'dm3': ptype = 'bulge'
+
+        # read in the data
+        # if (self.ds_type == 'GadgetDataset'):  #need to retweek the names for G2.
+        #     if prop == 'metallicity':
+        #         prop =  'Z'
+        #     if prop == 'aform' or prop == 'StellarFormationTime':
+        #         prop = 'age'
+        # data = pygr.readsnap(snapfile, prop, ptype, units=1, suppress=1) * hfact
+
+        # set to doubles
+        # if prop == 'HaloID' or prop == 'haloid':
+        #     data = data.astype(np.uint32)
+        # elif prop == 'particle_index' or prop == 'pid':  # this fixes a bug in our Gizmo, that HaloID is output as a float!
+        #     data = data.astype(np.int64)
+        # else:
+        #     data = data.astype(np.float32)
+
+        if prop in prop_unit.keys():
+            data = self.ds.arr(data.value, prop_unit[prop])
+        else:
+            data = self.ds.arr(data.value, '')
+        return data
+
 
     def _get_gas_grid_posvel(self,request):
         """Return a typical Nx3 array for gas grid positions."""
