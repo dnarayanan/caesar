@@ -331,50 +331,56 @@ class DatasetType(object):
 
     def _get_swift_property(self,ptype,prop):
         try:
-            import swiftsimio as sso
+            import h5py
         except:
             return self.dd[ptype, prop].astype(MY_DTYPE)
-        data = sso.load('%s/%s'%(self.ds.directory,self.ds.basename))
-        data = getattr(data, ptype)  # get particle
-        data = getattr(data, prop)   # now actual particle data with unit
+        alias_ptype = self.get_ptype_name(ptype)
+        alias_prop  = self.get_property_name(prop)
+        snap = h5py.File('%s/%s'%(self.ds.directory,self.ds.basename))
+        Units = {}
+        for i in snap['Units'].attrs.keys():
+            if len(snap['Units'].attrs[i]) != 1:
+                print('# WARNING: the unit for %s in swift snapshot has multiple values: %r, I only use the first one!'%(i, snap['Units'].attrs[i]))
+            Units[i.split(' ')[1]] = snap['Units'].attrs[i][0]
         
-        # set up units coming out of pygr
-        prop_unit = {'mass':'Msun', 'pos':'kpc', 'vel':'km/s', 'pot':'Msun * kpc**2 / s**2', 'rho':'g / cm**3', 'sfr':'Msun / yr', 'u':'K', 'Dust_Masses':'Msun', 'bhmass':'Msun', 'BH_Mass':'Msun', 'bhmdot':'Msun / yr', 'hsml':'kpc'}
-        if prop in prop_unit.keys():
-            data = data.to(prop_unit[prop])
+        # Unit current in cgs (U_I)
+        # Unit length in cgs (U_L)
+        # Unit mass in cgs (U_M)
+        # Unit temperature in cgs (U_T)
+        # Unit time in cgs (U_t)
+        Units['mass']/=1.989e33  # to Msun
+        Units['length']/=3.0856e21 # to kpc
+        
+        data = snap['%s/%s' % (alias_ptype, alias_prop)][:]
+        
+    
+        # set to doubles
+        if prop == 'HaloID' or prop == 'haloid':
+            data = data.astype(np.uint32)
+        elif prop == 'particle_index' or prop == 'pid':  # this fixes a bug in our Gizmo, that HaloID is output as a float!
+            data = data.astype(np.int64)
+        else:
+            data = data.astype(np.float64)
+            
+        if 'mass' in prop:
+            data *= Units['mass']
+        elif 'pos' in prop or 'hsml' in prop:
+            data *= Units['length']
+        elif 'vel' in prop:
+            data *= Units['length']*3.0856e21/1e5/Units['time']  # km/s
+        elif pot in prop:
+            data *= Units['mass'] * Units['length']**2 / Units['time']**2
+        elif 'rho' in prop:
+            data *= Units['mass'] * 1.989e33 / (Units['length']*3.0856e21)**2
+        elif 'sfr' in prop or 'bhmdot' in prop:
+            data *= Units['mass'] / Units['time'] * 3.156e+7
+        elif 'u' in prop:
+            data *= Units['temperature']
+        else :
+            print(prop, '\'s unit is not changed! \n')
+            
         
         prop_unit = {'mass':'Msun', 'pos':'kpccm', 'vel':'km/s', 'pot':'Msun * kpccm**2 / s**2', 'rho':'g / cm**3', 'sfr':'Msun / yr', 'u':'K', 'Dust_Masses':'Msun', 'bhmass':'Msun', 'BH_Mass':'Msun', 'bhmdot':'Msun / yr', 'hsml':'kpccm'}
-
-        # damn you little h!
-        # if prop == 'mass' or prop == 'bhmass' or prop == 'pos':
-        #     hfact = 1./self.ds.hubble_constant
-        # elif prop == 'rho':
-        #     hfact = self.ds.hubble_constant**2
-        # else:
-        #     hfact = 1
-        # 
-        # # deal with differences in pygr vs. yt/caesar naming
-        # if ptype == 'bh': ptype = 'bndry'
-        # if prop == 'temperature': prop = 'u'
-        # if prop == 'haloid' or prop == 'dustmass' or prop == 'aform' or prop == 'bhmass' or prop == 'bhmdot': prop = self.get_property_name(ptype, prop)
-        # if ptype == 'dm2': ptype = 'disk'
-        # if ptype == 'dm3': ptype = 'bulge'
-
-        # read in the data
-        # if (self.ds_type == 'GadgetDataset'):  #need to retweek the names for G2.
-        #     if prop == 'metallicity':
-        #         prop =  'Z'
-        #     if prop == 'aform' or prop == 'StellarFormationTime':
-        #         prop = 'age'
-        # data = pygr.readsnap(snapfile, prop, ptype, units=1, suppress=1) * hfact
-
-        # set to doubles
-        # if prop == 'HaloID' or prop == 'haloid':
-        #     data = data.astype(np.uint32)
-        # elif prop == 'particle_index' or prop == 'pid':  # this fixes a bug in our Gizmo, that HaloID is output as a float!
-        #     data = data.astype(np.int64)
-        # else:
-        #     data = data.astype(np.float32)
 
         if prop in prop_unit.keys():
             data = self.ds.arr(data.value, prop_unit[prop])
