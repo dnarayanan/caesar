@@ -38,7 +38,7 @@ particle_data_aliases_swift = {
     'rho':'Densities',
     'hsml':'SmoothingLengths',
     'sfr':'StarFormationRates',
-    'mass':'Masses',
+    'mass':'Mass',
     'temp':'Temperatures',
     'temperature':'Temperatures',
     'ne':'ElectronNumberDensities',
@@ -335,7 +335,7 @@ class DatasetType(object):
         except:
             return self.dd[ptype, prop].astype(MY_DTYPE)
         alias_ptype = self.get_ptype_name(ptype)
-        alias_prop  = self.get_property_name(prop)
+        alias_prop  = self.get_property_name(ptype, prop)
         snap = h5py.File('%s/%s'%(self.ds.directory,self.ds.basename))
         Units = {}
         for i in snap['Units'].attrs.keys():
@@ -351,7 +351,10 @@ class DatasetType(object):
         Units['mass']/=1.989e33  # to Msun
         Units['length']/=3.0856e21 # to kpc
         
-        data = snap['%s/%s' % (alias_ptype, alias_prop)][:]
+        if alias_prop == 'Mass':
+            data = snap['%s/%s' % (alias_ptype, 'Masses')][:]
+        else:
+            data = snap['%s/%s' % (alias_ptype, alias_prop)][:]
         
     
         # set to doubles
@@ -360,7 +363,7 @@ class DatasetType(object):
         elif prop == 'particle_index' or prop == 'pid':  # this fixes a bug in our Gizmo, that HaloID is output as a float!
             data = data.astype(np.int64)
         else:
-            data = data.astype(np.float64)
+            data = data.astype(np.float32)
             
         if 'mass' in prop:
             data *= Units['mass']
@@ -368,7 +371,7 @@ class DatasetType(object):
             data *= Units['length']
         elif 'vel' in prop:
             data *= Units['length']*3.0856e21/1e5/Units['time']  # km/s
-        elif pot in prop:
+        elif 'pot' in prop:
             data *= Units['mass'] * Units['length']**2 / Units['time']**2
         elif 'rho' in prop:
             data *= Units['mass'] * 1.989e33 / (Units['length']*3.0856e21)**2
@@ -383,9 +386,9 @@ class DatasetType(object):
         prop_unit = {'mass':'Msun', 'pos':'kpccm', 'vel':'km/s', 'pot':'Msun * kpccm**2 / s**2', 'rho':'g / cm**3', 'sfr':'Msun / yr', 'u':'K', 'Dust_Masses':'Msun', 'bhmass':'Msun', 'BH_Mass':'Msun', 'bhmdot':'Msun / yr', 'hsml':'kpccm'}
 
         if prop in prop_unit.keys():
-            data = self.ds.arr(data.value, prop_unit[prop])
+            data = self.ds.arr(data, prop_unit[prop])
         else:
-            data = self.ds.arr(data.value, '')
+            data = self.ds.arr(data, '')
         return data
 
 
