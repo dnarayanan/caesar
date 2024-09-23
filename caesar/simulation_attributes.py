@@ -107,7 +107,12 @@ class SimulationAttributes(object):
             
         phdd = hdd.create_group('parameters')
         for k,v in six.iteritems(self.parameters):
-            phdd.attrs.create(k, v)
+            if isinstance(v, dict):            # yt load all parameters in swift snapshot
+                sphdd = phdd.create_group(k)
+                for sk, sv in six.iteritems(v):
+                    sphdd.attrs.create(sk, sv)
+            else:
+                phdd.attrs.create(k, v)
 
             
     def _unpack(self, obj, hd):
@@ -126,5 +131,11 @@ class SimulationAttributes(object):
 
         phdd = hdd['parameters']
         self.parameters = {}
-        for k,v in six.iteritems(phdd.attrs):
-            self.parameters[k] = v
+        if len(phdd.keys()) >= 1:
+            for i in phdd.keys():
+                self.parameters[i] = {}
+                for k,v in six.iteritems(phdd[i].attrs):
+                    self.parameters[i][k] = v
+        else:
+            for k,v in six.iteritems(phdd.attrs):
+                self.parameters[k] = v
