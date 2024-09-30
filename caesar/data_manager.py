@@ -181,8 +181,8 @@ class DataManager(object):
 
         if has_property(self.obj, 'gas', 'sfr'):
             sfr = get_property(self.obj, 'sfr', 'gas')[flag].to(sfr_unit)
-            if self.obj.simulation.ds_type == 'SwiftDataset':
-                sfr = self.obj.yt_dataset.arr(np.where(sfr.d>0, sfr.d, 0.), sfr_unit)
+            # if self.obj.simulation.ds_type == 'SwiftDataset':
+            #     sfr = self.obj.yt_dataset.arr(np.where(sfr.d>0, sfr.d, 0.), sfr_unit)
         else:
             mylog.warning('SFRs not found in snapshot, all SFRs set to 0')
 
@@ -198,7 +198,7 @@ class DataManager(object):
             gfHI  = get_property(self.obj, 'nh', 'gas')[flag]
             if self.obj.simulation.ds_type == 'SwiftDataset':
                 gm  = get_property(self.obj, 'mass', 'gas')[flag]
-                gfHI /= gm
+                gfHI /= gm*1e-10
         else:
             mylog.warning('HI fractions not found in snapshot, will compute later')
 
@@ -206,7 +206,7 @@ class DataManager(object):
             gfH2  = get_property(self.obj, 'fh2', 'gas')[flag]
             if self.obj.simulation.ds_type == 'SwiftDataset':
                 gm  = get_property(self.obj, 'mass', 'gas')[flag]
-                gfH2 /= gm
+                gfH2 /= gm*1e-10
         else:
             mylog.warning('H2 fractions not found in snapshot, will compute later')
 
