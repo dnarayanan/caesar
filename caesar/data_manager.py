@@ -308,14 +308,17 @@ class DataManager(object):
 
         if has_property(self.obj, 'bh', 'bhmdot') and self.use_bhmass:
             #units mutlitplied by ((All.UnitMass_in_g / SOLAR_MASS) / (All.UnitTime_in_s / SEC_PER_YEAR))
-            bhmdot_unit = '10.22465727143273*Msun/h/yr'
-            #bhmdot_unit = '15.036260693283424*Msun/yr'
-            #bhmdot_unit = '%s/%s' %(self.obj.units['mass'], self.obj.units['time'])
+            if self.obj.simulation.ds_type == 'SwiftDataset':
+                bhmdot      = get_property(self.obj, 'bhmdot', 'bh')[flag] # already converted to Msun/yr
+            else:
+                bhmdot_unit = '10.22465727143273*Msun/h/yr'
+                #bhmdot_unit = '15.036260693283424*Msun/yr'
+                #bhmdot_unit = '%s/%s' %(self.obj.units['mass'], self.obj.units['time'])
 
-            bhmdot      = get_property(self.obj, 'bhmdot', 'bh').d[flag] #of course  it is dimentionless
-            bhmdot      = self.obj.yt_dataset.arr(bhmdot, bhmdot_unit).to('%s/%s' %(self.obj.units['mass'], self.obj.units['time']))
+                bhmdot      = get_property(self.obj, 'bhmdot', 'bh').d[flag] #of course  it is dimentionless
+                bhmdot      = self.obj.yt_dataset.arr(bhmdot, bhmdot_unit).to('%s/%s' %(self.obj.units['mass'], self.obj.units['time']))
             self.bhmdot = bhmdot
-            #mylog.info('BH_Mdot available, units=%s'%bhmdot_unit)
+                #mylog.info('BH_Mdot available, units=%s'%bhmdot_unit)
         else: 
             if self.use_bhmass: 
                 mylog.warning('Black holes are there, but BH_Mdot not available!')
