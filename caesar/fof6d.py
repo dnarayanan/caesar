@@ -76,25 +76,51 @@ class fof6d:
                 else:
                     haloid_file=haloid_file.replace('particles','halos')
                 halo_info=np.loadtxt(haloid_file,usecols=(0,1),dtype=np.int64) #hid, host hid
+                if len(halo_info) == 0:
+                    sys.exit("No Halos in AHF halo file -- no need to run Caesar! ", len(halo_info))
 
                 if 'AHF_use_subhalos' not in self.obj._kwargs:  #only use particles in distinct halo. this is default.
                     nhalos=int(lines[0])
-                    hpp=1 # halo particle numbers and halo ID position
-                    hid_info=[] #particle ID, particle type, halo_ID as keys fillup with the information from AHF particle file
-                    for i in range(nhalos):
-                        npt,hid=[int(x) for x in lines[hpp].split()]
-                        hpp+=1
-                        tmp=np.loadtxt(lines[hpp:hpp+npt],dtype=np.int64)
-                        hpp+=npt
-                        if halo_info[i,1] == 0: # we only use idstinctive halos, as subhalos (sub subhalos) repeatively saved the particles, really a pain to deal with! Match galaxies back to subhhalos later by yourself.
-                            tmpd = np.zeros((tmp.shape[0],3),dtype=np.int64)
-                            tmpd[:, :2] = tmp
-                            tmpd[:, 2] = hid
-                            hid_info.extend(tmpd.tolist())
-                    hid_info = np.asarray(hid_info)
-                    uniq_hid, uq_counts = np.unique(hid_info[:,0], return_counts=True)
-                    if uniq_hid.size != hid_info.shape[0]:
-                        memlog('!!Warning!! duplicated particle IDs in different halos!! removing them %d, %d' % (uniq_hid.size , hid_info.shape[0]))
+                    if nhalos == len(halo_info): # no MPI case 
+                        hpp=1 # halo particle numbers and halo ID position
+                        hid_info=[] #particle ID, particle type, halo_ID as keys fillup with the information from AHF particle file
+                        for i in range(nhalos):
+                            npt,hid=[int(x) for x in lines[hpp].split()]
+                            hpp+=1
+                            tmp=np.loadtxt(lines[hpp:hpp+npt],dtype=np.int64)
+                            hpp+=npt
+                            if halo_info[i,1] == 0: # we only use idstinctive halos, as subhalos (sub subhalos) repeatively saved the particles, really a pain to deal with! Match galaxies back to subhhalos later by yourself.
+                                tmpd = np.zeros((tmp.shape[0],3),dtype=np.int64)
+                                tmpd[:, :2] = tmp
+                                tmpd[:, 2] = hid
+                                hid_info.extend(tmpd.tolist())
+                        hid_info = np.asarray(hid_info)
+                        uniq_hid, uq_counts = np.unique(hid_info[:,0], return_counts=True)
+                        if uniq_hid.size != hid_info.shape[0]:
+                            memlog('!!Warning!! duplicated particle IDs in different halos!! removing them %d, %d' % (uniq_hid.size , hid_info.shape[0]))
+                    else: # MPI case, in which the _particles file contains information merged from different files
+                        memlog('!!Warning!! reading AHF halo IDs from merged files!!')
+                        hpp=0 # halo particle numbers and halo ID position
+                        hid_info=[] #particle ID, particle type, halo_ID as keys fillup with the information from AHF particle file
+                        nhalos=0
+                        while nhalos < len(halo_info):
+                            tempn = int(lines[hpp])
+                            nhalos+=tempn
+                            hpp+=1
+                            for i in range(tempn):
+                                npt,hid=[int(x) for x in lines[hpp].split()]
+                                hpp+=1
+                                tmp=np.loadtxt(lines[hpp:hpp+npt],dtype=np.int64)
+                                hpp+=npt
+                                if halo_info[nhalos-tempn+i,1] == 0: # we only use idstinctive halos, as subhalos (sub subhalos) repeatively saved the particles, really a pain to deal with! Match galaxies back to subhhalos later by yourself.
+                                    tmpd = np.zeros((tmp.shape[0],3),dtype=np.int64)
+                                    tmpd[:, :2] = tmp
+                                    tmpd[:, 2] = hid
+                                    hid_info.extend(tmpd.tolist())
+                        hid_info = np.asarray(hid_info)
+                        uniq_hid, uq_counts = np.unique(hid_info[:,0], return_counts=True)
+                        if uniq_hid.size != hid_info.shape[0]:
+                            memlog('!!Warning!! duplicated particle IDs in different halos!! removing them %d, %d' % (uniq_hid.size , hid_info.shape[0]))            
                 else: # use subhalo inforamtion as well, but very pain to remove these duplicated particles!!!!
                     hpp=1 # halo particle numbers and halo ID position
                     hid_info={} #particle ID, particle type, halo_ID as keys fillup with the information from AHF particle file
