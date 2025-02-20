@@ -77,7 +77,7 @@ class fof6d:
                     haloid_file=haloid_file.replace('particles','halos')
                 halo_info=np.loadtxt(haloid_file,usecols=(0,1),dtype=np.int64) #hid, host hid
                 if len(halo_info) == 0:
-                    sys.exit("No Halos in AHF halo file -- no need to run Caesar! ", len(halo_info))
+                    sys.exit("No Halos in AHF halo file -- no need to run Caesar! Halos: %d" % len(halo_info))
 
                 if 'AHF_use_subhalos' not in self.obj._kwargs:  #only use particles in distinct halo. this is default.
                     nhalos=int(lines[0])
