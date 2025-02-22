@@ -52,7 +52,7 @@ def compute_mags(phot):
         ## input quantities
         long int[:] starid_bins = phot.sid_bins   # starting indexes of star particle IDs in each group
         float[:] sm = phot.obj.smass_orig[phot.starids]
-        float[:] svz = vlos
+        float[:] svz = MY_DTYPE(vlos)
         float[:] sage = phot.obj.data_manager.age[phot.starids]
         float[:] sZ = phot.obj.data_manager.sZ[phot.starids] #/phot.solar_abund['total']
         float[:] ssp_wavelengths = phot.ssp_wavelengths
@@ -83,7 +83,7 @@ def compute_mags(phot):
         float redshift = phot.obj.simulation.redshift
         float lumtoflux = phot.lumtoflux
         float lumtoflux_abs = phot.lumtoflux_abs
-        float[:] dnu = CLIGHT_AA/phot.ssp_wavelengths[:nlam-1] - CLIGHT_AA/phot.ssp_wavelengths[1:]
+        float[:] dnu = MY_DTYPE(CLIGHT_AA/phot.ssp_wavelengths[:nlam-1] - CLIGHT_AA/phot.ssp_wavelengths[1:])
         float splitage = phot.splitting_age
         float msum
         int ib,ig,ip,idim,ikern,istart,iend
