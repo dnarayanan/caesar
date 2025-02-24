@@ -817,7 +817,7 @@ def get_group_properties(self,grp_list):
 
     get_group_overall_properties(self,grp_list)
     if 'gas' in self.obj.data_manager.ptypes: get_group_gas_properties(self,grp_list)
-    if 'star' in self.obj.data_manager.ptypes: get_group_star_properties(self,grp_list)
+    if ('star' in self.obj.data_manager.ptypes) and (self.obj.simulation.nstar>0): get_group_star_properties(self,grp_list)
     if 'dust' in self.obj.data_manager.ptypes: get_group_dust_properties(self,grp_list)
     
     if (self.obj.data_manager.blackholes):
