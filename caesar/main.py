@@ -349,7 +349,7 @@ class CAESAR(object):
         #import caesar.hydrogen_mass_calc as mass_calc
         #mass_calc.hydrogen_mass_calc(self)
 
-        if (len(self.halos) !=0) and (lowres is not None): # no need this when there is no halos
+        if (len(self.halos) !=0) and ('lowres' in self._kwargs and self._kwargs['lowres'] is not None): # no need this when there is no halos
             from caesar.zoom_funcs import all_object_contam_check
             all_object_contam_check(self)
 
