@@ -493,9 +493,9 @@ def get_group_gas_properties(group,grp_list):
     cdef:
         ## gas quantities
         long long[:] hid_bins = gid_bins   # starting indexes of particle IDs in each group
-        float[:]   gm = group.obj.data_manager.mass[grpids]
+        float[:]   gm = np.float32(group.obj.data_manager.mass[grpids])
         float[:]   gnh = group.obj.data_manager.gnh[grpids]
-        float[:]   gsfr = group.obj.data_manager.gsfr[grpids]
+        float[:]   gsfr = np.float32(group.obj.data_manager.gsfr[grpids])
         float[:]   gZ = group.obj.data_manager.gZ[grpids]
         float[:]   gtemp = group.obj.data_manager.gT[grpids]
         float[:]   gfH2 = group.obj.data_manager.gfH2[grpids]
@@ -581,10 +581,12 @@ def get_group_star_properties(group,grp_list):
     from caesar.group import collate_group_ids
     ngroup, grpids, gid_bins = collate_group_ids(grp_list,'star',group.nparttype['star'])
 
+    mass_float32 = np.float32(group.obj.data_manager.mass[grpids])
+
     cdef:
         ## star quantities
         long long[:] hid_bins = gid_bins   # starting indexes of particle IDs in each group
-        float[:]   sm = group.obj.data_manager.mass[grpids]
+        float[:]   sm = np.float32(group.obj.data_manager.mass[grpids])
         float[:]   sZ = group.obj.data_manager.sZ[grpids]
         float[:]   sage = group.obj.data_manager.age[grpids]
         # general variables
@@ -636,7 +638,7 @@ def get_group_bh_properties(group,grp_list):
     cdef:
         ## bh quantities
         long long[:] hid_bins = gid_bins   # starting indexes of particle IDs in each group
-        float[:]   bhmass = group.obj.data_manager.bhmass[grpids]
+        float[:]   bhmass = np.float32(group.obj.data_manager.bhmass[grpids])
         float[:]   bhmdot = group.obj.data_manager.bhmdot[grpids]
         # general variables
         int ng = ngroup
@@ -724,7 +726,7 @@ def get_group_overall_properties(group,grp_list):
         long long[:] hid_bins = gid_bins   # starting indexes of particle IDs in each group
         float[:,:] pos = group.obj.data_manager.pos[grpids]
         float[:,:] vel = group.obj.data_manager.vel[grpids]
-        float[:]   mass = group.obj.data_manager.mass[grpids]
+        float[:]   mass = np.float32(group.obj.data_manager.mass[grpids])
         float[:]   pot = group.obj.data_manager.pot[grpids]
         int[:]      ptype = group.obj.data_manager.ptype[grpids]
         int[:]      group_ptypes = np.asarray(pt_ints,dtype=np.int32)

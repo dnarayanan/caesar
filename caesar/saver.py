@@ -4,7 +4,7 @@ import numpy as np
 import pdb
 import six
 from yt.units.yt_array import YTQuantity, YTArray
-from yt import mylog
+from yt.funcs import mylog
 blacklist = [
     'G', 'initial_mass',
     'valid', 'vel_conversion',

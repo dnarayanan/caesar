@@ -375,7 +375,7 @@ def get_HIH2_masses(galaxies,aperture=30,rho_thresh=0.13):
         double[:,:] galaxy_pos = galpos
         double[:]   galaxy_mass = galmass
         float[:,:]  gas_pos = galaxies.obj.data_manager.pos[grpids]
-        float[:]    gas_mass = galaxies.obj.data_manager.mass[grpids]
+        float[:]    gas_mass = np.float32(galaxies.obj.data_manager.mass[grpids])
         float[:]    gas_nh = galaxies.obj.data_manager.gnh[grpids]
         float[:]    HImass = galaxies.obj.data_manager.gfHI[grpids]
         float[:]    H2mass = galaxies.obj.data_manager.gfH2[grpids]
@@ -716,7 +716,7 @@ def _get_aperture_quan(galaxies,aperture=30,aptname=None,projection=None):
         double[:,:] galaxy_pos = galpos
         float[:,:]  ppos = galaxies.obj.data_manager.pos[grpids]
         float[:,:]  pvel = galaxies.obj.data_manager.vel[grpids]
-        float[:]    pmass = galaxies.obj.data_manager.mass[grpids]
+        float[:]    pmass = np.float32(galaxies.obj.data_manager.mass[grpids])
         int[:]      ptype = galaxies.obj.data_manager.ptype[grpids]
         int[:]      galaxy_indexes = np.zeros(ngal,dtype=np.int32)
         int[:]      galind_bins = np.zeros(nhalo+1,dtype=np.int32)

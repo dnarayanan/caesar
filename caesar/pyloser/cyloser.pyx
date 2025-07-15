@@ -45,7 +45,7 @@ def compute_mags(phot):
 
     # perhaps need ssfr and Z for choosing extinction law
     from caesar.pyloser.pyloser import Solar
-    logssfr_gal = np.array([np.log10((g.sfr*1.e9/g.masses['stellar']).d+1.e-20) for g in phot.groups],dtype=MY_DTYPE)  # in Gyr^-1
+    logssfr_gal = np.array([np.log10((g.sfr*1.e9/(g.masses['stellar']+1.e-6)).d+1.e-20) for g in phot.groups],dtype=MY_DTYPE)  # in Gyr^-1
     logZ_gal = np.array([np.log10(g.metallicities['sfr_weighted']/Solar['total']+1.e-20) for g in phot.groups],dtype=MY_DTYPE)
 
     cdef:

@@ -38,7 +38,7 @@ particle_data_aliases_swift = {
     'rho':'Densities',
     'hsml':'SmoothingLengths',
     'sfr':'StarFormationRates',
-    'mass':'Masses',
+    'mass':'Mass',
     'temp':'Temperatures',
     'temperature':'Temperatures',
     'ne':'ElectronNumberDensities',

@@ -106,7 +106,11 @@ class SimulationAttributes(object):
             uhdd.attrs.create(k, str(v).encode('utf8'))
             
         phdd = hdd.create_group('parameters')
-        for k,v in six.iteritems(self.parameters):
+        if obj.simulation.ds_type == 'SwiftDataset':
+            params = self.parameters['header']
+        else:
+            params = self.parameters
+        for k,v in six.iteritems(params):
             phdd.attrs.create(k, v)
 
             

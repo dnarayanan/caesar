@@ -93,7 +93,7 @@ class DataManager(object):
         self.pos   = pdata['pos']
         self.vel   = pdata['vel']
         self.pot   = pdata['pot']
-        self.mass  = pdata['mass']
+        self.mass  = np.float32(pdata['mass'])
         self.ptype = pdata['ptype']
         self.indexes = pdata['indexes']
         if self.obj.load_haloid:
@@ -180,9 +180,13 @@ class DataManager(object):
 
 
         if has_property(self.obj, 'gas', 'sfr'):
-            sfr = get_property(self.obj, 'sfr', 'gas')[flag].to(sfr_unit)
-            if self.obj.simulation.ds_type == 'SwiftDataset':
-                sfr = self.obj.yt_dataset.arr(np.where(sfr.d>0, sfr.d, 0.), sfr_unit)
+            sfr = get_property(self.obj, 'sfr', 'gas')[flag]
+            try:
+                sfr = sfr.in_units('Msun/yr')
+            except:
+                mylog.warning('SFR units appear wrong; setting to code_mass / code_time')
+                sfr = self.obj.yt_dataset.arr(sfr.d, 'code_mass / code_time')
+                sfr = sfr.in_units('Msun/yr')
         else:
             mylog.warning('SFRs not found in snapshot, all SFRs set to 0')
 
