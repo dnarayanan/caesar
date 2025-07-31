@@ -1,0 +1,62 @@
+# pyproject.toml
+
+[build-system]
+requires = ["setuptools>=61.0", "cython>=3.0", "numpy", "six"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "caesar"
+dynamic = ["version"]
+authors = [
+  { name = "Robert Thompson" },
+  { name = "Desika Narayanan", email = "desika.narayanan@gmail.com" },
+  { name = "Romeel Dave" },
+  { name = "Benjamin Kimock" },
+  { name = "Weiguang Cui" },
+]
+description = "CAESAR is a python library for analyzing the outputs from cosmological simulations."
+readme = "README.md" # Make sure you have a README.md file
+requires-python = ">=3.6"
+license = { file = "LICENSE" } # It's best practice to add a LICENSE file and reference it here
+keywords = ["astronomy", "simulations", "cosmology", "halo-finder"] # Suggested keywords
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License", # Please update with your actual license
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Scientific/Engineering :: Astronomy",
+]
+dependencies = [
+    "six",
+    "numpy",
+    "h5py",
+    "cython",
+    "psutil",
+    "scipy",
+    "joblib",
+    "scikit-learn",
+    "yt",
+    "astropy",
+    # If you need the git dependency, uncomment the following line
+    # "pygadgetreader @ git+https://github.com/dnarayanan/pygadgetreader",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/dnarayanan/caesar"
+"Bug Tracker" = "https://github.com/dnarayanan/caesar/issues"
+
+[project.scripts]
+caesar = "caesar.command_line:run"
+
+# This tells setuptools how to find your dynamic version
+[tool.setuptools.dynamic]
+version = { attr = "caesar.__version__.VERSION" }
+
+# This tells setuptools to find packages automatically
+[tool.setuptools]
+packages = ["caesar"]
