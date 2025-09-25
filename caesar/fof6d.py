@@ -83,12 +83,12 @@ class fof6d:
                     halo_info=np.reshape(halo_info,(1,2))
 
                 if 'AHF_use_subhalos' not in self.obj._kwargs:  #only use particles in distinct halo. this is default.
-                    nhalos=int(lines[0])
+                    nhalos=np.int64(lines[0])
                     if nhalos == len(halo_info): # no MPI case 
                         hpp=1 # halo particle numbers and halo ID position
                         hid_info=[] #particle ID, particle type, halo_ID as keys fillup with the information from AHF particle file
                         for i in range(nhalos):
-                            npt,hid=[int(x) for x in lines[hpp].split()]
+                            npt,hid=[np.int64(x) for x in lines[hpp].split()]
                             hpp+=1
                             tmp=np.loadtxt(lines[hpp:hpp+npt],dtype=np.int64)
                             hpp+=npt
@@ -107,11 +107,11 @@ class fof6d:
                         hid_info=[] #particle ID, particle type, halo_ID as keys fillup with the information from AHF particle file
                         nhalos=0
                         while nhalos < len(halo_info):
-                            tempn = int(lines[hpp])
+                            tempn = np.int64(lines[hpp])
                             nhalos+=tempn
                             hpp+=1
                             for i in range(tempn):
-                                npt,hid=[int(x) for x in lines[hpp].split()]
+                                npt,hid=[np.int64(x) for x in lines[hpp].split()]
                                 hpp+=1
                                 tmp=np.loadtxt(lines[hpp:hpp+npt],dtype=np.int64)
                                 hpp+=npt
@@ -127,10 +127,10 @@ class fof6d:
                 else: # use subhalo inforamtion as well, but very pain to remove these duplicated particles!!!!
                     hpp=1 # halo particle numbers and halo ID position
                     hid_info={} #particle ID, particle type, halo_ID as keys fillup with the information from AHF particle file
-                    for i in range(int(lines[0])):
-                        npt,hid=[int(x) for x in lines[hpp].split()]
+                    for i in range(np.int64(lines[0])):
+                        npt,hid=[np.int64(x) for x in lines[hpp].split()]
                         hpp+=1
-                        hid_info[str(hid)]=np.loadtxt(lines[hpp:hpp+npt],dtype=int)
+                        hid_info[str(hid)]=np.loadtxt(lines[hpp:hpp+npt],dtype=np.int64)
                         hpp+=npt
                         # hid_info.extend(tmpd.tolist())
 
@@ -283,6 +283,7 @@ class fof6d:
         else:
             grpid = parent.tags_fof6d
             if len(grpid[grpid>=0]) < MINIMUM_STARS_PER_GALAXY:
+                mylog.warning('Not enough star particles for a single valid galaxy (%d < %d)'%(len(grpid[grpid>=0]),MINIMUM_STARS_PER_GALAXY))
                 self.nparttot = 0
                 return False
 
@@ -345,7 +346,7 @@ class fof6d:
         # adjust tags to be sequential in galaxy number overall (rather than within each halo)
         ngrp = 0
         memlog('total galaxies %d, total groups %d'%(ngs,len(grp_tags)))
-        self.group_parents = np.zeros(ngs,dtype=np.int32)
+        self.group_parents = np.zeros(ngs,dtype=np.int64)
         for ih in range(len(grp_tags)):
             grp_tags[ih] = np.where(grp_tags[ih]>=0, grp_tags[ih]+ngrp, -1)
             mygals = np.unique(grp_tags[ih])
@@ -554,7 +555,7 @@ def fof6d_halo(nparthalo,npart,pos,vel,minstars,Lbox,fof_LL,vel_LL,kerneltab):
 
     # insert galaxy IDs into particle lists
     nfof = 0
-    galindex = np.zeros(npart,dtype=int)-1
+    galindex = np.zeros(npart,dtype=int64)-1
     for igrp in range(len(groups)):
         if fof6d_results[igrp] is None: continue  # no valid galaxies
         istart = groups[igrp][0]  # starting particle index for group igrp
@@ -601,13 +602,13 @@ def fof6d_main(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,mingrp,fof_LL,vel_L
             siglist.append(sigs)
 
     # determine counts within fof_LL, set up ordering of most dense to least
-    ncount = np.zeros(nactive,dtype=int)
+    ncount = np.zeros(nactive,dtype=int64)
     for i in range(len(ncount)):
         ncount[i] = len(nlist[1][i])  # count number of neighbors for each particle
     dense_order = np.argsort(-ncount)  # find ordering of most dense to least
 
     # main loop to do FOF
-    galind = np.zeros(nactive,dtype=int)-1
+    galind = np.zeros(nactive,dtype=int64)-1
     linked = []
     galcount = 0
     for ipart in range(nactive):
@@ -640,7 +641,7 @@ def fof6d_main(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,mingrp,fof_LL,vel_L
         if pcount[galind[i]] < mingrp: galind[i] = -1
     if len(galind[galind>=0])==0: return 0,galind  # if there are no valid groups left, return
     galind_unique = np.unique(galind[galind>=0])  # find unique groups
-    galind_inv = np.zeros(max(galind_unique)+1,dtype=int)
+    galind_inv = np.zeros(max(galind_unique)+1,dtype=int64)
     for i in range(len(galind_unique)):
         galind_inv[galind_unique[i]] = i  # create mapping from original groups to unique set
     for i in range(iend-istart):
@@ -735,7 +736,7 @@ def kernel_table(fof_LL,ntab=1000):
 def kernel(r_over_h,kerneltab):
     ntab = len(kerneltab)-1
     rtab = ntab*r_over_h+0.5
-    itab = rtab.astype(int)
+    itab = rtab.astype(np.int64)
     return kerneltab[itab]
 
 
