@@ -59,4 +59,4 @@ version = { attr = "caesar.__version__.VERSION" }
 
 # This tells setuptools to find packages automatically
 [tool.setuptools]
-packages = ["caesar"]
+packages = ["caesar", "caesar.pyloser"]
