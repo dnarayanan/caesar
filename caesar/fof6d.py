@@ -555,7 +555,7 @@ def fof6d_halo(nparthalo,npart,pos,vel,minstars,Lbox,fof_LL,vel_LL,kerneltab):
 
     # insert galaxy IDs into particle lists
     nfof = 0
-    galindex = np.zeros(npart,dtype=int64)-1
+    galindex = np.zeros(npart,dtype=np.int64)-1
     for igrp in range(len(groups)):
         if fof6d_results[igrp] is None: continue  # no valid galaxies
         istart = groups[igrp][0]  # starting particle index for group igrp
@@ -602,13 +602,13 @@ def fof6d_main(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,mingrp,fof_LL,vel_L
             siglist.append(sigs)
 
     # determine counts within fof_LL, set up ordering of most dense to least
-    ncount = np.zeros(nactive,dtype=int64)
+    ncount = np.zeros(nactive,dtype=np.int64)
     for i in range(len(ncount)):
         ncount[i] = len(nlist[1][i])  # count number of neighbors for each particle
     dense_order = np.argsort(-ncount)  # find ordering of most dense to least
 
     # main loop to do FOF
-    galind = np.zeros(nactive,dtype=int64)-1
+    galind = np.zeros(nactive,dtype=np.int64)-1
     linked = []
     galcount = 0
     for ipart in range(nactive):
@@ -641,7 +641,7 @@ def fof6d_main(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,mingrp,fof_LL,vel_L
         if pcount[galind[i]] < mingrp: galind[i] = -1
     if len(galind[galind>=0])==0: return 0,galind  # if there are no valid groups left, return
     galind_unique = np.unique(galind[galind>=0])  # find unique groups
-    galind_inv = np.zeros(max(galind_unique)+1,dtype=int64)
+    galind_inv = np.zeros(max(galind_unique)+1,dtype=np.int64)
     for i in range(len(galind_unique)):
         galind_inv[galind_unique[i]] = i  # create mapping from original groups to unique set
     for i in range(iend-istart):
