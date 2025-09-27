@@ -42,6 +42,9 @@ dependencies = [
     "scikit-learn",
     "yt",
     "astropy",
+    # for pyloser
+    "synphot",
+    "fsps"
     # If you need the git dependency, uncomment the following line
     # "pygadgetreader @ git+https://github.com/dnarayanan/pygadgetreader",
 ]
