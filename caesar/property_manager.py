@@ -273,7 +273,11 @@ class DatasetType(object):
             if self.ds_type == 'GizmoDataset' or self.ds_type == 'GadgetDataset' or self.ds_type == None:  # Note yt doesn't work properly for the particle IDs for Gadget snapshot, additional twist is needed in lower function and pygadgetreader
                 data = self._get_simba_property(requested_ptype,requested_prop)
             else:
-                data = self.dd[ptype, prop].astype(MY_DTYPE)
+                if requested_prop == 'haloid' or requested_prop == 'pid':
+                    data = self.dd[ptype, prop].astype(np.int64)
+                else:
+                    data = self.dd[ptype, prop].astype(MY_DTYPE)
+
 
         #if not isinstance(self.indexes, str):
         #    data = data[self.indexes]

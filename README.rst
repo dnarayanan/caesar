@@ -22,3 +22,10 @@ http://caesar.readthedocs.org
 
 VERSION 0.2b0 changelog is detailed here:
 https://www.overleaf.com/read/tfpfstktkrjm
+
+For the problem of "ValueError: numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject", that is due to the different version of numpy has been used between installing and common use.
+You need to do:
+'''
+export CFLAGS="-I$(python -c 'import numpy; print(numpy.get_include())')"
+pip install .
+'''
