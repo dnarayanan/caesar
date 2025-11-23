@@ -434,7 +434,7 @@ class fof6d:
             self.obj.cloud_list = grp_list
             self.counts[self.obj_type] = len(self.obj.cloud_list)
             self.obj.group_types.append(self.obj_type)
-
+        # import pdb; pdb.set_trace()
         memlog('Found %d valid %s, loaded indexes'%(self.counts[self.obj_type],group_types[self.obj_type]))
 
 
@@ -502,6 +502,7 @@ def find_bins(sorted_list,last_value):
     np.not_equal(sorted_list[:-1], sorted_list[1:], out=loc_run_start[1:])
     sorted_bins = np.nonzero(loc_run_start)[0]
     sorted_bins = np.append(sorted_bins,last_value)
+    # import pdb; pdb.set_trace()
     return sorted_bins
 
 def setup_indexes(self,halo_indexes):
@@ -523,7 +524,7 @@ def setup_indexes(self,halo_indexes):
     # add in other particle types
     bh_indexes = halo_indexes[my_ptype == ptype_ints['bh']]
     dust_indexes = halo_indexes[my_ptype == ptype_ints['dust']]
-    all_indexes = np.concatenate((dense_indexes,star_indexes,bh_indexes,dust_indexes),axis=None).astype(np.int32)
+    all_indexes = np.concatenate((dense_indexes,star_indexes,bh_indexes,dust_indexes),axis=None).astype(np.int64)
     # concatenate everything in the proper order and return
     return all_indexes
 
@@ -541,7 +542,7 @@ def fof6d_halo(nparthalo,npart,pos,vel,minstars,Lbox,fof_LL,vel_LL,kerneltab):
 
     # run fof6d
     groups = [[0,npart]]  # group to process has the entire list of particles in halo
-    pindex = np.arange(npart,dtype=np.int32) # index to keep track of particle sorting
+    pindex = np.arange(npart,dtype=np.int64) # index to keep track of particle sorting
     myhaloID = np.zeros(npart,dtype=np.int32)  # fof6d doing one halo at a time; arbitrarily assign to halo 0
     for idir in range(len(mypos)):  # sort in each direction, find groups within sorted list
         if len(groups) > 0: groups = fof_sorting_old(groups,mypos,myvel,myhaloID,pindex,fof_LL,Lbox,idir,mingrp=minstars)
@@ -601,13 +602,13 @@ def fof6d_main(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,mingrp,fof_LL,vel_L
             siglist.append(sigs)
 
     # determine counts within fof_LL, set up ordering of most dense to least
-    ncount = np.zeros(nactive,dtype=int)
+    ncount = np.zeros(nactive,dtype=np.int64)
     for i in range(len(ncount)):
         ncount[i] = len(nlist[1][i])  # count number of neighbors for each particle
     dense_order = np.argsort(-ncount)  # find ordering of most dense to least
 
     # main loop to do FOF
-    galind = np.zeros(nactive,dtype=int)-1
+    galind = np.zeros(nactive,dtype=np.int64)-1
     linked = []
     galcount = 0
     for ipart in range(nactive):
@@ -640,7 +641,7 @@ def fof6d_main(igrp,groups,poslist,vellist,kerneltab,t0,Lbox,mingrp,fof_LL,vel_L
         if pcount[galind[i]] < mingrp: galind[i] = -1
     if len(galind[galind>=0])==0: return 0,galind  # if there are no valid groups left, return
     galind_unique = np.unique(galind[galind>=0])  # find unique groups
-    galind_inv = np.zeros(max(galind_unique)+1,dtype=int)
+    galind_inv = np.zeros(max(galind_unique)+1,dtype=np.int64)
     for i in range(len(galind_unique)):
         galind_inv[galind_unique[i]] = i  # create mapping from original groups to unique set
     for i in range(iend-istart):
@@ -735,7 +736,7 @@ def kernel_table(fof_LL,ntab=1000):
 def kernel(r_over_h,kerneltab):
     ntab = len(kerneltab)-1
     rtab = ntab*r_over_h+0.5
-    itab = rtab.astype(int)
+    itab = rtab.astype(np.int64)
     return kerneltab[itab]
 
 
