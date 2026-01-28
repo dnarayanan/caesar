@@ -368,7 +368,7 @@ def get_HIH2_masses(galaxies,aperture=30,rho_thresh=0.13):
         ## global quantities
         int         nhalo = len(galaxies.obj.halo_list)
         int         ngal = len(galaxies.obj.galaxy_list)
-        int         npart = len(grpids)
+        long long   npart = len(grpids)
         int         my_nproc = galaxies.nproc
         double      XH = galaxies.obj.simulation.XH
         long int[:] hid_bins = gid_bins   # starting indexes of particle IDs in each halo
@@ -383,7 +383,7 @@ def get_HIH2_masses(galaxies,aperture=30,rho_thresh=0.13):
         int[:]      galind_bins = np.zeros(nhalo+1,dtype=np.int32)
         ## general variables
         double      rho_th = rho_thresh        # atoms/cm^3
-        int         ih,ig,istart,iend,igstart,igend
+        long long   ih,ig,istart,iend,igstart,igend
         double      Lbox = galaxies.obj.simulation.boxsize.d
         double      apert2 = aperture*aperture
         double      myHI, myH2
@@ -520,7 +520,7 @@ def compute_selfshield(caesar_obj,grpids,rho_thresh,uvb_model='FG11'):
         double    P0BLITZ     = 1.7e4
         double    ALPHA0BLITZ = 0.8
         ## Popping+09 constants (equation 7)
-        int    i
+        long long i
         double beta, xi, nHss, fgamma_HI, C, Rmol, fHI, fH2, cold_phase_massfrac 
         double a  = 7.982e-11                  # cm^3/s
         double b  = 0.7480
@@ -533,7 +533,7 @@ def compute_selfshield(caesar_obj,grpids,rho_thresh,uvb_model='FG11'):
         float[:]   gmass = caesar_obj.data_manager.mass[grpids]
         float[:]   gnh = caesar_obj.data_manager.gnh[grpids]
         float[:]   gtemp = caesar_obj.data_manager.gT[grpids]
-        int        npart = len(gmass)
+        long long  npart = len(gmass)
         int        my_nproc = caesar_obj.nproc
         # things to compute
         float[:]   gfHI = caesar_obj.data_manager.gfHI[grpids]
@@ -609,7 +609,7 @@ def _get_aperture_masses(galaxies,aperture=30,projection=None):
         ## global quantities
         int         nhalo = len(galaxies.obj.halo_list)
         int         ngal = len(galaxies.obj.galaxy_list)
-        int         npart = len(grpids)
+        # long long   npart = len(grpids)
         int         my_nproc = galaxies.nproc
         int         kdir = kproj
         long int[:] hid_bins = gid_bins   # starting indexes of particle IDs in each halo
@@ -708,11 +708,11 @@ def _get_aperture_quan(galaxies,aperture=30,aptname=None,projection=None):
         ## global quantities
         int         nhalo = len(galaxies.obj.halo_list)
         int         ngal  = len(galaxies.obj.galaxy_list)
-        int         npart = len(grpids)
+        long long   npart = len(grpids)
         long int    nptype= len(ptype_array)
         int         my_nproc = galaxies.nproc
         int         kdir = kproj
-        long int[:] hid_bins = gid_bins   # starting indexes of particle IDs in each halo
+        long long[:] hid_bins = gid_bins   # starting indexes of particle IDs in each halo
         double[:,:] galaxy_pos = galpos
         float[:,:]  ppos = galaxies.obj.data_manager.pos[grpids]
         float[:,:]  pvel = galaxies.obj.data_manager.vel[grpids]
@@ -975,11 +975,11 @@ def get_aperture_vdis(snapfile,caesarobj,quantities=['gas','star','dm'],aperture
     ptype_array = []
     for pt in quants:  # this is the ordering for ptypes to be computed
         ptype_array.append(ptype_ints[pt])
-    ptype_array = np.array(ptype_array,dtype=np.int32)
+    ptype_array = np.array(ptype_array,dtype=np.int64)
 
     cdef:
-        int ig, ipt, ngal = 0
-        long int npart = 0
+        long long ig, ipt, ngal = 0
+        long long npart = 0
     # collate galaxy info in order of halos
     g_indexes = np.zeros(len(galaxies),dtype=np.int32)
     gind_bins = np.zeros(len(halos)+1,dtype=np.int32)
@@ -1098,7 +1098,7 @@ def get_aperture_vdis(snapfile,caesarobj,quantities=['gas','star','dm'],aperture
         int         kdir = kproj
         int         nhalo = len(halos)
         int         npt = len(quants)
-        long int[:] hid_bins = gid_bins   # starting indexes of particle IDs in each halo
+        long long[:] hid_bins = gid_bins   # starting indexes of particle IDs in each halo
         double[:,:] galaxy_pos = galpos
         float[:,:]  ppos = phalo_pos
         float[:,:]  pvel = phalo_vel
@@ -1108,7 +1108,7 @@ def get_aperture_vdis(snapfile,caesarobj,quantities=['gas','star','dm'],aperture
         int[:]      galind_bins = gind_bins
         ## general variables
         int         ih
-        int[:]      ptypes = np.arange(np.max(ptype_array)+1, dtype=np.int32)
+        int [:]      ptypes = np.arange(np.max(ptype_array)+1, dtype=np.int32)
         #double      Lbox = galaxies.obj.simulation.boxsize.d
         float       Lbox = boxsize
         float[:]    apert2 = aperture2
@@ -1175,14 +1175,14 @@ cdef void get_galaxy_aperture_masses(int igstart, int igend, int istart, int ien
 @cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cdef void get_galaxy_aperture(int nh, int ng, long int npt, long int[:] hbins,int[:] gbins, double[:,:] galaxy_pos, float[:] pmass, float[:,:] ppos, float[:,:] pvel, int[:] ptype, float Lbox, int[:] target_ptype, int nptype, int kdir, float[:] apert2, int nproc, double[:,:] aperture_mass, double[:,:] aperture_vd) noexcept:
+cdef void get_galaxy_aperture(int nh, int ng, long long npt, long long[:] hbins,int[:] gbins, double[:,:] galaxy_pos, float[:] pmass, float[:,:] ppos, float[:,:] pvel, int[:] ptype, float Lbox, int[:] target_ptype, int nptype, int kdir, float[:] apert2, int nproc, double[:,:] aperture_mass, double[:,:] aperture_vd) noexcept:
     """
     Note that this only looks at particles belongs to a galaxy's halo, so it may miss some mass
     particularly for satellites on the outskirts of the halo.
     Should be good for centrals, though!
     """
 
-    cdef int j,k,l,ih, igstart, igend
+    cdef long long j,k,l,ih, igstart, igend
     cdef long int i, istart, iend
     cdef double d2
     cdef double dx[3]
