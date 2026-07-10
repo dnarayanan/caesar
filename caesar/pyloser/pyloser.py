@@ -4,26 +4,17 @@
 # IMPORT STATEMENTS
 #=========================================================
 
-import caesar
 from readgadget import *
 import sys
-import pylab as plt 
 import os
 os.environ["OMP_NUM_THREADS"] = "24"
 import numpy as np
-import fsps
 import h5py
-from scipy import interpolate
 from astropy import constants as const
 from astropy.cosmology import FlatLambdaCDM
 from caesar.utils import memlog
 from caesar.property_manager import MY_DTYPE
 from yt.funcs import mylog
-
-#from pygas import *
-#from auxloser import t_elapsed,parse_args,progress_bar,hubble_z
-
-#from scipy.ndimage.filters import gaussian_filter
 
 # start overall timer
 CLIGHT_AA = const.c.to('AA/s').value
@@ -69,7 +60,6 @@ class photometry:
 
     def __init__(self, obj, group_list, ds=None, band_names='v', ssp_model='FSPS', ssp_table_file='FSPS_Chab_EL.hdf5', view_dir='x', use_dust=True, ext_law='mix_calz_MW', use_cosmic_ext=True, beta_wave=[1500,3000], splitting_age=0.01, kernel_type='cubic', nproc=-1):
 
-        from caesar.property_manager import ptype_ints
         self.obj = obj  # caesar object
         self.groups = group_list  # list of objects to process
 
@@ -242,8 +232,7 @@ class photometry:
     def init_stars_to_process(self):
         """Initialization star and gas particle lists."""
 
-        from caesar.group import Group, collate_group_ids
-        from caesar.property_manager import ptype_ints
+        from caesar.group import collate_group_ids
         from caesar.cyloser import smass_at_formation
 
         #if isinstance(self.groups[0],Group):
@@ -265,7 +254,10 @@ class photometry:
     def init_bands(self):
         """Initialization bands to compute."""
 
-        import fsps
+        try:
+            import fsps
+        except ImportError:
+            raise ImportError("fsps is required for photometry features (try `pip install caesar[pyloser]`)")
         if isinstance(self.band_names,str):
             self.band_names = [self.band_names]
         if self.band_names[0] == 'all': 
@@ -299,8 +291,11 @@ class photometry:
   
         # Madau IGM attenuation is applied directly to rest-frame bandpasses only when computing apparent magnitudes; compute this curve here for specific redshift
         redshift = self.obj.simulation.redshift
-        if self.use_cosmic_ext: 
-            from synphot import etau_madau  # see synphot.readthedocs.io/en/latest/synphot/tutorials.html
+        if self.use_cosmic_ext:
+            try:
+                from synphot import etau_madau  # see synphot.readthedocs.io/en/latest/synphot/tutorials.html
+            except ImportError:
+                raise ImportError("synphot is required for photometry (try `pip install caesar[pyloser]`.")
             extcurve = etau_madau(self.ssp_wavelengths*(1.+redshift), redshift)
             cosmic_ext = extcurve(self.ssp_wavelengths)
         else: cosmic_ext = np.ones(len(self.ssp_wavelengths))
@@ -502,7 +497,6 @@ def generate_ssp_table_bc03(ssp_lookup_file,Zsol=Solar['total'],return_table=Fal
         '''
         Generates an SPS lookup table from BC03 data.
         '''
-        import pandas as pd
 
         mylog.info('Generating BC03 SSP lookup table %s'%(ssp_lookup_file))
         mylog.info('Using BC03 files in: %s'%(model_dir))
