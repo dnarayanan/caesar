@@ -726,7 +726,7 @@ def kernel_table(fof_LL,ntab=1000):
     norm = 0.31832*hinv**3
     for i in range(ntab):
         r = 1.*i/ntab
-        q = 2*r*hinv
+        q = 2*r
         if q > 2: kerneltab[i] = 0.0
         elif q > 1: kerneltab[i] = 0.25*norm*(2-q)**3
         else: kerneltab[i] = norm*(1-1.5*q*q*(1-0.5*q))

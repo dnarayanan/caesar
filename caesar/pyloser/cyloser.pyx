@@ -210,7 +210,7 @@ cdef void extinction(float sAV, float[:,:] extinct, int nextinct, float ssfr, fl
             if zfact > 1.: zfact = 1.
             if zfact < 0.: zfact = 0.
             for i in range(nlam):
-                dust_ext[i] *= (dust_ext[i]*zfact+ extinct[4][i]*(1.-zfact)) 
+                dust_ext[i] = (dust_ext[i]*zfact+ extinct[4][i]*(1.-zfact)) 
 
     for i in range(nlam):
         dust_ext[i] = c_exp(-dust_ext[i])  # turn optical depths into attenuation factor
@@ -247,7 +247,7 @@ cdef void get_galaxy_spectrum(int istart, int iend, float[:] sm, float[:] sage, 
             # get spectrum of 1 Mo star interpolated to its age and metallicity
             interp_tab(age,sZ[ip],nlam,nage,nZ,ssp_wavelengths,ssp_ages,ssp_logZ,ssp_spectra,spec_star)
             extinction(sAV[ip],extinct,nextinct,ssfr,Zgal,nlam,dust_ext)
-            zfact = svz[ip]/3.e10
+            zfact = svz[ip]/3.e5
             if zfact >= 0: zsign = 1
             else: zsign = -1
             for i in range(nlam):
@@ -390,7 +390,7 @@ cdef float star_AV(int ip, int idir, int igstart, int igend, double[:,:] spos, d
         for idim in range(3):
             dx[idim] = spos[ip,idim] - gpos[i,idim] 
             if dx[idim] > 0.5*Lbox: dx[idim] -= Lbox
-            if dx[idim] > 0.5*Lbox: dx[idim] += Lbox
+            if dx[idim] < -0.5*Lbox: dx[idim] += Lbox
         if dx[idir] > 0: continue  # only use gas in front of stars
         if idir == 0: dx2 = dx[1]*dx[1]+dx[2]*dx[2]
         if idir == 1: dx2 = dx[0]*dx[0]+dx[2]*dx[2]
@@ -454,8 +454,7 @@ def init_kerntab(phot):
             xnext = x+binsize
             sqrtl = c_sqrt(x*x+b*b)
             sqrtlnext = c_sqrt(xnext*xnext+b*b)
-            if i>0: kerntab[i] += 0.5*binsize*(x*kernel(sqrtl,ktype)/sqrtl+xnext*kernel(sqrtlnext,ktype)/sqrtlnext)
-            else: kerntab[i] += 0.5*binsize*(kernel(sqrtl,ktype)+kernel(sqrtlnext,ktype))
+            kerntab[i] += 0.5*binsize*(kernel(sqrtl,ktype)+kernel(sqrtlnext,ktype))
         kerntab[i] *= 2.0       # above calculates integral in half the kernel, so must double
 
     phot.kerntab = np.array(kerntab, dtype=MY_DTYPE)
