@@ -132,6 +132,104 @@ def compute_mags(phot):
     return np.array(spect_dust), np.array(spect_nodust)
 
 
+""" ================================================================== """
+""" BAND LUMINOSITIES OF INDIVIDUAL STARS, E.G. FOR APERTURE PHOTOMETRY """
+""" ================================================================== """
+
+@cython.cdivision(True)
+@cython.wraparound(False)
+@cython.boundscheck(False)
+def compute_star_lums(phot, starids, AV, logssfr, logZ):
+
+    """Computes band luminosities of individual stars for photometry object phot.
+    starids: star indices; AV: A_V to each star; logssfr, logZ: log sSFR (Gyr^-1) and
+    log Z/Zsun of each star's galaxy, used to choose the extinction law.
+    Returns a dict of (nstar,nbands) arrays keyed by absmag, absmag_nodust, appmag, appmag_nodust.
+    These are band-averaged L_nu, so for any set of stars, -48.6-2.5*log10(sum(L)*lumtoflux)
+    (lumtoflux_abs for absmag) gives the magnitudes compute_mags would give for that set."""
+
+    from caesar.property_manager import ptype_ints
+
+    memlog('Computing luminosities in %d bands for %d stars (nproc=%d)'%(len(phot.band_names),len(starids),phot.nproc))
+    starids = np.asarray(starids, dtype=np.int64)
+    ptype = phot.obj.data_manager.ptype
+    # stars' LOS hubble velocity, as in compute_mags
+    H0 = phot.obj.simulation.H_z.to('1/s').d
+    length_to_km = phot.obj.yt_dataset.quan(1.0,phot.obj.units['length']).to('km').d
+    vlos = phot.obj.data_manager.vel[ptype==ptype_ints['star']][starids,phot.viewdir] + phot.obj.data_manager.pos[ptype==ptype_ints['star']][starids,phot.viewdir] * length_to_km * H0
+    vbox = phot.obj.simulation.boxsize.to('km').d * H0
+    vlos = np.where(vlos<0, vlos+vbox, vlos)
+    vlos = np.where(vlos>vbox, vlos-vbox, vlos)
+
+    cdef:
+        ## input quantities
+        float[:] sm = phot.obj.smass_orig[starids]
+        float[:] svz = MY_DTYPE(vlos)
+        float[:] sage = phot.obj.data_manager.age[starids]
+        float[:] sZ = phot.obj.data_manager.sZ[starids]
+        float[:] sAV = np.asarray(AV, dtype=MY_DTYPE)
+        float[:] ssfr = np.asarray(logssfr, dtype=MY_DTYPE)
+        float[:] Zgal = np.asarray(logZ, dtype=MY_DTYPE)
+        float[:] ssp_wavelengths = phot.ssp_wavelengths
+        float[:] ssp_ages = phot.ssp_ages
+        float[:] ssp_logZ = phot.ssp_logZ
+        float[:,:] ssp_spectra = phot.ssp_spectra
+        float[:] ftrans = phot.band_ftrans.astype(MY_DTYPE)
+        int[:] itrans = phot.band_indexes
+        int[:] iwave0 = phot.band_iwave0
+        int[:] iwave1 = phot.band_iwave1
+        float[:] ztrans = phot.band_ztrans.astype(MY_DTYPE)
+        int[:] jtrans = phot.band_indz
+        int[:] iwz0 = phot.band_iwz0
+        int[:] iwz1 = phot.band_iwz1
+        float[:,:] extinctions = phot.ext_curves.astype(MY_DTYPE)
+        # general variables
+        int nstar = len(starids)
+        int nlam = len(phot.ssp_wavelengths)
+        int nage = len(phot.ssp_ages)
+        int nZ = len(phot.ssp_logZ)
+        int nbands = len(phot.band_names)
+        int nextinct = phot.ext_law
+        int my_nproc = phot.nproc
+        float splitage = phot.splitting_age
+        int ip,ib,tid
+        # per-thread spectrum buffers
+        float[:,:] spec = np.zeros((my_nproc,nlam),dtype=MY_DTYPE)
+        float[:,:] spec_nd = np.zeros((my_nproc,nlam),dtype=MY_DTYPE)
+        # things to compute
+        float[:,:] lum = np.zeros((nstar,nbands),dtype=MY_DTYPE)
+        float[:,:] lum_nd = np.zeros((nstar,nbands),dtype=MY_DTYPE)
+        float[:,:] zlum = np.zeros((nstar,nbands),dtype=MY_DTYPE)
+        float[:,:] zlum_nd = np.zeros((nstar,nbands),dtype=MY_DTYPE)
+
+    for ip in prange(nstar,nogil=True,schedule='dynamic',num_threads=my_nproc):
+        tid = threadid()
+        # spectrum of this single star, with and without dust
+        get_galaxy_spectrum(ip,ip+1,sm,sage,sZ,svz,sAV,extinctions,nextinct,ssfr[ip],Zgal[ip],splitage,nlam,nage,nZ,ssp_wavelengths,ssp_ages,ssp_logZ,ssp_spectra,spec[tid],spec_nd[tid])
+        for ib in range(nbands):
+            lum[ip,ib] = band_lum(spec[tid],ftrans,iwave0[ib],iwave1[ib],itrans[ib])
+            lum_nd[ip,ib] = band_lum(spec_nd[tid],ftrans,iwave0[ib],iwave1[ib],itrans[ib])
+            zlum[ip,ib] = band_lum(spec[tid],ztrans,iwz0[ib],iwz1[ib],jtrans[ib])
+            zlum_nd[ip,ib] = band_lum(spec_nd[tid],ztrans,iwz0[ib],iwz1[ib],jtrans[ib])
+
+    return {'absmag': np.array(lum), 'absmag_nodust': np.array(lum_nd), 'appmag': np.array(zlum), 'appmag_nodust': np.array(zlum_nd)}
+
+@cython.cdivision(True)
+@cython.wraparound(False)
+@cython.boundscheck(False)
+cdef float band_lum(float[:] spectrum, float[:] ftrans, int iwave0, int iwave1, int itrans) noexcept nogil:
+    """Band-averaged luminosity; same sums as apply_bands, without converting to a magnitude"""
+
+    cdef int i
+    cdef double lum=0., res=0.
+
+    for i in range(iwave0,iwave1):
+        lum += spectrum[i]*ftrans[i-iwave0+itrans]
+        res += ftrans[i-iwave0+itrans]
+    if res > 0: return <float>(lum/res)
+    return 0.
+
+
 """ =============================================== """
 """ SUBROUTINES TO CALCULATE PHOTOMETRIC PROPERTIES """
 """ =============================================== """
